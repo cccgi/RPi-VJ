@@ -1,5 +1,8 @@
 # RPi-VJ Appliance V3 — Start Here
 
+To run this program with a main Antigravity/Gemini orchestrator and bounded
+coding subagents, use [`ANTIGRAVITY_ORCHESTRATOR.md`](ANTIGRAVITY_ORCHESTRATOR.md).
+
 This program replaces the Raspberry Pi OS Desktop + LightDM + Labwc + Chromium
 WebHID deployment with a deterministic, offline-first VJ appliance.
 
