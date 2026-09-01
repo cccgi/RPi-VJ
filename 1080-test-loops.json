@@ -1,0 +1,500 @@
+{
+ "4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic.mp4": {
+  "duration": 30.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 336,
+   "seconds": 11.2,
+   "window_err": 35.116,
+   "window_ratio": 3.347,
+   "seam_ratio": 2.97,
+   "confident": false,
+   "refined_from": 339,
+   "typical_step": 10.491
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 1.03,
+   "max_err": 1.23
+  }
+ },
+ "4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_1.mp4": {
+  "duration": 30.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 256,
+   "seconds": 8.533,
+   "window_err": 25.617,
+   "window_ratio": 5.1,
+   "seam_ratio": 1.498,
+   "confident": false,
+   "refined_from": 259,
+   "typical_step": 5.023
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.67,
+   "max_err": 1.07
+  }
+ },
+ "4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_10.mp4": {
+  "duration": 60.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 618,
+   "seconds": 20.6,
+   "window_err": 23.097,
+   "window_ratio": 8.474,
+   "seam_ratio": 5.146,
+   "confident": false,
+   "refined_from": 621,
+   "typical_step": 2.726
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.95,
+   "max_err": 1.24
+  }
+ },
+ "4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_11.mp4": {
+  "duration": 15.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 133,
+   "seconds": 4.433,
+   "window_err": 32.106,
+   "window_ratio": 3.291,
+   "seam_ratio": 4.412,
+   "confident": false,
+   "refined_from": 130,
+   "typical_step": 9.755
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.71,
+   "max_err": 1.19
+  }
+ },
+ "4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_2.mp4": {
+  "duration": 30.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 305,
+   "seconds": 10.167,
+   "window_err": 27.626,
+   "window_ratio": 5.481,
+   "seam_ratio": 3.252,
+   "confident": false,
+   "refined_from": 308,
+   "typical_step": 5.04
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 2.02,
+   "max_err": 2.54
+  }
+ },
+ "4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_3.mp4": {
+  "duration": 15.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 204,
+   "seconds": 6.8,
+   "window_err": 8.224,
+   "window_ratio": 6.35,
+   "seam_ratio": 0.189,
+   "confident": false,
+   "refined_from": 207,
+   "typical_step": 1.295
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.28,
+   "max_err": 0.71
+  }
+ },
+ "4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_4.mp4": {
+  "duration": 63.6,
+  "fps": 30.0,
+  "loop": {
+   "frames": 675,
+   "seconds": 22.5,
+   "window_err": 47.662,
+   "window_ratio": 6.845,
+   "seam_ratio": 4.015,
+   "confident": false,
+   "refined_from": 674,
+   "typical_step": 6.964
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.87,
+   "max_err": 1.37
+  }
+ },
+ "4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_5.mp4": {
+  "duration": 30.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 103,
+   "seconds": 3.433,
+   "window_err": 19.012,
+   "window_ratio": 8.733,
+   "seam_ratio": 5.378,
+   "confident": false,
+   "refined_from": 106,
+   "typical_step": 2.177
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.67,
+   "max_err": 0.89
+  }
+ },
+ "4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_6.mp4": {
+  "duration": 30.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 301,
+   "seconds": 10.033,
+   "window_err": 27.3,
+   "window_ratio": 3.184,
+   "seam_ratio": 1.957,
+   "confident": false,
+   "refined_from": 302,
+   "typical_step": 8.573
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.56,
+   "max_err": 0.82
+  }
+ },
+ "4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_8.mp4": {
+  "duration": 30.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 416,
+   "seconds": 13.867,
+   "window_err": 38.067,
+   "window_ratio": 5.557,
+   "seam_ratio": 4.41,
+   "confident": false,
+   "refined_from": 419,
+   "typical_step": 6.851
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.74,
+   "max_err": 0.86
+  }
+ },
+ "4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_9.mp4": {
+  "duration": 30.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 121,
+   "seconds": 4.033,
+   "window_err": 24.553,
+   "window_ratio": 4.752,
+   "seam_ratio": 2.628,
+   "confident": false,
+   "refined_from": 122,
+   "typical_step": 5.167
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.85,
+   "max_err": 1.24
+  }
+ },
+ "4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic.mp4": {
+  "duration": 29.97,
+  "fps": 30.0,
+  "loop": {
+   "frames": 437,
+   "seconds": 14.567,
+   "window_err": 7.822,
+   "window_ratio": 1.087,
+   "seam_ratio": 1.766,
+   "confident": false,
+   "refined_from": 439,
+   "typical_step": 7.197
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 4.92,
+   "max_err": 8.61
+  }
+ },
+ "4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_1.mp4": {
+  "duration": 15.53,
+  "fps": 30.0,
+  "loop": {
+   "frames": 233,
+   "seconds": 7.767,
+   "window_err": 2.767,
+   "window_ratio": 0.599,
+   "seam_ratio": 0.687,
+   "confident": true,
+   "refined_from": 231,
+   "typical_step": 4.62
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 2.21,
+   "max_err": 4.12
+  }
+ },
+ "4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_10.mp4": {
+  "duration": 37.57,
+  "fps": 30.0,
+  "loop": {
+   "frames": 105,
+   "seconds": 3.5,
+   "window_err": 29.138,
+   "window_ratio": 2.412,
+   "seam_ratio": 3.974,
+   "confident": false,
+   "refined_from": 102,
+   "typical_step": 12.079
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.59,
+   "max_err": 1.19
+  }
+ },
+ "4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_11.mp4": {
+  "duration": 29.63,
+  "fps": 30.0,
+  "loop": {
+   "frames": 153,
+   "seconds": 5.1,
+   "window_err": 32.691,
+   "window_ratio": 4.545,
+   "seam_ratio": 1.034,
+   "confident": false,
+   "refined_from": 150,
+   "typical_step": 7.193
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.59,
+   "max_err": 0.93
+  }
+ },
+ "4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_2.mp4": {
+  "duration": 30.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 148,
+   "seconds": 4.933,
+   "window_err": 35.36,
+   "window_ratio": 3.583,
+   "seam_ratio": 3.162,
+   "confident": false,
+   "refined_from": 145,
+   "typical_step": 9.868
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 7.68,
+   "max_err": 12.36
+  }
+ },
+ "4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_3.mp4": {
+  "duration": 15.63,
+  "fps": 30.0,
+  "loop": {
+   "frames": 67,
+   "seconds": 2.233,
+   "window_err": 31.067,
+   "window_ratio": 1.967,
+   "seam_ratio": 0.487,
+   "confident": true,
+   "typical_step": 15.797
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 1.12,
+   "max_err": 1.73
+  }
+ },
+ "4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_4.mp4": {
+  "duration": 30.03,
+  "fps": 30.0,
+  "loop": {
+   "frames": 146,
+   "seconds": 4.867,
+   "window_err": 63.978,
+   "window_ratio": 5.275,
+   "seam_ratio": 2.107,
+   "confident": false,
+   "refined_from": 149,
+   "typical_step": 12.128
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 1.18,
+   "max_err": 1.38
+  }
+ },
+ "4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_5.mp4": {
+  "duration": 16.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 60,
+   "seconds": 2.0,
+   "window_err": 0.142,
+   "window_ratio": 0.06,
+   "seam_ratio": 0.614,
+   "confident": true,
+   "typical_step": 2.347
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.47,
+   "max_err": 0.79
+  }
+ },
+ "4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_6.mp4": {
+  "duration": 30.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 161,
+   "seconds": 5.367,
+   "window_err": 27.114,
+   "window_ratio": 4.025,
+   "seam_ratio": 1.398,
+   "confident": false,
+   "refined_from": 163,
+   "typical_step": 6.736
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.91,
+   "max_err": 1.21
+  }
+ },
+ "4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_7.mp4": {
+  "duration": 15.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 152,
+   "seconds": 5.067,
+   "window_err": 16.48,
+   "window_ratio": 3.52,
+   "seam_ratio": 3.075,
+   "confident": false,
+   "refined_from": 153,
+   "typical_step": 4.682
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 1.31,
+   "max_err": 1.51
+  }
+ },
+ "4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_8.mp4": {
+  "duration": 15.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 225,
+   "seconds": 7.5,
+   "window_err": 13.138,
+   "window_ratio": 1.271,
+   "seam_ratio": 0.664,
+   "confident": true,
+   "refined_from": 224,
+   "typical_step": 10.333
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.69,
+   "max_err": 0.92
+  }
+ },
+ "4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_9.mp4": {
+  "duration": 74.67,
+  "fps": 30.0,
+  "loop": {
+   "frames": 257,
+   "seconds": 8.567,
+   "window_err": 7.094,
+   "window_ratio": 5.896,
+   "seam_ratio": 1.297,
+   "confident": false,
+   "refined_from": 260,
+   "typical_step": 1.203
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.64,
+   "max_err": 0.79
+  }
+ },
+ "4K_VJ_LOOP_EDM__4K_126_BPM_Neon_Laser_Light_DJ_Visuals__No_Copyright__Free_VFX_Motion_Graphic.mp4": {
+  "duration": 22.9,
+  "fps": 30.0,
+  "loop": {
+   "frames": 174,
+   "seconds": 5.8,
+   "window_err": 32.411,
+   "window_ratio": 4.547,
+   "seam_ratio": 1.436,
+   "confident": false,
+   "refined_from": 171,
+   "typical_step": 7.128
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.88,
+   "max_err": 1.3
+  }
+ },
+ "4K_VJ_LOOP_EDM__4K_128_BPM_Neon_Laser_Light_DJ_Visuals__No_Copyright__Free_VFX_Motion_Graphic.mp4": {
+  "duration": 15.17,
+  "fps": 30.0,
+  "loop": {
+   "frames": 63,
+   "seconds": 2.1,
+   "window_err": 56.103,
+   "window_ratio": 5.487,
+   "seam_ratio": 2.971,
+   "confident": false,
+   "refined_from": 61,
+   "typical_step": 10.225
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 1.01,
+   "max_err": 1.53
+  }
+ }
+}

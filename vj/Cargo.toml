@@ -1,0 +1,37 @@
+[workspace]
+resolver = "2"
+members = ["crates/*", "tools/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+rust-version = "1.80"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+thiserror = "1"
+wgpu = "0.20"
+winit = "0.29"
+pollster = "0.3"
+bytemuck = { version = "1", features = ["derive"] }
+
+vj-types = { path = "crates/vj-types" }
+vj-core = { path = "crates/vj-core" }
+vj-surface = { path = "crates/vj-surface" }
+vj-tempo = { path = "crates/vj-tempo" }
+vj-audio = { path = "crates/vj-audio" }
+vj-video = { path = "crates/vj-video" }
+vj-isf = { path = "crates/vj-isf" }
+vj-render = { path = "crates/vj-render" }
+vj-devices = { path = "crates/vj-devices" }
+vj-surface-midi = { path = "crates/vj-surface-midi" }
+vj-surface-hid = { path = "crates/vj-surface-hid" }
+vj-api = { path = "crates/vj-api" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"

@@ -1,0 +1,1026 @@
+{
+  "name": "Sat 29 Aug",
+  "bpmDefault": 128,
+  "banks": [
+    {
+      "name": "CLIPS",
+      "pads": [
+        {
+          "key": 0,
+          "type": "clip",
+          "src": "media/h264/4K_Abstract_Video_Background__Techno_LED_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic.mp4",
+          "bigText": "1",
+          "label": "4K Abstract",
+          "thumb": "media/thumbs/4K_Abstract_Video_Background__Techno_LED_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic.jpg"
+        },
+        {
+          "key": 1,
+          "type": "clip",
+          "src": "media/h264/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic.mp4",
+          "bigText": "2",
+          "label": "4K Abstract",
+          "thumb": "media/thumbs/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic.jpg"
+        },
+        {
+          "key": 2,
+          "type": "clip",
+          "src": "media/h264/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_1.mp4",
+          "bigText": "3",
+          "label": "4K Abstract",
+          "thumb": "media/thumbs/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_1.jpg"
+        },
+        {
+          "key": 3,
+          "type": "clip",
+          "src": "media/h264/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_10.mp4",
+          "bigText": "4",
+          "label": "4K Abstract",
+          "thumb": "media/thumbs/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_10.jpg"
+        },
+        {
+          "key": 4,
+          "type": "clip",
+          "src": "media/h264/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_11.mp4",
+          "bigText": "5",
+          "label": "4K Abstract",
+          "thumb": "media/thumbs/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_11.jpg"
+        },
+        {
+          "key": 5,
+          "type": "clip",
+          "src": "media/h264/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_2.mp4",
+          "bigText": "6",
+          "label": "4K Abstract",
+          "thumb": "media/thumbs/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_2.jpg"
+        },
+        {
+          "key": 6,
+          "type": "clip",
+          "src": "media/h264/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_3.mp4",
+          "bigText": "7",
+          "label": "4K Abstract",
+          "thumb": "media/thumbs/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_3.jpg"
+        },
+        {
+          "key": 7,
+          "type": "clip",
+          "src": "media/h264/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_4.mp4",
+          "bigText": "8",
+          "label": "4K Abstract",
+          "thumb": "media/thumbs/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_4.jpg"
+        },
+        {
+          "key": 8,
+          "type": "clip",
+          "src": "media/h264/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_5.mp4",
+          "bigText": "9",
+          "label": "4K Abstract",
+          "thumb": "media/thumbs/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_5.jpg"
+        },
+        {
+          "key": 9,
+          "type": "clip",
+          "src": "media/h264/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_6.mp4",
+          "bigText": "10",
+          "label": "4K Abstract",
+          "thumb": "media/thumbs/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_6.jpg"
+        },
+        {
+          "key": 10,
+          "type": "clip",
+          "src": "media/h264/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_7.mp4",
+          "bigText": "11",
+          "label": "4K Abstract",
+          "thumb": "media/thumbs/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_7.jpg"
+        },
+        {
+          "key": 11,
+          "type": "clip",
+          "src": "media/h264/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_8.mp4",
+          "bigText": "12",
+          "label": "4K Abstract",
+          "thumb": "media/thumbs/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_8.jpg"
+        },
+        {
+          "key": 12,
+          "type": "clip",
+          "src": "media/h264/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_9.mp4",
+          "bigText": "13",
+          "label": "4K Abstract",
+          "thumb": "media/thumbs/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_9.jpg"
+        },
+        {
+          "key": 13,
+          "type": "clip",
+          "src": "media/h264/4K_Laser_Light_Show_DJ_Visuals__Neon_LED_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic.mp4",
+          "bigText": "14",
+          "label": "4K Laser Li",
+          "thumb": "media/thumbs/4K_Laser_Light_Show_DJ_Visuals__Neon_LED_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic.jpg"
+        },
+        {
+          "key": 14,
+          "type": "clip",
+          "src": "media/h264/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic.mp4",
+          "bigText": "15",
+          "label": "4K Laser Li",
+          "thumb": "media/thumbs/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic.jpg"
+        },
+        {
+          "key": 15,
+          "type": "clip",
+          "src": "media/h264/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_1.mp4",
+          "bigText": "16",
+          "label": "4K Laser Li",
+          "thumb": "media/thumbs/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_1.jpg"
+        },
+        {
+          "key": 16,
+          "type": "shader",
+          "src": "shaders/plasma_flow.fs",
+          "label": "PLASMA FL",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 17,
+          "type": "shader",
+          "src": "shaders/cyber_grid.fs",
+          "label": "CYBER GRI",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 18,
+          "type": "shader",
+          "src": "shaders/neon_tunnel.fs",
+          "label": "NEON TUNN",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 19,
+          "type": "shader",
+          "src": "shaders/kaleidoscope_mirror.fs",
+          "label": "KALEIDOSC",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 20,
+          "type": "shader",
+          "src": "shaders/particle_warp.fs",
+          "label": "PARTICLE ",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 21,
+          "type": "shader",
+          "src": "shaders/audio_oscilloscope.fs",
+          "label": "AUDIO OSC",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 22,
+          "type": "shader",
+          "src": "shaders/multiband_rings.fs",
+          "label": "MULTIBAND",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 23,
+          "type": "shader",
+          "src": "shaders/spectrum_flow.fs",
+          "label": "SPECTRUM ",
+          "blend": "add",
+          "opacity": 0.9
+        }
+      ]
+    },
+    {
+      "name": "MIX",
+      "pads": [
+        {
+          "key": 0,
+          "type": "clip",
+          "src": "media/h264/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_10.mp4",
+          "bigText": "17",
+          "label": "4K Laser Li",
+          "thumb": "media/thumbs/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_10.jpg"
+        },
+        {
+          "key": 1,
+          "type": "clip",
+          "src": "media/h264/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_11.mp4",
+          "bigText": "18",
+          "label": "4K Laser Li",
+          "thumb": "media/thumbs/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_11.jpg"
+        },
+        {
+          "key": 2,
+          "type": "clip",
+          "src": "media/h264/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_2.mp4",
+          "bigText": "19",
+          "label": "4K Laser Li",
+          "thumb": "media/thumbs/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_2.jpg"
+        },
+        {
+          "key": 3,
+          "type": "clip",
+          "src": "media/h264/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_3.mp4",
+          "bigText": "20",
+          "label": "4K Laser Li",
+          "thumb": "media/thumbs/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_3.jpg"
+        },
+        {
+          "key": 4,
+          "type": "clip",
+          "src": "media/h264/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_4.mp4",
+          "bigText": "21",
+          "label": "4K Laser Li",
+          "thumb": "media/thumbs/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_4.jpg"
+        },
+        {
+          "key": 5,
+          "type": "clip",
+          "src": "media/h264/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_5.mp4",
+          "bigText": "22",
+          "label": "4K Laser Li",
+          "thumb": "media/thumbs/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_5.jpg"
+        },
+        {
+          "key": 6,
+          "type": "clip",
+          "src": "media/h264/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_6.mp4",
+          "bigText": "23",
+          "label": "4K Laser Li",
+          "thumb": "media/thumbs/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_6.jpg"
+        },
+        {
+          "key": 7,
+          "type": "clip",
+          "src": "media/h264/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_7.mp4",
+          "bigText": "24",
+          "label": "4K Laser Li",
+          "thumb": "media/thumbs/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_7.jpg"
+        },
+        {
+          "key": 8,
+          "type": "shader",
+          "src": "shaders/strata_drift.fs",
+          "label": "STRATA DR",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 9,
+          "type": "shader",
+          "src": "shaders/vs_cyber_wormhole.fs",
+          "label": "CYBER WOR",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 10,
+          "type": "shader",
+          "src": "shaders/vs_sacred_polyhedron.fs",
+          "label": "SACRED PO",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 11,
+          "type": "shader",
+          "src": "shaders/vs_shattered_glitch_core.fs",
+          "label": "SHATTERED",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 12,
+          "type": "shader",
+          "src": "shaders/audio_wave_rings.fs",
+          "label": "AUDIO WAV",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 13,
+          "type": "shader",
+          "src": "shaders/spectrum_bars.fs",
+          "label": "SPECTRUM ",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 14,
+          "type": "shader",
+          "src": "shaders/multiband_rings.fs",
+          "label": "MULTIBAND",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 15,
+          "type": "shader",
+          "src": "shaders/spectrum_flow.fs",
+          "label": "SPECTRUM ",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 16,
+          "type": "blend",
+          "mode": "normal",
+          "label": "NORMAL"
+        },
+        {
+          "key": 17,
+          "type": "blend",
+          "mode": "add",
+          "label": "ADD"
+        },
+        {
+          "key": 18,
+          "type": "blend",
+          "mode": "screen",
+          "label": "SCREEN"
+        },
+        {
+          "key": 19,
+          "type": "blend",
+          "mode": "multiply",
+          "label": "MULTIPLY"
+        },
+        {
+          "key": 20,
+          "type": "blend",
+          "mode": "overlay",
+          "label": "OVERLAY"
+        },
+        {
+          "key": 21,
+          "type": "blend",
+          "mode": "softlight",
+          "label": "SOFTLIGHT"
+        },
+        {
+          "key": 22,
+          "type": "blend",
+          "mode": "lumakey",
+          "label": "LUMAKEY"
+        },
+        {
+          "key": 23,
+          "type": "blend",
+          "mode": "difference",
+          "label": "DIFFERENC"
+        }
+      ]
+    },
+    {
+      "name": "SYS",
+      "pads": [
+        {
+          "key": 0,
+          "type": "clip",
+          "src": "media/h264/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_8.mp4",
+          "bigText": "25",
+          "label": "4K Laser Li",
+          "thumb": "media/thumbs/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_8.jpg"
+        },
+        {
+          "key": 1,
+          "type": "clip",
+          "src": "media/h264/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_9.mp4",
+          "bigText": "26",
+          "label": "4K Laser Li",
+          "thumb": "media/thumbs/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_9.jpg"
+        },
+        {
+          "key": 2,
+          "type": "clip",
+          "src": "media/h264/4K_VJ_LOOP_EDM__4K_126_BPM_Neon_Laser_Light_DJ_Visuals__No_Copyright__Free_VFX_Motion_Graphic.mp4",
+          "bigText": "27",
+          "label": "4K VJ LOOP ",
+          "thumb": "media/thumbs/4K_VJ_LOOP_EDM__4K_126_BPM_Neon_Laser_Light_DJ_Visuals__No_Copyright__Free_VFX_Motion_Graphic.jpg"
+        },
+        {
+          "key": 3,
+          "type": "clip",
+          "src": "media/h264/4K_VJ_LOOP_EDM__4K_128_BPM_Neon_Laser_Light_DJ_Visuals__No_Copyright__Free_VFX_Motion_Graphic.mp4",
+          "bigText": "28",
+          "label": "4K VJ LOOP ",
+          "thumb": "media/thumbs/4K_VJ_LOOP_EDM__4K_128_BPM_Neon_Laser_Light_DJ_Visuals__No_Copyright__Free_VFX_Motion_Graphic.jpg"
+        },
+        {
+          "key": 8,
+          "type": "shader",
+          "src": "shaders/plasma_flow.fs",
+          "label": "PLASMA FL",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 9,
+          "type": "shader",
+          "src": "shaders/cyber_grid.fs",
+          "label": "CYBER GRI",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 10,
+          "type": "shader",
+          "src": "shaders/neon_tunnel.fs",
+          "label": "NEON TUNN",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 11,
+          "type": "shader",
+          "src": "shaders/kaleidoscope_mirror.fs",
+          "label": "KALEIDOSC",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 12,
+          "type": "shader",
+          "src": "shaders/particle_warp.fs",
+          "label": "PARTICLE ",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 13,
+          "type": "shader",
+          "src": "shaders/audio_oscilloscope.fs",
+          "label": "AUDIO OSC",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 14,
+          "type": "shader",
+          "src": "shaders/multiband_rings.fs",
+          "label": "MULTIBAND",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 15,
+          "type": "shader",
+          "src": "shaders/spectrum_flow.fs",
+          "label": "SPECTRUM ",
+          "blend": "add",
+          "opacity": 0.9
+        },
+        {
+          "key": 16,
+          "type": "blend",
+          "mode": "normal",
+          "label": "NORMAL"
+        },
+        {
+          "key": 17,
+          "type": "blend",
+          "mode": "add",
+          "label": "ADD"
+        },
+        {
+          "key": 18,
+          "type": "blend",
+          "mode": "screen",
+          "label": "SCREEN"
+        },
+        {
+          "key": 19,
+          "type": "blend",
+          "mode": "multiply",
+          "label": "MULTIPLY"
+        },
+        {
+          "key": 20,
+          "type": "blend",
+          "mode": "overlay",
+          "label": "OVERLAY"
+        },
+        {
+          "key": 21,
+          "type": "blend",
+          "mode": "softlight",
+          "label": "SOFTLIGHT"
+        },
+        {
+          "key": 22,
+          "type": "blend",
+          "mode": "lumakey",
+          "label": "LUMAKEY"
+        },
+        {
+          "key": 23,
+          "type": "blend",
+          "mode": "difference",
+          "label": "DIFFERENC"
+        }
+      ]
+    },
+    {
+      "name": "FX",
+      "pads": [
+        {
+          "key": 0,
+          "type": "videofx",
+          "fx": 1,
+          "label": "INVERT",
+          "amount": 1.0
+        },
+        {
+          "key": 1,
+          "type": "videofx",
+          "fx": 2,
+          "label": "HUE",
+          "amount": 1.0
+        },
+        {
+          "key": 2,
+          "type": "videofx",
+          "fx": 3,
+          "label": "CONTRAST",
+          "amount": 1.0
+        },
+        {
+          "key": 3,
+          "type": "videofx",
+          "fx": 4,
+          "label": "B&W",
+          "amount": 1.0
+        },
+        {
+          "key": 4,
+          "type": "videofx",
+          "fx": 5,
+          "label": "POSTER",
+          "amount": 1.0
+        },
+        {
+          "key": 5,
+          "type": "videofx",
+          "fx": 6,
+          "label": "THRESH",
+          "amount": 1.0
+        },
+        {
+          "key": 6,
+          "type": "videofx",
+          "fx": 7,
+          "label": "WARM",
+          "amount": 1.0
+        },
+        {
+          "key": 7,
+          "type": "videofx",
+          "fx": 8,
+          "label": "COOL",
+          "amount": 1.0
+        },
+        {
+          "key": 8,
+          "type": "videofx",
+          "fx": 9,
+          "label": "MIRROR H",
+          "amount": 1.0
+        },
+        {
+          "key": 9,
+          "type": "videofx",
+          "fx": 10,
+          "label": "MIRROR V",
+          "amount": 1.0
+        },
+        {
+          "key": 10,
+          "type": "videofx",
+          "fx": 11,
+          "label": "QUAD",
+          "amount": 1.0
+        },
+        {
+          "key": 11,
+          "type": "videofx",
+          "fx": 12,
+          "label": "KALEIDO",
+          "amount": 1.0
+        },
+        {
+          "key": 12,
+          "type": "videofx",
+          "fx": 13,
+          "label": "ZOOM IN",
+          "amount": 1.0
+        },
+        {
+          "key": 13,
+          "type": "videofx",
+          "fx": 14,
+          "label": "ZOOM OUT",
+          "amount": 1.0
+        },
+        {
+          "key": 14,
+          "type": "videofx",
+          "fx": 15,
+          "label": "WAVE",
+          "amount": 1.0
+        },
+        {
+          "key": 15,
+          "type": "videofx",
+          "fx": 16,
+          "label": "TWIRL",
+          "amount": 1.0
+        },
+        {
+          "key": 16,
+          "type": "videofx",
+          "fx": 17,
+          "label": "PIXELATE",
+          "amount": 1.0
+        },
+        {
+          "key": 17,
+          "type": "videofx",
+          "fx": 18,
+          "label": "SCANLINE",
+          "amount": 1.0
+        },
+        {
+          "key": 18,
+          "type": "videofx",
+          "fx": 19,
+          "label": "RGB SHFT",
+          "amount": 1.0
+        },
+        {
+          "key": 19,
+          "type": "videofx",
+          "fx": 24,
+          "label": "EDGE",
+          "amount": 1.0
+        },
+        {
+          "key": 20,
+          "type": "videofx",
+          "fx": 20,
+          "label": "VIGNETTE",
+          "amount": 1.0
+        },
+        {
+          "key": 21,
+          "type": "videofx",
+          "fx": 21,
+          "label": "GRAIN",
+          "amount": 1.0
+        },
+        {
+          "key": 22,
+          "type": "videofx",
+          "fx": 22,
+          "label": "HALFTONE",
+          "amount": 1.0
+        },
+        {
+          "key": 23,
+          "type": "videofx",
+          "fx": 23,
+          "label": "STROBE",
+          "amount": 1.0
+        }
+      ]
+    },
+    {
+      "name": "FX-LAYER",
+      "pads": [
+        {
+          "key": 0,
+          "type": "shaderfx",
+          "fx": 1,
+          "label": "INVERT",
+          "amount": 1.0
+        },
+        {
+          "key": 1,
+          "type": "shaderfx",
+          "fx": 2,
+          "label": "HUE",
+          "amount": 1.0
+        },
+        {
+          "key": 2,
+          "type": "shaderfx",
+          "fx": 3,
+          "label": "CONTRAST",
+          "amount": 1.0
+        },
+        {
+          "key": 3,
+          "type": "shaderfx",
+          "fx": 4,
+          "label": "B&W",
+          "amount": 1.0
+        },
+        {
+          "key": 4,
+          "type": "shaderfx",
+          "fx": 5,
+          "label": "POSTER",
+          "amount": 1.0
+        },
+        {
+          "key": 5,
+          "type": "shaderfx",
+          "fx": 6,
+          "label": "THRESH",
+          "amount": 1.0
+        },
+        {
+          "key": 6,
+          "type": "shaderfx",
+          "fx": 7,
+          "label": "WARM",
+          "amount": 1.0
+        },
+        {
+          "key": 7,
+          "type": "shaderfx",
+          "fx": 8,
+          "label": "COOL",
+          "amount": 1.0
+        },
+        {
+          "key": 8,
+          "type": "shaderfx",
+          "fx": 9,
+          "label": "MIRROR H",
+          "amount": 1.0
+        },
+        {
+          "key": 9,
+          "type": "shaderfx",
+          "fx": 10,
+          "label": "MIRROR V",
+          "amount": 1.0
+        },
+        {
+          "key": 10,
+          "type": "shaderfx",
+          "fx": 11,
+          "label": "QUAD",
+          "amount": 1.0
+        },
+        {
+          "key": 11,
+          "type": "shaderfx",
+          "fx": 12,
+          "label": "KALEIDO",
+          "amount": 1.0
+        },
+        {
+          "key": 12,
+          "type": "shaderfx",
+          "fx": 13,
+          "label": "ZOOM IN",
+          "amount": 1.0
+        },
+        {
+          "key": 13,
+          "type": "shaderfx",
+          "fx": 14,
+          "label": "ZOOM OUT",
+          "amount": 1.0
+        },
+        {
+          "key": 14,
+          "type": "shaderfx",
+          "fx": 15,
+          "label": "WAVE",
+          "amount": 1.0
+        },
+        {
+          "key": 15,
+          "type": "shaderfx",
+          "fx": 16,
+          "label": "TWIRL",
+          "amount": 1.0
+        },
+        {
+          "key": 16,
+          "type": "shaderfx",
+          "fx": 17,
+          "label": "PIXELATE",
+          "amount": 1.0
+        },
+        {
+          "key": 17,
+          "type": "shaderfx",
+          "fx": 18,
+          "label": "SCANLINE",
+          "amount": 1.0
+        },
+        {
+          "key": 18,
+          "type": "shaderfx",
+          "fx": 19,
+          "label": "RGB SHFT",
+          "amount": 1.0
+        },
+        {
+          "key": 19,
+          "type": "shaderfx",
+          "fx": 24,
+          "label": "EDGE",
+          "amount": 1.0
+        },
+        {
+          "key": 20,
+          "type": "shaderfx",
+          "fx": 20,
+          "label": "VIGNETTE",
+          "amount": 1.0
+        },
+        {
+          "key": 21,
+          "type": "shaderfx",
+          "fx": 21,
+          "label": "GRAIN",
+          "amount": 1.0
+        },
+        {
+          "key": 22,
+          "type": "shaderfx",
+          "fx": 22,
+          "label": "HALFTONE",
+          "amount": 1.0
+        },
+        {
+          "key": 23,
+          "type": "shaderfx",
+          "fx": 23,
+          "label": "STROBE",
+          "amount": 1.0
+        }
+      ]
+    }
+  ],
+  "scenes": [
+    {
+      "name": "slow-build",
+      "label": "SLOW BUILD",
+      "shader": "shaders/cyber_grid.fs",
+      "blend": "screen",
+      "opacity": 0.75,
+      "post": {
+        "bloom": 0.3,
+        "feedback": 0.2,
+        "chromatic": 0.05,
+        "grain": 0.05
+      },
+      "mods": [
+        {
+          "source": "lfoSaw",
+          "target": "u_grid_speed",
+          "depth": 0.8,
+          "rate": 16,
+          "mode": "replace"
+        },
+        {
+          "source": "lfoSine",
+          "target": "u_line_glow",
+          "depth": 0.6,
+          "rate": 8,
+          "mode": "add"
+        },
+        {
+          "source": "energy",
+          "target": "u_brightness",
+          "depth": 0.4,
+          "mode": "add"
+        }
+      ]
+    },
+    {
+      "name": "peak-hard",
+      "label": "PEAK HARD",
+      "shader": "shaders/vs_cyber_wormhole.fs",
+      "blend": "add",
+      "opacity": 0.95,
+      "post": {
+        "bloom": 0.8,
+        "feedback": 0.4,
+        "chromatic": 0.3,
+        "grain": 0.1
+      },
+      "mods": [
+        {
+          "source": "kick",
+          "target": "u_warp_depth",
+          "depth": 1.2,
+          "mode": "add"
+        },
+        {
+          "source": "bass",
+          "target": "u_speed",
+          "depth": 1.5,
+          "mode": "multiply"
+        },
+        {
+          "source": "lfoSquare",
+          "target": "u_strobe",
+          "depth": 0.5,
+          "rate": 0.5,
+          "mode": "add"
+        },
+        {
+          "source": "lfoSine",
+          "target": "u_color_shift",
+          "depth": 1.0,
+          "rate": 4,
+          "mode": "add"
+        }
+      ]
+    },
+    {
+      "name": "breakdown-drift",
+      "label": "BREAKDOWN",
+      "shader": "shaders/plasma_flow.fs",
+      "blend": "screen",
+      "opacity": 0.8,
+      "post": {
+        "bloom": 0.5,
+        "feedback": 0.6,
+        "chromatic": 0.1,
+        "grain": 0.08
+      },
+      "mods": [
+        {
+          "source": "lfoTri",
+          "target": "u_zoom",
+          "depth": 0.5,
+          "rate": 8,
+          "mode": "add"
+        },
+        {
+          "source": "lfoSine",
+          "target": "u_flow_angle",
+          "depth": 1.0,
+          "rate": 16,
+          "mode": "replace"
+        },
+        {
+          "source": "treble",
+          "target": "u_shimmer",
+          "depth": 0.7,
+          "mode": "add"
+        }
+      ]
+    },
+    {
+      "name": "strobe-hit",
+      "label": "STROBE HIT",
+      "shader": "shaders/neon_tunnel.fs",
+      "blend": "add",
+      "opacity": 1.0,
+      "post": {
+        "bloom": 0.9,
+        "feedback": 0.1,
+        "chromatic": 0.5,
+        "grain": 0.2
+      },
+      "mods": [
+        {
+          "source": "beatPhase",
+          "target": "u_flash",
+          "depth": 1.0,
+          "mode": "replace"
+        },
+        {
+          "source": "kick",
+          "target": "u_tunnel_speed",
+          "depth": 2.0,
+          "mode": "add"
+        },
+        {
+          "source": "lfoRandom",
+          "target": "u_glitch_seed",
+          "depth": 1.0,
+          "rate": 0.25,
+          "mode": "replace"
+        }
+      ]
+    }
+  ]
+}

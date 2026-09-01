@@ -1,0 +1,11 @@
+# RPi-VJ udev rules for non-root hardware access
+
+# Elgato Stream Deck XL (USB HID)
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="006c", MODE="0666", GROUP="pi"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="008f", MODE="0666", GROUP="pi"
+
+# Creative Sound Blaster Play! 3 (USB Audio)
+SUBSYSTEM=="sound", ATTRS{idVendor}=="041e", ATTRS{idProduct}=="324d", MODE="0666", GROUP="audio"
+
+# Behringer X-Touch Mini (USB MIDI)
+SUBSYSTEM=="sound", ATTRS{idVendor}=="1397", ATTRS{idProduct}=="00b3", MODE="0666", GROUP="audio"

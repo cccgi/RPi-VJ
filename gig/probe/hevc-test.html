@@ -1,0 +1,21 @@
+<!doctype html><meta charset=utf-8><title>HEVC support</title>
+<body style="background:#000;color:#0f0;font:16px monospace">
+<pre id=o>testing...</pre>
+<video id=v src="/gig/media/hevc/_hevc_probe.mp4" autoplay muted playsinline
+       style="width:640px"></video>
+<script>
+var o=document.getElementById('o'), v=document.getElementById('v'), lines=[];
+function say(s){lines.push(s);o.textContent=lines.join('\n');
+  try{fetch('/collect?name=hevc',{method:'POST',body:lines.join('\n')})}catch(e){}}
+say('canPlayType hvc1 : "'+v.canPlayType('video/mp4; codecs="hvc1"')+'"');
+say('canPlayType hev1 : "'+v.canPlayType('video/mp4; codecs="hev1"')+'"');
+say('canPlayType avc1 : "'+v.canPlayType('video/mp4; codecs="avc1.640028"')+'"');
+v.addEventListener('error',function(){say('VIDEO ERROR: HEVC NOT DECODABLE')});
+v.addEventListener('loadeddata',function(){say('loadeddata ok '+v.videoWidth+'x'+v.videoHeight)});
+var n=0;
+setInterval(function(){
+  if(v.currentTime>0 && !v.paused){ n++;
+    if(n===3) say('PLAYING at t='+v.currentTime.toFixed(1)+'  => HEVC WORKS'); }
+},1000);
+setTimeout(function(){ if(n===0) say('NEVER ADVANCED => HEVC NOT USABLE'); },8000);
+</script>

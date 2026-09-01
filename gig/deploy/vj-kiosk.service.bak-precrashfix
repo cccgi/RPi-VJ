@@ -1,0 +1,21 @@
+[Unit]
+Description=RPi VJ Chromium Kiosk
+After=vj-server.service graphical-session.target
+Wants=vj-server.service
+PartOf=graphical-session.target
+[Service]
+Type=simple
+ExecStartPre=/home/rpi/RPi-VJ/gig/deploy/sanitize-profile.sh
+ExecStartPre=/bin/sh -c 'until curl -sf http://127.0.0.1:8080/gig/ >/dev/null; do sleep 0.5; done'
+ExecStart=/usr/bin/chromium \
+  --password-store=basic --use-mock-keychain --kiosk --app=http://localhost:8080/gig/ \
+  --autoplay-policy=no-user-gesture-required \
+  --enable-gpu-rasterization --ignore-gpu-blocklist \
+  --disable-session-crashed-bubble --hide-crash-restore-bubble --no-first-run --no-default-browser-check --disable-infobars --noerrdialogs \
+  --check-for-update-interval=31536000 --disable-features=Translate,InfiniteSessionRestore \
+  --disable-pinch --overscroll-history-navigation=0 \
+  --remote-debugging-port=9222 --remote-allow-origins=*
+Restart=always
+RestartSec=3
+[Install]
+WantedBy=graphical-session.target

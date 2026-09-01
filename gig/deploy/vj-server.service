@@ -1,0 +1,22 @@
+# CANONICAL. Written by install-units.sh. Do not hand-edit on the Pi.
+#
+# ExecStart MUST be collect_server.py, never `python3 -m http.server`.
+# collect_server.py serves the show AND provides /heartbeat, the watchdog that
+# recovers a crashed kiosk, /system/shutdown for the Stream Deck power button,
+# /collect for all telemetry, and the no-store cache headers that stop Chromium
+# running stale modules. A plain http.server silently removes every one of
+# those while still serving the page, so the show looks fine until something
+# goes wrong and nothing recovers it.
+[Unit]
+Description=RPi VJ Show Server (collect_server: static + telemetry + watchdog)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/rpi/RPi-VJ
+ExecStart=/usr/bin/python3 /home/rpi/RPi-VJ/gig/tools/collect_server.py
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

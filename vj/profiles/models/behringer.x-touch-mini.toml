@@ -1,0 +1,395 @@
+id = "behringer.x-touch-mini"
+display_name = "Behringer X-Touch Mini"
+driver = "generic"
+feedback_hz = 30
+
+# Standard (MIDI) mode, NOT Mackie Control. Encoders must be set to relative
+# in X-Touch Editor on a PC or Mac before the unit is deployed to the Pi --
+# the editor does not run on Linux and the setting is stored on the device.
+[transport]
+transport = "midi"
+in_port = "X-TOUCH MINI"
+out_port = "X-TOUCH MINI"
+
+[[controls]]
+id = "enc.0"
+
+[controls.kind]
+kind = "encoder"
+detents = 24
+
+[controls.input]
+via = "cc"
+channel = 0
+number = 16
+mode = "relative_twos_complement"
+
+[controls.feedback]
+feedback = "encoder_ring"
+segments = 13
+modes = ["single", "pan", "fan", "spread", "trim"]
+
+[[controls]]
+id = "enc.1"
+
+[controls.kind]
+kind = "encoder"
+detents = 24
+
+[controls.input]
+via = "cc"
+channel = 0
+number = 17
+mode = "relative_twos_complement"
+
+[controls.feedback]
+feedback = "encoder_ring"
+segments = 13
+modes = ["single", "pan", "fan", "spread", "trim"]
+
+[[controls]]
+id = "enc.2"
+
+[controls.kind]
+kind = "encoder"
+detents = 24
+
+[controls.input]
+via = "cc"
+channel = 0
+number = 18
+mode = "relative_twos_complement"
+
+[controls.feedback]
+feedback = "encoder_ring"
+segments = 13
+modes = ["single", "pan", "fan", "spread", "trim"]
+
+[[controls]]
+id = "enc.3"
+
+[controls.kind]
+kind = "encoder"
+detents = 24
+
+[controls.input]
+via = "cc"
+channel = 0
+number = 19
+mode = "relative_twos_complement"
+
+[controls.feedback]
+feedback = "encoder_ring"
+segments = 13
+modes = ["single", "pan", "fan", "spread", "trim"]
+
+[[controls]]
+id = "enc.4"
+
+[controls.kind]
+kind = "encoder"
+detents = 24
+
+[controls.input]
+via = "cc"
+channel = 0
+number = 20
+mode = "relative_twos_complement"
+
+[controls.feedback]
+feedback = "encoder_ring"
+segments = 13
+modes = ["single", "pan", "fan", "spread", "trim"]
+
+[[controls]]
+id = "enc.5"
+
+[controls.kind]
+kind = "encoder"
+detents = 24
+
+[controls.input]
+via = "cc"
+channel = 0
+number = 21
+mode = "relative_twos_complement"
+
+[controls.feedback]
+feedback = "encoder_ring"
+segments = 13
+modes = ["single", "pan", "fan", "spread", "trim"]
+
+[[controls]]
+id = "enc.6"
+
+[controls.kind]
+kind = "encoder"
+detents = 24
+
+[controls.input]
+via = "cc"
+channel = 0
+number = 22
+mode = "relative_twos_complement"
+
+[controls.feedback]
+feedback = "encoder_ring"
+segments = 13
+modes = ["single", "pan", "fan", "spread", "trim"]
+
+[[controls]]
+id = "enc.7"
+
+[controls.kind]
+kind = "encoder"
+detents = 24
+
+[controls.input]
+via = "cc"
+channel = 0
+number = 23
+mode = "relative_twos_complement"
+
+[controls.feedback]
+feedback = "encoder_ring"
+segments = 13
+modes = ["single", "pan", "fan", "spread", "trim"]
+
+[[controls]]
+id = "btn.0.0"
+
+[controls.kind]
+kind = "button"
+
+[controls.input]
+via = "note"
+channel = 0
+number = 8
+
+[controls.feedback]
+feedback = "monochrome"
+
+[[controls]]
+id = "btn.0.1"
+
+[controls.kind]
+kind = "button"
+
+[controls.input]
+via = "note"
+channel = 0
+number = 9
+
+[controls.feedback]
+feedback = "monochrome"
+
+[[controls]]
+id = "btn.0.2"
+
+[controls.kind]
+kind = "button"
+
+[controls.input]
+via = "note"
+channel = 0
+number = 10
+
+[controls.feedback]
+feedback = "monochrome"
+
+[[controls]]
+id = "btn.0.3"
+
+[controls.kind]
+kind = "button"
+
+[controls.input]
+via = "note"
+channel = 0
+number = 11
+
+[controls.feedback]
+feedback = "monochrome"
+
+[[controls]]
+id = "btn.0.4"
+
+[controls.kind]
+kind = "button"
+
+[controls.input]
+via = "note"
+channel = 0
+number = 12
+
+[controls.feedback]
+feedback = "monochrome"
+
+[[controls]]
+id = "btn.0.5"
+
+[controls.kind]
+kind = "button"
+
+[controls.input]
+via = "note"
+channel = 0
+number = 13
+
+[controls.feedback]
+feedback = "monochrome"
+
+[[controls]]
+id = "btn.0.6"
+
+[controls.kind]
+kind = "button"
+
+[controls.input]
+via = "note"
+channel = 0
+number = 14
+
+[controls.feedback]
+feedback = "monochrome"
+
+[[controls]]
+id = "btn.0.7"
+
+[controls.kind]
+kind = "button"
+
+[controls.input]
+via = "note"
+channel = 0
+number = 15
+
+[controls.feedback]
+feedback = "monochrome"
+
+[[controls]]
+id = "btn.1.0"
+
+[controls.kind]
+kind = "button"
+
+[controls.input]
+via = "note"
+channel = 0
+number = 16
+
+[controls.feedback]
+feedback = "monochrome"
+
+[[controls]]
+id = "btn.1.1"
+
+[controls.kind]
+kind = "button"
+
+[controls.input]
+via = "note"
+channel = 0
+number = 17
+
+[controls.feedback]
+feedback = "monochrome"
+
+[[controls]]
+id = "btn.1.2"
+
+[controls.kind]
+kind = "button"
+
+[controls.input]
+via = "note"
+channel = 0
+number = 18
+
+[controls.feedback]
+feedback = "monochrome"
+
+[[controls]]
+id = "btn.1.3"
+
+[controls.kind]
+kind = "button"
+
+[controls.input]
+via = "note"
+channel = 0
+number = 19
+
+[controls.feedback]
+feedback = "monochrome"
+
+[[controls]]
+id = "btn.1.4"
+
+[controls.kind]
+kind = "button"
+
+[controls.input]
+via = "note"
+channel = 0
+number = 20
+
+[controls.feedback]
+feedback = "monochrome"
+
+[[controls]]
+id = "btn.1.5"
+
+[controls.kind]
+kind = "button"
+
+[controls.input]
+via = "note"
+channel = 0
+number = 21
+
+[controls.feedback]
+feedback = "monochrome"
+
+[[controls]]
+id = "btn.1.6"
+
+[controls.kind]
+kind = "button"
+
+[controls.input]
+via = "note"
+channel = 0
+number = 22
+
+[controls.feedback]
+feedback = "monochrome"
+
+[[controls]]
+id = "btn.1.7"
+
+[controls.kind]
+kind = "button"
+
+[controls.input]
+via = "note"
+channel = 0
+number = 23
+
+[controls.feedback]
+feedback = "monochrome"
+
+[[controls]]
+id = "fader.0"
+
+[controls.kind]
+kind = "fader"
+
+[controls.input]
+via = "cc"
+channel = 0
+number = 9
+mode = "absolute"
+
+[controls.feedback]
+feedback = "none"

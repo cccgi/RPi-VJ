@@ -1,0 +1,4 @@
+# Stream Deck XL / XL revision; systemd service user is in plugdev.
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="006c", GROUP="plugdev", MODE="0660", TAG+="uaccess"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="008f", GROUP="plugdev", MODE="0660", TAG+="uaccess"
+

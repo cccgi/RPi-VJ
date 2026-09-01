@@ -1,0 +1,232 @@
+<!doctype html><meta charset="utf-8"><title>RPi-VJ shader bench</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block}
+#o{position:fixed;left:0;top:0;padding:10px;color:#cfe;background:rgba(0,0,0,.72);
+font:12px/1.4 ui-monospace,monospace;white-space:pre;max-height:100%;overflow:hidden}
+#e{color:#ff5b7f}</style>
+<canvas id="c"></canvas><pre id="o">starting…</pre><pre id="e"></pre>
+<script>
+var L=[],T=null,oEl=document.getElementById('o'),eEl=document.getElementById('e');
+function flush(){try{fetch('/collect?name=shaderbench',{method:'POST',body:L.join('\n'),keepalive:true})}catch(e){}}
+function log(s){L.push(s===undefined?'':String(s));oEl.textContent=L.slice(-38).join('\n');
+  if(T)clearTimeout(T);T=setTimeout(flush,400);}
+function fail(w,e){var m='ERROR '+w+': '+(e&&e.message?e.message:e);eEl.textContent+=m+'\n';log(m);flush();}
+window.onerror=function(m,s,l,c){fail('@'+l+':'+c,m)};
+addEventListener('beforeunload',function(){try{navigator.sendBeacon('/collect?name=shaderbench',L.join('\n'))}catch(e){}});
+
+var SHADERS=['plasma_flow','particle_warp','kaleidoscope_mirror','audio_oscilloscope',
+'audio_wave_rings','spectrum_bars','cyber_grid','neon_tunnel','multiband_rings',
+'spectrum_flow','strata_drift','deep_drift','beat_tunnel','liquid_metal',
+'strobe_geometry','vs_cyber_wormhole','vs_sacred_polyhedron','vs_shattered_glitch_core'];
+var SIZES=[[1920,1080,'1080p'],[1280,720,'720p'],[960,540,'540p']];
+var SECS=4;
+
+var c=document.getElementById('c');
+var gl=c.getContext('webgl2',{alpha:false,antialias:false,depth:false,stencil:false,
+  powerPreference:'high-performance'});
+if(!gl){fail('init','no webgl2');}
+
+var VS='#version 300 es\nin vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}';
+var HEAD=['#version 300 es','precision highp float;','out vec4 isf_out;',
+'#define gl_FragColor isf_out','#define texture2D texture',
+'#define isf_FragNormCoord (gl_FragCoord.xy / u_resolution)'].join('\n');
+
+// These shaders use a custom u_* convention (NOT stock ISF names).
+// MUST stay in step with WANT_UNIFORMS in src/isf.js. This list drifted:
+// the engine gained u_flow*/u_locked/u_spec_flow and the five-band + transient
+// uniforms, the bench did not, and five shaders that compile perfectly well in
+// the engine reported COMPILE FAIL here. A bench that lies is worse than no
+// bench, so this is the full set.
+var WANT=['u_time','u_resolution','u_bass','u_mid','u_treble','u_onset','u_volume',
+  'u_beat_phase','u_bar_phase','u_energy','u_kick',
+  'u_sub','u_low_mid','u_high_mid',
+  'u_hit_low','u_hit_mid','u_hit_high',
+  'u_locked','u_flow','u_flow_low','u_flow_mid','u_flow_high'];
+// Array uniforms need an explicit size, so they are declared separately.
+var WANT_ARR=['u_spectrum','u_spec_flow'];
+var TYPES={'float':'float','bool':'bool','long':'int','point2D':'vec2','color':'vec4','image':'sampler2D','event':'bool'};
+
+function parseHeader(src){
+  var m=src.indexOf('/*'); if(m<0) return {inputs:[],body:src};
+  var e=src.indexOf('*/',m); if(e<0) return {inputs:[],body:src};
+  var raw=src.slice(m+2,e).trim(), meta=null;
+  try{ meta=JSON.parse(raw); }catch(err){ meta=null; }
+  var body=(src.slice(0,m)+src.slice(e+2));
+  return {inputs:(meta&&meta.INPUTS)||[],body:body};
+}
+
+function build(src){
+  var h=parseHeader(src);
+  var body=h.body.replace(/^\s*#version[^\n]*\n/,'');
+  var decls=[], defaults=[];
+  // uniforms the engine always supplies, if the body did not declare them
+  WANT.forEach(function(n){
+    if(!new RegExp('uniform\\s+\\w+\\s+'+n+'\\s*;').test(body))
+      decls.push('uniform '+(n==='u_resolution'?'vec2':'float')+' '+n+';');
+  });
+  WANT_ARR.forEach(function(n){
+    if(!new RegExp('uniform\\s+\\w+\\s+'+n+'\\s*\\[').test(body))
+      decls.push('uniform float '+n+'[32];');
+  });
+  // uniforms declared only in the ISF header INPUTS block
+  h.inputs.forEach(function(inp){
+    var t=TYPES[inp.TYPE]||'float';
+    if(!new RegExp('uniform\\s+\\w+\\s+'+inp.NAME+'\\s*;').test(body)){
+      decls.push('uniform '+t+' '+inp.NAME+';');
+      defaults.push({name:inp.NAME,type:t,val:inp.DEFAULT});
+    }
+  });
+  return {src:HEAD+'\n'+decls.join('\n')+'\n#line 1\n'+body, defaults:defaults, inputs:h.inputs};
+}
+function mk(t,s,lbl){var h=gl.createShader(t);gl.shaderSource(h,s);gl.compileShader(h);
+  if(!gl.getShaderParameter(h,gl.COMPILE_STATUS))throw new Error(lbl+': '+gl.getShaderInfoLog(h).split('\n')[0]);return h}
+function prog(full){var p=gl.createProgram();
+  gl.attachShader(p,mk(gl.VERTEX_SHADER,VS,'vs'));
+  gl.attachShader(p,mk(gl.FRAGMENT_SHADER,full,'fs'));
+  gl.bindAttribLocation(p,0,'p');gl.linkProgram(p);
+  if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw new Error('link: '+gl.getProgramInfoLog(p));return p}
+
+var vao=gl.createVertexArray();gl.bindVertexArray(vao);
+var vb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,vb);
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);
+
+function med(a){a=a.slice().sort(function(x,y){return x-y});return a[Math.floor(a.length/2)]}
+function pad(s,w){s=''+s;while(s.length<w)s+=' ';return s}
+
+function runOne(p,defaults,w,h,secs,LOAD){
+    LOAD=LOAD||1;
+  return new Promise(function(res){
+    c.width=w;c.height=h;gl.viewport(0,0,gl.drawingBufferWidth,gl.drawingBufferHeight);
+    gl.useProgram(p);
+    var U={};WANT.forEach(function(n){U[n]=gl.getUniformLocation(p,n)});
+    // Array uniforms resolve under either 'name' or 'name[0]' depending on
+    // the driver, so try both rather than silently getting null.
+    WANT_ARR.forEach(function(n){
+      U[n]=gl.getUniformLocation(p,n)||gl.getUniformLocation(p,n+'[0]');
+    });
+    (defaults||[]).forEach(function(d){
+      var l=gl.getUniformLocation(p,d.name); if(!l)return;
+      var v=d.val;
+      if(d.type==='float')gl.uniform1f(l,typeof v==='number'?v:1.0);
+      else if(d.type==='int'||d.type==='bool')gl.uniform1i(l,v?1:0);
+      else if(d.type==='vec2')gl.uniform2f(l,(v&&v[0])||0,(v&&v[1])||0);
+      else if(d.type==='vec4')gl.uniform4f(l,(v&&v[0])||1,(v&&v[1])||1,(v&&v[2])||1,(v&&v[3])||1);
+    });
+    var _sp=new Float32Array(32);
+    function SPEC(el,scale){
+      for(var i=0;i<32;i++){
+        var f=i/31;
+        _sp[i]=scale*(0.5+0.5*Math.sin(el*(2.0+f*9.0)+f*6.283))*(1.0-f*0.6);
+      }
+      return _sp;
+    }
+    var t0=performance.now(),prev=t0,fr=0,times=[];
+    function frame(){
+      var now=performance.now(),dt=(now-prev)/1000;prev=now;
+      var el=(now-t0)/1000;
+      var b=0.5+0.5*Math.sin(el*6.0), k=Math.max(0.0,Math.sin(el*6.2831));
+      if(U.u_time)gl.uniform1f(U.u_time,el);
+      if(U.u_resolution)gl.uniform2f(U.u_resolution,gl.drawingBufferWidth,gl.drawingBufferHeight);
+      if(U.u_bass)gl.uniform1f(U.u_bass,b);
+      if(U.u_mid)gl.uniform1f(U.u_mid,0.5+0.4*Math.sin(el*3.1));
+      if(U.u_treble)gl.uniform1f(U.u_treble,0.5+0.4*Math.sin(el*8.3));
+      if(U.u_volume)gl.uniform1f(U.u_volume,0.6);
+      if(U.u_onset)gl.uniform1f(U.u_onset,k*k*k);
+      if(U.u_beat_phase)gl.uniform1f(U.u_beat_phase,(el*128/60)%1);
+      if(U.u_bar_phase)gl.uniform1f(U.u_bar_phase,(el*128/240)%1);
+      if(U.u_energy)gl.uniform1f(U.u_energy,0.6);
+      if(U.u_kick)gl.uniform1f(U.u_kick,k*k*k);
+      if(U.u_locked)gl.uniform1f(U.u_locked,1.0);
+      if(U.u_sub)gl.uniform1f(U.u_sub,b*0.9);
+      if(U.u_low_mid)gl.uniform1f(U.u_low_mid,0.5+0.4*Math.sin(el*3.1));
+      if(U.u_high_mid)gl.uniform1f(U.u_high_mid,0.5+0.4*Math.sin(el*5.7));
+      if(U.u_hit_low)gl.uniform1f(U.u_hit_low,k*k*k);
+      if(U.u_hit_mid)gl.uniform1f(U.u_hit_mid,Math.max(0,Math.sin(el*9.4)));
+      if(U.u_hit_high)gl.uniform1f(U.u_hit_high,Math.max(0,Math.sin(el*13.1)));
+      // Flow clocks are INTEGRATED in the engine; here a plain ramp is enough
+      // to exercise the same code path at a representative rate.
+      if(U.u_flow)gl.uniform1f(U.u_flow,el*1.6);
+      if(U.u_flow_low)gl.uniform1f(U.u_flow_low,el*1.4);
+      if(U.u_flow_mid)gl.uniform1f(U.u_flow_mid,el*1.7);
+      if(U.u_flow_high)gl.uniform1f(U.u_flow_high,el*2.1);
+      if(U.u_spectrum)gl.uniform1fv(U.u_spectrum,SPEC(el,1.0));
+      if(U.u_spec_flow)gl.uniform1fv(U.u_spec_flow,SPEC(el,el*2.0));
+      for(var q=0;q<LOAD;q++)gl.drawArrays(gl.TRIANGLES,0,3);
+      fr++;
+      if(fr>12)times.push(dt*1000);
+      if(el<secs)requestAnimationFrame(frame);
+      else{var m=times.length?med(times):9999;res({fps:1000/m,ms:m,frames:fr,
+        w:gl.drawingBufferWidth,h:gl.drawingBufferHeight})}
+    }
+    requestAnimationFrame(frame);
+  });
+}
+
+(async function(){
+ try{
+  var dbg=gl.getExtension('WEBGL_debug_renderer_info');
+  log('renderer: '+(dbg?gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL):'?'));
+  log('Real-shader fps test. rAF-paced, so 60.0 = "fits in budget",');
+  log('anything below 60 is a genuine overrun. '+SECS+'s per cell.');
+  log('');
+  log(pad('SHADER',30)+pad('1080p',9)+pad('720p',9)+pad('540p',9)+'VERDICT');
+  log('-'.repeat(72));
+  var rows=[];
+  for(var i=0;i<SHADERS.length;i++){
+    var name=SHADERS[i],p=null,built=null;
+    try{
+      var r=await fetch('../shaders/'+name+'.fs');
+      if(!r.ok){log(pad(name,30)+'MISSING');continue}
+      built=build(await r.text());
+      p=prog(built.src);
+    }catch(e){log(pad(name,30)+'COMPILE FAIL — '+(e.message||e).slice(0,70));flush();continue}
+    var cells=[],verdict='';
+    for(var s=0;s<SIZES.length;s++){
+      var g=await runOne(p,built.defaults,SIZES[s][0],SIZES[s][1],SECS,1);
+      cells.push(g.fps);
+      if(g.fps>=58){verdict=SIZES[s][2];break}
+    }
+    while(cells.length<3)cells.push(null);
+    if(!verdict)verdict='HEAVY (<58 even at 540p)';
+    rows.push({name:name,cells:cells,verdict:verdict});
+    log(pad(name,30)+cells.map(function(x){return pad(x===null?'-':x.toFixed(1),9)}).join('')+verdict);
+    flush();
+    gl.deleteProgram(p);
+  }
+  log('');
+  var safe=rows.filter(function(r){return r.verdict==='1080p'});
+  log('SAFE at 1080p : '+(safe.length?safe.map(function(r){return r.name}).join(', '):'none'));
+  var s720=rows.filter(function(r){return r.verdict==='720p'});
+  log('needs 720p    : '+(s720.map(function(r){return r.name}).join(', ')||'none'));
+  var s540=rows.filter(function(r){return r.verdict==='540p'});
+  log('needs 540p    : '+(s540.map(function(r){return r.name}).join(', ')||'none'));
+  var hv=rows.filter(function(r){return r.verdict.indexOf('HEAVY')===0});
+  log('HEAVY / cut   : '+(hv.map(function(r){return r.name}).join(', ')||'none'));
+  log('');
+  log('=== HEADROOM: how many times can each 1080p-safe shader be drawn');
+  log('=== per frame and still hold 60fps? 2x means half the frame is free.');
+  log('');
+  log(pad('SHADER',30)+pad('MAX DRAWS',11)+'HEADROOM');
+  log('-'.repeat(56));
+  for(var q=0;q<safe.length;q++){
+    var nm=safe[q].name, pp=null, bb=null;
+    try{ bb=build(await (await fetch('../shaders/'+nm+'.fs')).text()); pp=prog(bb.src); }
+    catch(e){ log(pad(nm,30)+'rebuild failed'); continue; }
+    var best=1;
+    for(var k=1;k<=8;k++){
+      var g2=await runOne(pp,bb.defaults,1920,1080,2,k);
+      if(g2.fps>=57){best=k;} else break;
+    }
+    log(pad(nm,30)+pad(best+(best>=8?'+':''),11)+best.toFixed(1)+'x');
+    flush();
+    gl.deleteProgram(pp);
+  }
+  log('');
+  log('BUDGET RULE: a shader with Nx headroom leaves (N-1)/N of the frame');
+  log('for video upload + post chain. Aim to keep total under 1.0 frame.');
+  log('BENCH COMPLETE');
+  flush();
+ }catch(e){fail('main',e)}
+})();
+</script>

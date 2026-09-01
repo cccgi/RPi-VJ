@@ -1,0 +1,1088 @@
+<title>Six Controllers, Three Platforms</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&family=JetBrains+Mono:wght@400;500&display=swap">
+
+<style>
+:root {
+  /* Light: a spec sheet under work-lights. Cool paper, not cream. */
+  --ground:      #ECEDF1;
+  --panel:       #F7F8FA;
+  --panel-2:     #E2E4EB;
+  --line:        #CBCEDA;
+  --line-soft:   #DDE0E9;
+  --ink:         #12141B;
+  --ink-2:       #444A5C;
+  --ink-3:       #737A8E;
+
+  /* Three channels, taken from the band split the shaders actually receive. */
+  --bass:        #D9541A;   /* amber-orange — low  */
+  --mid:         #B0327A;   /* magenta      — mid  */
+  --treble:      #0E7E9E;   /* cyan         — high */
+
+  --ok:          #2E7D51;
+  --warn:        #9A6B10;
+  --off:         #8A90A2;
+
+  --accent:      var(--bass);
+  --shadow:      0 1px 2px rgba(18,20,27,.06), 0 8px 24px rgba(18,20,27,.05);
+  --cell-hollow: transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:    #0B0C11;
+    --panel:     #14161E;
+    --panel-2:   #1C1F29;
+    --line:      #272B37;
+    --line-soft: #1E2129;
+    --ink:       #E6E8F0;
+    --ink-2:     #A2A9BC;
+    --ink-3:     #767D91;
+
+    --bass:      #FF8A3D;
+    --mid:       #F0629E;
+    --treble:    #4CD3F2;
+
+    --ok:        #5FD08A;
+    --warn:      #E8B54A;
+    --off:       #6B7286;
+
+    --accent:    var(--bass);
+    --shadow:    0 1px 0 rgba(255,255,255,.03), 0 12px 32px rgba(0,0,0,.45);
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground:    #0B0C11;
+  --panel:     #14161E;
+  --panel-2:   #1C1F29;
+  --line:      #272B37;
+  --line-soft: #1E2129;
+  --ink:       #E6E8F0;
+  --ink-2:     #A2A9BC;
+  --ink-3:     #767D91;
+
+  --bass:      #FF8A3D;
+  --mid:       #F0629E;
+  --treble:    #4CD3F2;
+
+  --ok:        #5FD08A;
+  --warn:      #E8B54A;
+  --off:       #6B7286;
+
+  --accent:    var(--bass);
+  --shadow:    0 1px 0 rgba(255,255,255,.03), 0 12px 32px rgba(0,0,0,.45);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: "Newsreader", Georgia, "Times New Roman", serif;
+  font-size: 17.5px;
+  line-height: 1.62;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 28px 96px;
+  display: grid;
+  grid-template-columns: 188px minmax(0, 1fr);
+  gap: 0 56px;
+}
+
+/* ---------- rail ---------- */
+
+.rail {
+  grid-column: 1;
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  padding: 40px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  overflow-y: auto;
+}
+
+.rail-mark {
+  font-family: "Archivo", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rail-mark::before {
+  content: "";
+  width: 9px; height: 9px;
+  background: var(--accent);
+  border-radius: 1px;
+  flex: none;
+}
+
+.rail nav { display: flex; flex-direction: column; gap: 1px; }
+
+.rail a {
+  font-family: "Archivo", system-ui, sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: .01em;
+  color: var(--ink-3);
+  text-decoration: none;
+  padding: 5px 10px 5px 0;
+  border-left: 2px solid transparent;
+  padding-left: 12px;
+  transition: color .12s, border-color .12s;
+  display: flex;
+  gap: 9px;
+}
+.rail a span {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  color: var(--off);
+  padding-top: 1px;
+}
+.rail a:hover, .rail a:focus-visible { color: var(--ink); border-left-color: var(--accent); }
+.rail a:focus-visible { outline: 2px solid var(--treble); outline-offset: 2px; }
+
+.theme-toggle {
+  margin-top: auto;
+  font-family: "Archivo", system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  background: var(--panel);
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 7px 10px;
+  cursor: pointer;
+  text-align: left;
+}
+.theme-toggle:hover { color: var(--ink); border-color: var(--ink-3); }
+
+/* ---------- main ---------- */
+
+main { grid-column: 2; padding-top: 40px; min-width: 0; }
+
+h1, h2, h3 {
+  font-family: "Archivo", system-ui, sans-serif;
+  text-wrap: balance;
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(38px, 5.6vw, 62px);
+  font-weight: 700;
+  letter-spacing: -.025em;
+  line-height: 1.02;
+}
+
+h2 {
+  font-size: 25px;
+  font-weight: 600;
+  letter-spacing: -.012em;
+  line-height: 1.2;
+}
+
+h3 {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -.005em;
+}
+
+p { margin: 0; max-width: 68ch; }
+
+section { padding: 52px 0; border-top: 1px solid var(--line-soft); }
+section:first-of-type { border-top: none; }
+
+.sec-head { display: flex; flex-direction: column; gap: 10px; margin-bottom: 26px; }
+
+.eyebrow {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.stack   { display: flex; flex-direction: column; gap: 18px; }
+.stack-s { display: flex; flex-direction: column; gap: 10px; }
+
+/* ---------- hero ---------- */
+
+.hero { padding: 64px 0 52px; display: flex; flex-direction: column; gap: 26px; }
+
+.hero .lede {
+  font-size: 21px;
+  line-height: 1.52;
+  color: var(--ink-2);
+  max-width: 60ch;
+  font-weight: 300;
+}
+.hero .lede strong { color: var(--ink); font-weight: 500; }
+
+.meter {
+  display: flex;
+  gap: 3px;
+  height: 6px;
+  max-width: 480px;
+}
+.meter i { flex: none; border-radius: 1px; height: 100%; display: block; }
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+  gap: 1px;
+  background: var(--line-soft);
+  border: 1px solid var(--line-soft);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.fact { background: var(--panel); padding: 16px 18px; display: flex; flex-direction: column; gap: 3px; }
+.fact dt {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.fact dd {
+  margin: 0;
+  font-family: "Archivo", system-ui, sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
+.fact small {
+  font-family: "Newsreader", serif;
+  font-size: 13.5px;
+  color: var(--ink-3);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+/* ---------- decisions ---------- */
+
+.decisions { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+
+.decision {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 18px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.decision .tag {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: .1em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+}
+.decision h3 { font-size: 17px; }
+.decision p { font-size: 15.5px; line-height: 1.55; color: var(--ink-2); }
+.decision .adr {
+  margin-top: auto;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  color: var(--accent);
+  letter-spacing: .06em;
+}
+
+/* ---------- tables ---------- */
+
+.tw { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px; background: var(--panel); }
+
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+
+th {
+  font-family: "Archivo", system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  text-align: left;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+  background: var(--panel-2);
+}
+
+td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+tr:last-child td { border-bottom: none; }
+td strong { color: var(--ink); font-weight: 500; }
+
+td code, p code, li code {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .84em;
+  background: var(--panel-2);
+  padding: 1px 5px;
+  border-radius: 2px;
+  color: var(--ink);
+}
+
+.pill {
+  font-family: "Archivo", system-ui, sans-serif;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 2px;
+  white-space: nowrap;
+  border: 1px solid;
+}
+.pill.keep  { color: var(--ok);   border-color: color-mix(in srgb, var(--ok) 40%, transparent);   background: color-mix(in srgb, var(--ok) 10%, transparent); }
+.pill.check { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); background: color-mix(in srgb, var(--warn) 10%, transparent); }
+.pill.drop  { color: var(--off);  border-color: color-mix(in srgb, var(--off) 38%, transparent);  background: color-mix(in srgb, var(--off) 8%, transparent); }
+
+/* ---------- controller grids ---------- */
+
+.surfaces {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(268px, 1fr));
+  gap: 1px;
+  background: var(--line-soft);
+  border: 1px solid var(--line-soft);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.surface {
+  background: var(--panel);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.surface header { display: flex; flex-direction: column; gap: 2px; }
+.surface .name { font-family: "Archivo", system-ui, sans-serif; font-weight: 600; font-size: 15.5px; }
+.surface .dims {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  color: var(--ink-3);
+  letter-spacing: .06em;
+}
+
+.pads { display: grid; gap: 2.5px; width: fit-content; }
+.pads i { width: 13px; height: 13px; border-radius: 1.5px; display: block; }
+
+.pads.rgb i     { background: var(--treble); opacity: .82; }
+.pads.rgb i:nth-child(3n)   { background: var(--mid); }
+.pads.rgb i:nth-child(5n)   { background: var(--bass); }
+.pads.rgb i:nth-child(7n+2) { opacity: .3; }
+.pads.bitmap i  { background: transparent; border: 1.5px solid var(--ink-3); border-radius: 2px; }
+.pads.mono i    { background: var(--ink-3); opacity: .55; }
+.pads.none i    { background: transparent; border: 1.5px dashed var(--line); }
+
+.rings { display: flex; gap: 5px; align-items: center; }
+.rings i {
+  width: 15px; height: 15px;
+  border-radius: 50%;
+  border: 1.5px solid var(--bass);
+  display: block;
+  position: relative;
+}
+.rings i::after {
+  content: "";
+  position: absolute;
+  inset: 3.5px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  opacity: .5;
+}
+
+.surface .role { font-size: 14.5px; color: var(--ink-2); line-height: 1.45; }
+.surface .role b { color: var(--ink); font-weight: 500; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 18px; }
+.legend span {
+  display: flex; align-items: center; gap: 7px;
+  font-family: "Archivo", system-ui, sans-serif;
+  font-size: 11.5px;
+  color: var(--ink-3);
+  letter-spacing: .02em;
+}
+.legend i { width: 11px; height: 11px; border-radius: 1.5px; display: block; flex: none; }
+
+/* ---------- roadmap ---------- */
+
+.tracks { display: flex; flex-direction: column; gap: 12px; }
+
+.track {
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--panel);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.track-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.track-head h3 { font-size: 16px; }
+.track-head .len {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--ink-3);
+  margin-left: auto;
+}
+
+.phases { display: flex; flex-wrap: wrap; gap: 6px; }
+.phase {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11.5px;
+  padding: 5px 9px;
+  border-radius: 2px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.phase.shared { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.phase.risk   { border-color: var(--warn);   color: var(--warn);   background: color-mix(in srgb, var(--warn) 9%, transparent); }
+
+.track p { font-size: 15px; color: var(--ink-2); }
+
+/* ---------- gates ---------- */
+
+.gates { display: grid; grid-template-columns: repeat(auto-fit, minmax(122px, 1fr)); gap: 8px; }
+.gate {
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--panel);
+  padding: 11px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.gate .g {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: .1em;
+  color: var(--ink-3);
+}
+.gate .t { font-family: "Archivo", system-ui, sans-serif; font-size: 13.5px; font-weight: 500; }
+.gate .s {
+  font-family: "Archivo", system-ui, sans-serif;
+  font-size: 10.5px;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--warn);
+  margin-top: 2px;
+}
+.gate.new { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.gate.new .g { color: var(--accent); }
+
+/* ---------- docs index ---------- */
+
+.docs { display: grid; grid-template-columns: repeat(auto-fit, minmax(232px, 1fr)); gap: 1px; background: var(--line-soft); border: 1px solid var(--line-soft); border-radius: 3px; overflow: hidden; }
+.doc { background: var(--panel); padding: 15px 17px; display: flex; flex-direction: column; gap: 4px; }
+.doc .n { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 11px; color: var(--accent); }
+.doc .t { font-family: "Archivo", system-ui, sans-serif; font-weight: 600; font-size: 14.5px; }
+.doc .d { font-size: 14px; color: var(--ink-3); line-height: 1.4; }
+
+/* ---------- notes ---------- */
+
+.note {
+  border-left: 2px solid var(--accent);
+  padding: 2px 0 2px 18px;
+  font-size: 16px;
+  color: var(--ink-2);
+  max-width: 66ch;
+}
+.note b { color: var(--ink); font-weight: 500; }
+
+ul.clean { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; max-width: 68ch; }
+ul.clean li { color: var(--ink-2); font-size: 16px; }
+ul.clean li b { color: var(--ink); font-weight: 500; }
+
+footer {
+  grid-column: 2;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 22px;
+  margin-top: 44px;
+  font-size: 14px;
+  color: var(--ink-3);
+  max-width: 68ch;
+}
+
+@media (max-width: 880px) {
+  .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 0 20px 72px; }
+  .rail { position: static; height: auto; grid-column: 1; padding: 28px 0 0; }
+  .rail nav { flex-direction: row; flex-wrap: wrap; gap: 4px; }
+  .rail a { border-left: none; border-bottom: 2px solid transparent; padding: 4px 8px; }
+  .rail a:hover { border-left-color: transparent; border-bottom-color: var(--accent); }
+  .theme-toggle { margin-top: 16px; align-self: flex-start; }
+  main, footer { grid-column: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+
+<div class="wrap">
+
+  <aside class="rail">
+    <div class="rail-mark">RPi&#8209;VJ&nbsp;/&nbsp;v2</div>
+    <nav>
+      <a href="#decisions"><span>01</span>Decisions</a>
+      <a href="#research"><span>02</span>Prior research</a>
+      <a href="#surfaces"><span>03</span>Control surfaces</a>
+      <a href="#platforms"><span>04</span>Platforms</a>
+      <a href="#tempo"><span>05</span>Tempo</a>
+      <a href="#roadmap"><span>06</span>Roadmap</a>
+      <a href="#gates"><span>07</span>Gates</a>
+      <a href="#docs"><span>08</span>Document set</a>
+    </nav>
+    <button class="theme-toggle" id="tt" type="button">Theme</button>
+  </aside>
+
+  <main>
+
+    <div class="hero">
+      <div class="meter" aria-hidden="true">
+        <i style="background:var(--bass);width:34%"></i>
+        <i style="background:var(--mid);width:26%"></i>
+        <i style="background:var(--treble);width:18%"></i>
+        <i style="background:var(--line);width:9%"></i>
+        <i style="background:var(--line);width:5%"></i>
+      </div>
+
+      <h1>Six controllers,<br>three platforms,<br>one engine.</h1>
+
+      <p class="lede">
+        A development plan for the VJ engine behind your mobile rig — evaluated against four prior
+        research passes, widened from a Stream&nbsp;Deck-only Pi&nbsp;5 appliance to a
+        <strong>cross-platform engine</strong> that runs on the Pi, the RTX&nbsp;3090 box, and the
+        M2&nbsp;Pro, and driven by any combination of your MIDI hardware at once.
+      </p>
+
+      <dl class="facts">
+        <div class="fact"><dt>Prior passes</dt><dd>4</dd><small>merged, six conflicts adjudicated</small></div>
+        <div class="fact"><dt>Controllers</dt><dd>6</dd><small>1 HID, 5 class-compliant MIDI</small></div>
+        <div class="fact"><dt>Hardware branches</dt><dd>3</dd><small>appliance · portable · workstation</small></div>
+        <div class="fact"><dt>Scaffold tests</dt><dd>62</dd><small>passing, zero warnings</small></div>
+      </dl>
+    </div>
+
+    <!-- ================= DECISIONS ================= -->
+    <section id="decisions">
+      <div class="sec-head">
+        <div class="eyebrow">01 — The four decisions that define the program</div>
+        <h2>What the scope change actually forces</h2>
+      </div>
+
+      <div class="stack">
+        <p class="note">
+          The earlier research was right for the problem it was given. Three things widened it:
+          controllers went from one to six, the Pi went from <b>the</b> target to the <b>first</b>
+          target, and the DJ software entered scope as a sync source. Each of those invalidates a
+          specific earlier decision, and each is settled below.
+        </p>
+
+        <div class="decisions">
+          <article class="decision">
+            <div class="tag">Renderer</div>
+            <h3>wgpu everywhere</h3>
+            <p>Vulkan on the Pi and the 3090, Metal on the M2 Pro. One compositor, one shader
+              toolchain. GLES/EGL survives only as a Pi escape hatch, taken by measurement and
+              recorded honestly if taken.</p>
+            <div class="adr">ADR-100</div>
+          </article>
+
+          <article class="decision">
+            <div class="tag">Control model</div>
+            <h3>Virtual surface, named regions</h3>
+            <p>Devices project their physical topology onto abstract regions. Adding a seventh
+              controller becomes a TOML profile, not an engine change. No crate below the binary
+              names a product.</p>
+            <div class="adr">ADR-101</div>
+          </article>
+
+          <article class="decision">
+            <div class="tag">Show portability</div>
+            <h3>Tiers with declared degradation</h3>
+            <p>One show file. It declares what it needs and exactly how to shrink for the Pi.
+              The engine never guesses which of your six layers to drop.</p>
+            <div class="adr">ADR-102</div>
+          </article>
+
+          <article class="decision">
+            <div class="tag">Delivery</div>
+            <h3>Two tracks, shared crates</h3>
+            <p>Track A hardens the Pi rig for your gigs. Track B builds the portable core. The
+              control-surface work is written once and consumed by both — it is the same phase.</p>
+            <div class="adr">ADR-105</div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= RESEARCH ================= -->
+    <section id="research">
+      <div class="sec-head">
+        <div class="eyebrow">02 — Evaluation of the prior work</div>
+        <h2>Four passes, six contradictions</h2>
+      </div>
+
+      <div class="stack">
+        <div class="tw">
+          <table>
+            <thead>
+              <tr><th>Contradiction</th><th>Resolution</th><th style="width:96px">Verdict</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Render API</strong><br>GLES 3.1 on <code>glow</code> vs. wgpu/Vulkan</td>
+                <td>wgpu. The GLES call was sound for a Pi-only appliance and is invalidated by scope change, not by error — Metal has no GLES path.</td>
+                <td><span class="pill keep">settled</span></td>
+              </tr>
+              <tr>
+                <td><strong>Trigger latency</strong><br>page-cache warming vs. three-tier caching</td>
+                <td>Three tiers. Page-cache warm removes storage latency; demux-warm removes probing; only a live decoder holding a presentable frame meets a hard 50&nbsp;ms budget. Hot decoder slots, 4 on the Pi.</td>
+                <td><span class="pill keep">settled</span></td>
+              </tr>
+              <tr>
+                <td><strong>Video backend</strong><br>mpv subprocess vs. GStreamer</td>
+                <td>Neither, long-term. A <code>VideoDeck</code> trait with GStreamer/V4L2 on the Pi, NVDEC on Windows, VideoToolbox on macOS. mpv stays in Track&nbsp;A and is a dead end by design.</td>
+                <td><span class="pill keep">settled</span></td>
+              </tr>
+              <tr>
+                <td><strong>Codec standard</strong><br>HEVC everywhere</td>
+                <td>Right for the Pi, insufficient for the program. Media tiers: HEVC on the Pi, HAP on the desktop — V3D has no S3TC/BC support, so HAP would need a per-frame CPU transcode there.</td>
+                <td><span class="pill keep">settled</span></td>
+              </tr>
+              <tr>
+                <td><strong>Stream Deck library</strong><br>raw hidapi vs. <code>elgato-streamdeck</code></td>
+                <td>The crate. "A fixed appliance benefits from a visible protocol" holds only while the target is one fixed appliance. Keep the reconnect and cached-icon replay — generalised to every device.</td>
+                <td><span class="pill keep">settled</span></td>
+              </tr>
+              <tr>
+                <td><strong>Two named repos</strong><br>one pass says they don't exist, another cites and describes them</td>
+                <td>Unresolved, and deliberately made not to matter. A fresh search surfaced neither. Both are reference reading only; nothing depends on either. Two minutes of your time settles it.</td>
+                <td><span class="pill check">open</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="note">
+          <b>The blind spot all four share:</b> every one of them models control input as
+          "the Stream Deck." The closest gets a <code>ControllerAdapter</code> trait, but its
+          feedback type still assumes bitmap keys. None anticipates velocity-palette LEDs, RGB
+          SysEx grids, relative encoders with LED rings, or an OLED strip. That gap is the
+          largest new piece of work in this plan.
+        </p>
+
+        <p class="note" style="border-left-color: var(--treble)">
+          <b>Carried forward unchanged:</b> the audio uniform contract and dual-rate EMA
+          smoothing (fast attack, slow release — a single symmetric EMA is the classic mistake
+          and produces exactly the flicker you're avoiding); spectral-flux onset detection
+          against a rolling median&nbsp;+&nbsp;MAD; the rule never to normalise a spectrum by its
+          own maximum, which would make silence look active; the typed-internal /
+          JSON-at-boundaries discipline; and the zero-copy evidence list.
+        </p>
+      </div>
+    </section>
+
+    <!-- ================= SURFACES ================= -->
+    <section id="surfaces">
+      <div class="sec-head">
+        <div class="eyebrow">03 — The subsystem the prior research doesn't have</div>
+        <h2>One clip grid, six physical topologies</h2>
+      </div>
+
+      <div class="stack">
+        <p>
+          Six controllers, four input paradigms, five feedback models, three operating systems.
+          Integrating each against the engine directly produces six copies of the paging,
+          banking, soft-takeover and feedback-diffing logic — and a seventh the day you buy
+          another controller. Instead the engine exposes named regions, and each device projects
+          its own scroll window onto them.
+        </p>
+
+        <div class="surfaces">
+          <article class="surface">
+            <header>
+              <div class="name">Stream Deck XL</div>
+              <div class="dims">USB HID · 4 × 8 · 96px JPEG per key</div>
+            </header>
+            <div class="pads bitmap" style="grid-template-columns:repeat(8,13px)" aria-hidden="true">
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+            <p class="role"><b>Clip launch and page navigation.</b> The only device that can put a
+              clip thumbnail on the button.</p>
+          </article>
+
+          <article class="surface">
+            <header>
+              <div class="name">Launchpad Mini MK3</div>
+              <div class="dims">USB MIDI · 8 × 8 + 16 · RGB, hardware pulse</div>
+            </header>
+            <div class="pads rgb" style="grid-template-columns:repeat(8,13px)" aria-hidden="true">
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+            <p class="role"><b>The primary clip grid.</b> Must be put into Programmer Mode by SysEx
+              on every reconnect, or the note layout is wrong. Use the hardware pulse for a
+              pending quantized launch — one message instead of an animation.</p>
+          </article>
+
+          <article class="surface">
+            <header>
+              <div class="name">Akai Fire</div>
+              <div class="dims">USB MIDI · 4 × 16 · RGB bulk + OLED</div>
+            </header>
+            <div class="pads rgb" style="grid-template-columns:repeat(16,13px)" aria-hidden="true">
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+            <div class="rings" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+            <p class="role"><b>FX parameters, secondary grid, status readout.</b> No official spec —
+              community-reverse-engineered. One SysEx bulk message repaints all 64 pads, which
+              makes it the cheapest device to refresh. Encoders are relative, so no takeover needed.</p>
+          </article>
+
+          <article class="surface">
+            <header>
+              <div class="name">APC Key 25</div>
+              <div class="dims">USB MIDI · 5 × 8 · mk1 3-colour / mk2 RGB</div>
+            </header>
+            <div class="pads rgb" style="grid-template-columns:repeat(8,13px)" aria-hidden="true">
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+            <p class="role"><b>Note-driven modulation, secondary grid, 8 macro knobs.</b> mk1 and mk2
+              have materially different LED protocols — detect by product ID, load separate
+              profiles. The 25 keys default to modulation, not launch: a keyboard under your hands
+              mid-set is worth more as expression than as 25 more buttons.</p>
+          </article>
+
+          <article class="surface">
+            <header>
+              <div class="name">X-Touch Mini</div>
+              <div class="dims">USB MIDI · 8 encoders + 2 × 8 · rings, 2 layers</div>
+            </header>
+            <div class="rings" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="pads mono" style="grid-template-columns:repeat(8,13px)" aria-hidden="true">
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+            <p class="role"><b>The mixer surface.</b> Layer opacities on encoders, master on the fader,
+              blend modes on the buttons. Ring display mode encodes parameter type — pan for
+              bipolar, fan for unipolar. Configure it in X-Touch Editor on your PC <b>before</b> it
+              goes near the Pi; the editor doesn't run on Linux and the setting lives on the device.</p>
+          </article>
+
+          <article class="surface">
+            <header>
+              <div class="name">MPK mini mk3</div>
+              <div class="dims">USB MIDI · 2 × 4 × 2 banks · no addressable feedback</div>
+            </header>
+            <div class="pads none" style="grid-template-columns:repeat(4,13px)" aria-hidden="true">
+              <i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i>
+            </div>
+            <p class="role"><b>Portable expressive input.</b> Profile it with no feedback capability
+              until proven otherwise, and bind it so nothing needs feedback — momentary actions,
+              not toggles whose state you can't see. Its on-device editor makes it the device most
+              likely to arrive with a different map than the profile expects, which is the strongest
+              argument for MIDI learn.</p>
+          </article>
+        </div>
+
+        <div class="legend">
+          <span><i style="background:var(--treble)"></i>RGB via SysEx</span>
+          <span><i style="border:1.5px solid var(--ink-3);background:transparent"></i>Bitmap key</span>
+          <span><i style="background:var(--ink-3);opacity:.55"></i>Monochrome LED</span>
+          <span><i style="border:1.5px dashed var(--line);background:transparent"></i>No feedback</span>
+          <span><i style="border:1.5px solid var(--bass);border-radius:50%;background:transparent"></i>Encoder ring</span>
+        </div>
+
+        <p class="note" style="margin-top:26px">
+          <b>The acceptance test for the whole design:</b> a seventh controller can be added by
+          writing one TOML profile, with Rust code required only if its LED protocol is SysEx
+          bulk. Everything else — paging, banking, takeover, feedback diffing, learn — is already
+          written.
+        </p>
+
+        <p class="note" style="border-left-color: var(--mid)">
+          <b>The gotcha that will bite on Windows:</b> WinMM opens a MIDI input port exclusively.
+          If Resolume holds your APC, the engine can't — and vice versa. ALSA and CoreMIDI are
+          both multi-client, so this is the one place your three platforms genuinely disagree
+          about something you'll notice immediately.
+        </p>
+      </div>
+    </section>
+
+    <!-- ================= PLATFORMS ================= -->
+    <section id="platforms">
+      <div class="sec-head">
+        <div class="eyebrow">04 — Where branching is authorised</div>
+        <h2>Three tiers, one show file</h2>
+      </div>
+
+      <div class="stack">
+        <p>
+          Branch only where the hardware genuinely differs: decode, frame import, presentation,
+          audio capture, and MIDI/HID transport. Reducer, virtual surface, ISF host, compositor
+          graph, analyzer and show format are one implementation. A <code>cfg(target_os)</code>
+          outside those four crates is a design error.
+        </p>
+
+        <div class="tw">
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                <th>Appliance · Pi 5</th>
+                <th>Portable · M2 Pro</th>
+                <th>Workstation · RTX 3090</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>Backend</strong></td><td>Vulkan (V3DV) → GLES hatch</td><td>Metal</td><td>Vulkan or D3D12</td></tr>
+              <tr><td><strong>Hardware decode</strong></td><td>HEVC <em>only</em> — no H.264 block</td><td>VideoToolbox: HEVC, H.264, ProRes</td><td>NVDEC: everything</td></tr>
+              <tr><td><strong>Clip format</strong></td><td>MP4 / HEVC Main 8-bit</td><td>HAP / HAP Q</td><td>HAP / HAP Q</td></tr>
+              <tr><td><strong>Frame import</strong></td><td>DMA-BUF → Vulkan external memory</td><td>IOSurface → <code>MTLTexture</code></td><td>CUDA↔Vulkan interop</td></tr>
+              <tr><td><strong>Texture compression</strong></td><td>ETC2 + ASTC. <strong>No BC</strong></td><td>BC + ASTC + ETC2</td><td>BC, full</td></tr>
+              <tr><td><strong>MIDI</strong></td><td>ALSA seq — multi-client</td><td>CoreMIDI — multi-client</td><td>WinMM — <strong>exclusive</strong></td></tr>
+              <tr><td><strong>Budget</strong></td><td>2 decks · 2 layers · 4 hot slots</td><td>4 decks · 6 layers · 12 slots</td><td>8 decks · 8 layers · 32 slots</td></tr>
+              <tr><td><strong>Role</strong></td><td>Gig appliance, boots into the show</td><td>Portable gig rig</td><td>Development and authoring</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="note">
+          <b>The single highest-risk unknown in the program:</b> whether wgpu can import decoded
+          V4L2 frames on the Pi stack without a per-frame CPU copy. That's Gate&nbsp;B, and it's
+          why the GLES escape hatch exists as a documented fallback rather than a hope.
+        </p>
+      </div>
+    </section>
+
+    <!-- ================= TEMPO ================= -->
+    <section id="tempo">
+      <div class="sec-head">
+        <div class="eyebrow">05 — Tempo and phase</div>
+        <h2>Beat-quantized launching needs an authority</h2>
+      </div>
+
+      <div class="stack">
+        <p>
+          The FLX10 in rekordbox or Serato runs in the vendor's native mode, so there's no MIDI
+          wire to take clock from. Both applications speak <strong>Ableton Link</strong>, which
+          carries tempo <em>and</em> phase over the network — so the Pi joins the Link session over
+          Ethernet and audio analysis becomes the fallback rather than the primary clock. One
+          arbiter owns the answer; everything else reads it.
+        </p>
+
+        <ul class="clean">
+          <li><b>Priority by default:</b> manual tap → Link → MIDI clock → audio, each with a
+            confidence floor. Audio-derived tempo is admitted only above 0.6, because it's an
+            estimate and must never silently outrank an authoritative source.</li>
+          <li><b>Handover never jumps.</b> BPM ramps over a beat and phase aligns at the next bar
+            boundary of the outgoing source. Losing every source holds the last BPM and decays
+            confidence rather than zeroing it — a BPM-locked effect has to degrade through a
+            breakdown, not stutter.</li>
+          <li><b>A launch window, not an instant.</b> Press 50&nbsp;ms after the bar and it still
+            lands on that bar. That forgiveness is what makes hardware feel right.</li>
+          <li><b>Preroll ahead of the boundary.</b> A quantized trigger cues its decoder slot the
+            moment it's received. A quantized launch that misses its boundary because decode
+            started late is worse than an unquantized one.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ================= ROADMAP ================= -->
+    <section id="roadmap">
+      <div class="sec-head">
+        <div class="eyebrow">06 — Two tracks over a shared middle</div>
+        <h2>Gig-ready first, portable in parallel</h2>
+      </div>
+
+      <div class="stack">
+        <div class="tracks">
+          <article class="track">
+            <div class="track-head">
+              <h3>Track A — Pi appliance</h3>
+              <span class="len">≈ 24–37 days</span>
+            </div>
+            <div class="phases">
+              <span class="phase">A0 hardware bring-up</span>
+              <span class="phase">A1 typed core</span>
+              <span class="phase shared">A2 control surfaces · shared</span>
+              <span class="phase">A3 two decks</span>
+              <span class="phase">A4 freeze &amp; harden</span>
+            </div>
+            <p>Hardens the existing repository so it runs your gigs. It keeps mpv and takes no new
+              features after A4. A0 exists because every latency and decode claim in the corpus is
+              currently a reasoned budget, never a measurement.</p>
+          </article>
+
+          <article class="track">
+            <div class="track-head">
+              <h3>Track B — portable core</h3>
+              <span class="len">≈ 54–82 days</span>
+            </div>
+            <div class="phases">
+              <span class="phase">B0 workspace</span>
+              <span class="phase risk">B1 GPU spike · highest risk</span>
+              <span class="phase">B2 ISF host</span>
+              <span class="phase">B3 decode backends</span>
+              <span class="phase">B4 audio + tempo</span>
+              <span class="phase shared">B5 = A2</span>
+              <span class="phase">B6 desktop app</span>
+              <span class="phase">B7 Pi port</span>
+              <span class="phase">B8 macOS</span>
+            </div>
+            <p>The clean workspace. Three crates — vocabulary, command plane, control surfaces —
+              are written once and consumed by both tracks, which is what stops the parallelism
+              from being duplicated work. At B7 the portable engine replaces Track&nbsp;A and
+              Track&nbsp;A is retired.</p>
+          </article>
+        </div>
+
+        <p class="note">
+          <b>Suggested order for one person:</b> B0 (mostly written already) → A0, because you need
+          to know what's actually true about your Pi → A1&nbsp;+&nbsp;A2, the block that makes all
+          six controllers work → B1 on the 3090, interleaved with A3 since it's a different machine
+          and a different head-space → A4, then gig with it → B2 through B8 without gig pressure.
+        </p>
+      </div>
+    </section>
+
+    <!-- ================= GATES ================= -->
+    <section id="gates">
+      <div class="sec-head">
+        <div class="eyebrow">07 — Nothing passes until it's measured</div>
+        <h2>Ten gates, all currently open</h2>
+      </div>
+
+      <div class="stack">
+        <div class="gates">
+          <div class="gate"><span class="g">GATE A</span><span class="t">Decode path</span><span class="s">not measured</span></div>
+          <div class="gate"><span class="g">GATE B</span><span class="t">Renderer</span><span class="s">not measured</span></div>
+          <div class="gate"><span class="g">GATE C</span><span class="t">Trigger latency</span><span class="s">not measured</span></div>
+          <div class="gate"><span class="g">GATE D</span><span class="t">Audio</span><span class="s">not measured</span></div>
+          <div class="gate"><span class="g">GATE E</span><span class="t">ISF safety</span><span class="s">not measured</span></div>
+          <div class="gate"><span class="g">GATE F</span><span class="t">Stream Deck</span><span class="s">not measured</span></div>
+          <div class="gate"><span class="g">GATE G</span><span class="t">Soak &amp; faults</span><span class="s">not measured</span></div>
+          <div class="gate new"><span class="g">GATE H</span><span class="t">Surfaces</span><span class="s">not measured</span></div>
+          <div class="gate new"><span class="g">GATE I</span><span class="t">Platform parity</span><span class="s">not measured</span></div>
+          <div class="gate new"><span class="g">GATE J</span><span class="t">Tempo &amp; Link</span><span class="s">not measured</span></div>
+        </div>
+
+        <p class="note">
+          H, I and J are new to this plan; A–G are carried forward and widened to three platforms.
+          The existing <code>STATUS.md</code> set exactly the right precedent by separating what
+          compiled from what was assumed — this plan keeps that discipline. Every claim in the
+          document set is marked <em>verified</em>, <em>reasoned</em>, or <em>validate on target</em>,
+          and the gate table updates only against a linked measurement artifact.
+        </p>
+      </div>
+    </section>
+
+    <!-- ================= DOCS ================= -->
+    <section id="docs">
+      <div class="sec-head">
+        <div class="eyebrow">08 — What landed in your project folder</div>
+        <h2>The document set</h2>
+      </div>
+
+      <div class="stack">
+        <div class="docs">
+          <div class="doc"><span class="n">00</span><span class="t">Overview</span><span class="d">Scope change, the four decisions, constraints carried forward and newly introduced.</span></div>
+          <div class="doc"><span class="n">01</span><span class="t">Research evaluation</span><span class="d">What each prior pass got right and wrong; all six contradictions adjudicated.</span></div>
+          <div class="doc"><span class="n">02</span><span class="t">Target architecture</span><span class="d">Components, thread ownership, render graph, shader ABI, failure behaviour.</span></div>
+          <div class="doc"><span class="n">03</span><span class="t">Control surfaces</span><span class="d">The virtual surface, profile schema, and per-device protocol research.</span></div>
+          <div class="doc"><span class="n">04</span><span class="t">Platform branches</span><span class="d">Pi / 3090 / M2 Pro divergence, capability tiers, build and CI.</span></div>
+          <div class="doc"><span class="n">05</span><span class="t">Tempo and sync</span><span class="d">Authority model, Link, quantized launch scheduler, tempo-synced LFOs.</span></div>
+          <div class="doc"><span class="n">06</span><span class="t">Repo layout</span><span class="d">Crate responsibilities, dependency rules, key contracts, testing posture.</span></div>
+          <div class="doc"><span class="n">07</span><span class="t">Roadmap</span><span class="d">Both tracks, phase by phase, with exit criteria and effort ranges.</span></div>
+          <div class="doc"><span class="n">08</span><span class="t">Validation</span><span class="d">Gates A–J with pass conditions and the live status table.</span></div>
+          <div class="doc"><span class="n">ADR</span><span class="t">Decision records</span><span class="d">ADR-100 to ADR-108, each naming what it supersedes and its validation gate.</span></div>
+        </div>
+
+        <p class="note" style="margin-top:26px">
+          Alongside them, <code>vj/</code> is a Cargo workspace that compiles: thirteen crates with
+          the seams cut, <b>62 tests passing and no warnings</b>. The tested parts are the ones
+          worth trusting — soft takeover converging without a jump in both directions, a sweeping
+          encoder coalescing to one queued command, Link outranking audio, a held Stream Deck key
+          firing exactly once (the bug in the current <code>src/streamdeck.rs</code>), a 64-pad
+          Launchpad refresh fitting in one SysEx message, and HAP being rejected on the Pi tier.
+          The platform backends are trait definitions with nothing behind them yet — that's what
+          Phases B1–B4 are for.
+        </p>
+      </div>
+    </section>
+
+    <footer>
+      Generated 22 August 2026 against the four research passes in <code>RPi-VJ/</code>. Where this
+      set and the earlier documents disagree, this set takes precedence; where a conclusion is
+      marked <em>validate on target</em>, it is an experiment to run, not a promise.
+    </footer>
+
+  </main>
+</div>
+
+<script>
+(function () {
+  var btn = document.getElementById('tt');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    var root = document.documentElement;
+    var explicit = root.getAttribute('data-theme');
+    var dark = explicit
+      ? explicit === 'dark'
+      : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    root.setAttribute('data-theme', dark ? 'light' : 'dark');
+    try { localStorage.setItem('vj-plan-theme', dark ? 'light' : 'dark'); } catch (e) {}
+  });
+  try {
+    var saved = localStorage.getItem('vj-plan-theme');
+    if (saved === 'light' || saved === 'dark') {
+      document.documentElement.setAttribute('data-theme', saved);
+    }
+  } catch (e) {}
+})();
+</script>

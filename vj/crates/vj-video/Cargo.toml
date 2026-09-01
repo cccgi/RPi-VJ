@@ -1,0 +1,11 @@
+[package]
+name = "vj-video"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+# GStreamer hardware acceleration for Raspberry Pi 5 stateless HEVC decoding
+[dependencies]
+serde = { workspace = true }
+thiserror = { workspace = true }
+vj-types = { workspace = true }

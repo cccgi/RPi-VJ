@@ -1,0 +1,33 @@
+[package]
+name = "vj-app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "vj"
+path = "src/main.rs"
+
+[features]
+default = ["surface-hid", "surface-midi"]
+surface-hid = []
+surface-midi = []
+backend-v4l2 = []
+backend-nvdec = []
+backend-vtb = []
+backend-gles = []
+tempo-link = []
+
+[dependencies]
+vj-types = { workspace = true }
+vj-core = { workspace = true }
+vj-surface = { workspace = true }
+vj-devices = { workspace = true }
+vj-tempo = { workspace = true }
+vj-audio = { workspace = true }
+vj-video = { workspace = true }
+vj-isf = { workspace = true }
+vj-render = { workspace = true }
+vj-surface-hid = { workspace = true }
+vj-surface-midi = { workspace = true }
+vj-api = { workspace = true }

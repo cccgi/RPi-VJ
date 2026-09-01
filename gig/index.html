@@ -1,0 +1,2372 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>RPi-VJ Show</title>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #000;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      color: #e8f0f5;
+      cursor: none;
+    }
+    /* Buttons and controls below declare cursor:pointer for setup mode. That
+       overrides an inherited body cursor and left a visible arrow at (0,0)
+       in the kiosk. Gig mode hides it on every descendant, explicitly. */
+    body:not(.show-cursor), body:not(.show-cursor) * {
+      cursor: none !important;
+    }
+    body.show-cursor {
+      cursor: default;
+    }
+
+    #vj-canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+
+    /* HUD Overlay */
+    #hud {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      z-index: 10;
+      background: rgba(8, 12, 16, 0.85);
+      border: 1px solid #1e2a35;
+      border-radius: 6px;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 12px;
+      backdrop-filter: blur(4px);
+      transition: opacity 0.3s ease;
+      max-width: 520px;
+    }
+    #hud.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .hud-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: bold;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+    }
+    .badge-ok { background: #05ffa1; color: #000; }
+    .badge-warn { background: #ffb800; color: #000; }
+    .badge-bad { background: #ff2a6d; color: #fff; }
+    .badge-info { background: #1e2a35; color: #05ffa1; border: 1px solid #05ffa1; }
+
+    .val {
+      color: #05ffa1;
+      font-weight: bold;
+    }
+    .dim {
+      color: #7d8b97;
+    }
+
+    /* Audio visualizer bar */
+    .vu-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 2px;
+    }
+    .vu-meter {
+      height: 6px;
+      background: #1e2a35;
+      border-radius: 2px;
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+    .vu-fill {
+      height: 100%;
+      width: 0%;
+      background: #05ffa1;
+      transition: width 0.05s ease-out;
+    }
+    .vu-fill.kick {
+      background: #ff2a6d;
+    }
+
+    /* On-screen quick controls */
+    /* The stock arrow is nearly invisible over bright visuals. Big magenta
+       crosshair with a white outline reads on any background. */
+    body.show-cursor, body.show-cursor canvas {
+      cursor: url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'>\
+<g stroke='%23ffffff' stroke-width='6' stroke-linecap='round'>\
+<line x1='20' y1='4' x2='20' y2='16'/><line x1='20' y1='24' x2='20' y2='36'/>\
+<line x1='4' y1='20' x2='16' y2='20'/><line x1='24' y1='20' x2='36' y2='20'/></g>\
+<g stroke='%23ff2a6d' stroke-width='2.5' stroke-linecap='round'>\
+<line x1='20' y1='4' x2='20' y2='16'/><line x1='20' y1='24' x2='20' y2='36'/>\
+<line x1='4' y1='20' x2='16' y2='20'/><line x1='24' y1='20' x2='36' y2='20'/></g>\
+<circle cx='20' cy='20' r='2.5' fill='%23ff2a6d' stroke='%23ffffff' stroke-width='1.5'/>\
+</svg>") 20 20, crosshair;
+    }
+    #toast {
+      position: fixed; left: 50%; top: 12%; transform: translateX(-50%);
+      z-index: 99998; padding: 18px 34px; border-radius: 10px;
+      background: rgba(6,10,14,.92); border: 2px solid #05ffa1; color: #05ffa1;
+      font: 700 30px/1.2 ui-monospace, monospace; letter-spacing: .06em;
+      display: none; text-align: center; pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    #toast.hud-off {
+      left: auto; right: 20px; top: auto; bottom: 20px;
+      transform: none;
+      opacity: 0.5;
+      font-size: 20px;
+      padding: 10px 18px;
+    }
+    #toast.warn { border-color: #ffd166; color: #ffd166; }
+    #drop-indicator {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 99997;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      background: rgba(6, 10, 14, 0.75);
+      border: 1px solid rgba(5, 255, 161, 0.4);
+      color: rgba(5, 255, 161, 0.9);
+      font: 600 13px ui-monospace, monospace;
+      letter-spacing: 0.05em;
+      opacity: 0.5;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    #drop-indicator svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
+    .inmeter{display:flex;align-items:center;gap:6px;margin:4px 0 2px}
+    .inlbl{font-size:10px;color:#7d8b97;width:34px}
+    .inbar{position:relative;flex:1;height:12px;background:#0a0f14;
+      border:1px solid #1e2a35;border-radius:2px;overflow:hidden;min-width:150px}
+    .inbar i{position:absolute;left:0;top:0;bottom:0;width:0;background:#05ffa1}
+    .inbar b{position:absolute;top:0;bottom:0;width:2px;background:#fff;left:0}
+    .inbar u.mark{position:absolute;top:0;bottom:0;width:1px;background:#3a4a58}
+    .inbar.hot i{background:#ffd166}
+    .inbar.clip i{background:#ff2a6d}
+    .indb{font-size:10px;color:#c8d4de;width:48px;text-align:right}
+    .ingain{font-size:10px;color:#05ffa1;width:46px;text-align:right}
+    #quick-controls {
+      display: none !important;
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      background: rgba(8, 12, 16, 0.85);
+      border: 1px solid #1e2a35;
+      border-radius: 6px;
+      padding: 8px 12px;
+      gap: 8px;
+      align-items: center;
+      font-size: 11px;
+      backdrop-filter: blur(4px);
+      transition: opacity 0.3s ease;
+    }
+    #quick-controls.troubleshoot-show {
+      display: flex !important;
+    }
+    button, select {
+      background: #0d1319;
+      color: #e8f0f5;
+      border: 1px solid #1e2a35;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-family: inherit;
+      font-size: 11px;
+      cursor: pointer;
+      outline: none;
+    }
+    button:hover, button:focus, select:hover, select:focus {
+      border-color: #05ffa1;
+      color: #05ffa1;
+    }
+    button.active {
+      background: #ff2a6d;
+      color: #fff;
+      border-color: #ff2a6d;
+    }
+
+    /* Click to start audio overlay */
+    #start-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 100;
+      background: rgba(7, 9, 12, 0.92);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      cursor: pointer;
+    }
+    #start-overlay h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      margin: 0;
+      letter-spacing: 0.1em;
+    }
+    #start-overlay h1 b {
+      color: #05ffa1;
+    }
+    #start-overlay .prompt {
+      color: #7d8b97;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+<script>
+/* VJ_DIAG — crash + status reporting. There is no monitor at the gig, and a
+   silent black screen is unrecoverable. Everything here POSTs to /collect. */
+(function(){
+  var D=[],t=null;
+  function push(s){D.push(new Date().toISOString().slice(11,19)+' '+s);
+    if(D.length>200)D.shift();
+    if(t)clearTimeout(t);
+    // 1.5s debounce: diagnostics share the HTTP server with video streaming
+    // and shader fetches, so chattier logging directly costs trigger latency.
+    t=setTimeout(function(){try{fetch('/collect?name=show',{method:'POST',body:D.join('\n'),keepalive:true})}catch(e){}},1500);}
+  window.VJ_DIAG=push;
+  push('page load: '+location.href);
+  push('BUILD: navkeys-v2 thumbs-v1');
+  window.onerror=function(m,src,l,c,err){
+    push('JS ERROR: '+m+' @'+(src||'').split('/').pop()+':'+l+':'+c);
+    if(err&&err.stack)push('  '+String(err.stack).split('\n').slice(0,3).join(' | '));
+    var b=document.getElementById('vjerr');
+    if(b){b.style.display='block';b.textContent='ERROR: '+m+'\n@'+l+':'+c;}
+  };
+  window.addEventListener('unhandledrejection',function(e){
+    push('UNHANDLED REJECTION: '+(e.reason&&e.reason.message?e.reason.message:e.reason));
+    if(e.reason&&e.reason.stack)push('  '+String(e.reason.stack).split('\n').slice(0,3).join(' | '));
+  });
+  // capture-phase catches RESOURCE errors (module/script/img 404s), which
+  // window.onerror never sees. This is how a failed import stays silent.
+  window.addEventListener('error', function(e){
+    var t=e.target;
+    if(t && t!==window && (t.src||t.href))
+      push('RESOURCE FAIL: <'+t.tagName.toLowerCase()+'> '+(t.src||t.href));
+  }, true);
+
+  window.addEventListener('load',function(){push('window load fired')});
+
+  // 3s after load, report what actually exists — the app should have built by then
+  setTimeout(function(){
+    try{
+      var cs=document.querySelectorAll('canvas'), vs=document.querySelectorAll('video');
+      push('DOM: '+cs.length+' canvas, '+vs.length+' video');
+      for(var i=0;i<cs.length && i<4;i++){
+        var c=cs[i], ctx=null;
+        try{ ctx = c.getContext('webgl2', {}) ? 'webgl2-live' : 'no-ctx'; }catch(e){ ctx='ctx-err'; }
+        push('  canvas['+i+'] '+c.width+'x'+c.height+' css='+c.clientWidth+'x'+c.clientHeight+' '+ctx);
+      }
+      for(var j=0;j<vs.length && j<4;j++)
+        push('  video['+j+'] src='+(vs[j].currentSrc||'none').split('/').pop()+
+             ' ready='+vs[j].readyState+' paused='+vs[j].paused);
+      var g=[];['Mixer','mixer','app','VJ','show','ShowManager'].forEach(function(n){
+        if(window[n]!==undefined)g.push(n)});
+      push('globals: '+(g.join(',')||'none exported to window'));
+      push('scripts: '+document.querySelectorAll('script[type=module]').length+' module tags');
+    }catch(e){ push('DOM probe failed: '+e.message); }
+  }, 3000);
+  document.addEventListener('DOMContentLoaded',function(){push('DOMContentLoaded')});
+  setInterval(function(){
+    var m=(performance.memory&&performance.memory.usedJSHeapSize)||0;
+    push('alive heap='+(m/1048576).toFixed(0)+'MB');
+  },10000);
+})();
+</script>
+<div id="toast" class="hud-off"></div>
+<div id="drop-indicator">
+  <svg viewBox="0 0 24 24"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
+  <span id="drop-indicator-text"></span>
+</div>
+<pre id="vjerr" style="display:none;position:fixed;left:0;top:0;z-index:99999;
+margin:0;padding:12px;background:rgba(120,0,20,.92);color:#fff;
+font:14px/1.4 ui-monospace,monospace;white-space:pre-wrap;max-width:100%"></pre>
+
+  <div id="start-overlay">
+    <h1>RPi&#8209;VJ <b>LIVE</b></h1>
+    <div class="prompt">[ Click or Press Space to Activate Show ]</div>
+  </div>
+
+  <canvas id="vj-canvas"></canvas>
+
+  <div id="hud" class="hidden">
+    <div class="hud-row">
+      <span class="badge badge-info">RPi-VJ</span>
+      <span id="hud-fps" class="val">-- fps</span>
+      <span id="hud-res" class="dim">--</span>
+      <span id="hud-media-res" class="dim"></span>
+      <span id="hud-scale" class="dim"></span>
+      <span id="hud-audio-status" class="dim">audio: off</span>
+      <span id="hud-blackout" class="badge badge-bad" style="display:none">BLACKOUT</span>
+      <span id="hud-throttle" class="badge" style="display:none"></span>
+    </div>
+    <div class="hud-row">
+      <span class="dim">CLIP</span>
+      <span id="hud-clip" class="val">none</span>
+      <span class="dim" style="margin-left:8px">SHADER</span>
+      <span id="hud-shader" class="val">none</span>
+      <span class="dim" style="margin-left:8px">PRESET</span>
+      <span id="hud-preset" class="val">none</span>
+      <span class="dim" style="margin-left:8px">BLEND</span>
+      <span id="hud-blend" class="val">add</span>
+    </div>
+    <div id="hud-power-row" class="hud-row" style="display:none">
+      <span class="dim">BOARD</span>
+      <span id="hud-power" class="val">--</span>
+    </div>
+    <div class="hud-row">
+      <span class="dim">TEMP</span>
+      <span id="hud-temps" class="val">--</span>
+    </div>
+    <div class="inmeter">
+      <span class="inlbl">AUDIO</span>
+      <div class="inbar">
+        <i id="in-rms"></i>
+        <b id="in-peak"></b>
+        <u class="mark" style="left:50%"></u>
+        <u class="mark" style="left:75%"></u>
+        <u class="mark" style="left:90%"></u>
+      </div>
+      <span id="in-db" class="indb">-inf dB</span>
+      <span id="in-gain" class="ingain">x0.25</span>
+    </div>
+    <div class="vu-bar-wrap">
+      <span style="font-size: 10px; width: 34px;">BASS</span>
+      <div class="vu-meter"><div id="vu-bass" class="vu-fill"></div></div>
+      <span style="font-size: 10px; width: 30px;">KICK</span>
+      <div class="vu-meter"><div id="vu-kick" class="vu-fill kick"></div></div>
+    </div>
+  </div>
+
+  <div id="quick-controls" class="hidden">
+    <button id="btn-blackout">BLACKOUT (Space)</button>
+    <button id="btn-audio">Start Audio</button>
+    <select id="select-blend">
+      <option value="add" selected>Blend: ADD</option>
+      <option value="screen">Blend: SCREEN</option>
+      <option value="multiply">Blend: MULTIPLY</option>
+      <option value="normal">Blend: NORMAL</option>
+    </select>
+    <button id="btn-hud-toggle">HUD (H)</button>
+    <button id="btn-pair-deck" style="background:#ff2a6d;color:#fff;font-weight:700">PAIR STREAM DECK</button>
+    <button id="btn-calib" title="Run with the input SILENT">CALIBRATE NOISE</button>
+    <button id="btn-measure" title="Log raw input levels for 5s">MEASURE</button>
+  </div>
+
+  <script type="module">
+    if(window.VJ_DIAG) VJ_DIAG('module script: STARTED');
+    window.addEventListener('vj-ready',function(){if(window.VJ_DIAG)VJ_DIAG('module script: app reported ready')});
+    import { Mixer, BLEND_MODES, BLEND_NAMES } from './src/mixer.js';
+    import { ShowManager } from './src/show.js';
+    import { StreamDeckXL } from './src/streamdeck.js';
+    import { XTouchMini } from './src/xtouch.js';
+
+    const canvas = document.getElementById('vj-canvas');
+    const startOverlay = document.getElementById('start-overlay');
+    const hud = document.getElementById('hud');
+    const quickControls = document.getElementById('quick-controls');
+    const hudFps = document.getElementById('hud-fps');
+    const hudRes = document.getElementById('hud-res');
+    const hudMediaRes = document.getElementById('hud-media-res');
+    const hudScale = document.getElementById('hud-scale');
+    const hudClip = document.getElementById('hud-clip');
+    const hudShader = document.getElementById('hud-shader');
+    const hudPreset = document.getElementById('hud-preset');
+    const hudBlend = document.getElementById('hud-blend');
+    const hudAudioStatus = document.getElementById('hud-audio-status');
+    const hudBlackout = document.getElementById('hud-blackout');
+    const hudTemps = document.getElementById('hud-temps');
+    const hudPower = document.getElementById('hud-power');
+    const hudPowerRow = document.getElementById('hud-power-row');
+    const hudThrottle = document.getElementById('hud-throttle');
+    const vuBass = document.getElementById('vu-bass');
+    const vuKick = document.getElementById('vu-kick');
+
+    // 2026-08-27: bottom-HUD thermal/power telemetry, added chasing the
+    // idle/Streamdeck-press OOM crashes. Every sensor /sys/class/thermal
+    // reports (Pi 5 has more than one zone), plus PMIC current/voltage via
+    // vcgencmd -- see tools/collect_server.py's _telemetry(). Polls
+    // independently of the render loop; a slow/failed fetch must never
+    // touch mixer/render state, so every failure path is a no-op catch.
+    let _telemetryTimer = null;
+    function pollTelemetry() {
+      fetch('/system/telemetry').then(r => r.json()).then(data => {
+        if (hudTemps) {
+          const zones = Array.isArray(data.zones) ? data.zones : [];
+          hudTemps.textContent = zones.length
+            ? zones.map(z => (z.type || z.zone) + ' ' + z.temp_c.toFixed(1) + '°C').join('  ·  ')
+            : 'n/a';
+        }
+        if (hudPower) {
+          const p = data.power || {};
+          const hasPower = (p.watts !== null && p.watts !== undefined && p.volts !== null && p.volts !== undefined);
+          if (hasPower) {
+            hudPower.textContent = p.watts.toFixed(2) + 'W  (' + p.volts.toFixed(2) + 'V × ' + p.amps.toFixed(2) + 'A)';
+            if (hudPowerRow) hudPowerRow.style.display = '';
+          } else {
+            hudPower.textContent = 'n/a';
+            if (hudPowerRow) hudPowerRow.style.display = 'none';
+          }
+        }
+        if (hudThrottle) {
+          // vcgencmd get_throttled bitmask: bit0 under-voltage NOW, bit1 arm
+          // freq capped NOW, bit2 currently throttled, bit3 soft temp limit
+          // NOW; bits 16-19 are the same conditions "since boot" (sticky).
+          // Any of the low 4 bits set is worth a visible badge -- it is
+          // itself a crash-relevant fact, not just a display nicety.
+          const raw = data.throttled || '';
+          const m = raw.match(/0x([0-9a-fA-F]+)/);
+          const bits = m ? parseInt(m[1], 16) : 0;
+          const liveBad = (bits & 0x0f) !== 0;
+          const everBad = (bits & 0xf0000) !== 0;
+          hudThrottle.style.display = (liveBad || everBad) ? 'inline-block' : 'none';
+          hudThrottle.textContent = liveBad ? 'THROTTLED NOW' : 'THROTTLED (since boot)';
+          hudThrottle.className = 'badge ' + (liveBad ? 'badge-bad' : 'badge-ok');
+        }
+      }).catch(() => {
+        if (hudTemps) hudTemps.textContent = 'unavailable';
+        if (hudPowerRow) hudPowerRow.style.display = 'none';
+      });
+    }
+    function startTelemetryPolling() {
+      if (_telemetryTimer) return;
+      pollTelemetry();
+      _telemetryTimer = setInterval(pollTelemetry, 3000);
+    }
+
+    const btnBlackout = document.getElementById('btn-blackout');
+    const btnAudio = document.getElementById('btn-audio');
+    const selectBlend = document.getElementById('select-blend');
+    const btnHudToggle = document.getElementById('btn-hud-toggle');
+
+    // Instantiate core Mixer with governor DISABLED and render scale locked to 1.0 (Native 1:1)
+    const mixer = new Mixer(canvas, { scale: 1.0, governor: false });
+    mixer.setBlendMode('add');
+    mixer.setShaderOpacity(1.0);
+    mixer.setDeckOpacity(1.0);
+
+    // Initial resize
+    function onWindowResize() {
+      mixer.resize(window.innerWidth, window.innerHeight);
+    }
+    window.addEventListener('resize', onWindowResize);
+    onWindowResize();
+
+    startTelemetryPolling();
+
+    // Start mixer frame loop immediately
+    let lastFrameAt = performance.now();
+    window.lastFrameAt = lastFrameAt;
+    mixer.start();
+
+    // Debug handles for headless CDP testing (gig/tools/cdp_freeze_test.py).
+    // The module scope is invisible to Runtime.evaluate without these.
+    window.mixer = mixer;
+
+    // Show Manager setup
+    let __lastClipSrc = null;
+    let _lastPlayedClipBinding = null;
+    let _lastPlayedShaderBinding = null;
+
+    const showManager = new ShowManager({
+      getLastFrameAt: () => (typeof window !== 'undefined' && window.lastFrameAt !== undefined ? window.lastFrameAt : 0),
+      onTrigger: async (binding, active) => {
+        if (!binding) return;
+        if (binding.type === 'clip') {
+          if (active) _lastPlayedClipBinding = binding;
+          // active===false means this pad was pressed a second time -> STOP.
+          // Previously this branch always re-loaded, so a clip could never be
+          // turned off and repeated presses queued more loads.
+          if (!active) {
+            try {
+              if (mixer.deckA.stop) mixer.deckA.stop(); else mixer.deckA.pause();
+              if (mixer.deckA.clearTexture) mixer.deckA.clearTexture();
+              mixer.setDeckLayout(0);
+            } catch (e) {}
+            __lastClipSrc = null;
+            hudClip.textContent = 'none';
+            if (window.VJ_DIAG) VJ_DIAG('clip STOP: ' + (binding.label || binding.src));
+            return;
+          }
+          // Full clip filename without extension or path
+          const clipBase = (binding.src || '').replace(/^.*\//, '').replace(/\.[^.]+$/, '') || binding.label || 'none';
+          hudClip.textContent = clipBase;
+          try {
+            // Apply layout reconstruction mode if defined on pad binding
+            mixer.setDeckLayout(binding.layout || 0);
+
+            // Re-loading the same file is a needless multi-hundred-ms stall.
+            if (__lastClipSrc !== binding.src) {
+              await mixer.deckA.load(binding.src);
+              __lastClipSrc = binding.src;
+            }
+            // Triggering a clip returns speed to 100% -- a trim carried over
+            // from the previous clip is never what you want on a new one.
+            resetSpeed();
+            // Adopt this clip's stored knob level rather than whatever the
+            // previous clip was left at.
+            try { mixer.setDeckOpacity(window.__vjLevelOf ? window.__vjLevelOf(binding) : 1.0); } catch (e) {}
+            await mixer.deckA.play();
+            try { mixer.deckA.video.playbackRate = 1.0; } catch (e) {}
+            if (window.VJ_DIAG) VJ_DIAG('clip PLAY: ' + (binding.label || binding.src) + (binding.layout ? ' [' + binding.layout + ']' : ''));
+          } catch (err) {
+            if (window.VJ_DIAG) VJ_DIAG('clip load FAILED: ' + err.message);
+          }
+        } else if (binding.type === 'videofx') {
+          // Video effects act on the CLIP layer only. Second press clears.
+          if (!active) {
+            try { mixer.setVideoFx(0); } catch (e) {}
+            if (window.__vjToast) window.__vjToast('FX OFF');
+            return;
+          }
+          try { mixer.setVideoFx(binding.fx | 0, binding.amount); } catch (e) {}
+          if (window.__vjToast) window.__vjToast('FX: ' + (binding.label || binding.fx));
+          if (window.VJ_DIAG) VJ_DIAG('videofx -> ' + binding.fx + ' ' + (binding.label || ''));
+          return;
+        } else if (binding.type === 'shaderfx') {
+          if (!active) {
+            try { mixer.setShaderFx(0); } catch (e) {}
+            if (window.__vjToast) window.__vjToast('FX OFF (effects layer)');
+            return;
+          }
+          try { mixer.setShaderFx(binding.fx | 0, binding.amount); } catch (e) {}
+          if (window.__vjToast) window.__vjToast('FX LAYER: ' + (binding.label || binding.fx));
+          if (window.VJ_DIAG) VJ_DIAG('shaderfx -> ' + binding.fx);
+          return;
+        } else if (binding.type === 'blend') {
+          // A blend pad is a mode selector, not a layer — it has no on/off
+          // state, so re-arm it immediately rather than latching.
+          setBlend(binding.mode || 'add');
+          showManager.activeKeys.delete(binding.key);
+          return;
+        } else if (binding.type === 'shader') {
+          if (active) _lastPlayedShaderBinding = binding;
+          // Second press turns the effect OFF, matching how clip pads behave.
+          // Without this a shader pad could only ever reload itself.
+          if (!active) {
+            try { mixer.clearShader && mixer.clearShader(); } catch (e) {}
+            hudShader.textContent = 'none';
+            if (hudPreset) hudPreset.textContent = 'none';
+            if (window.VJ_DIAG) VJ_DIAG('shader OFF: ' + (binding.label || binding.src));
+            return;
+          }
+          if (window.VJ_DIAG) VJ_DIAG('shader LOAD: ' + binding.src);
+          // Full shader name without path or .fs
+          const shaderBase = (binding.src || '').replace(/^.*\//, '').replace(/\.fs$/, '') || binding.label || 'none';
+          hudShader.textContent = shaderBase;
+          if (hudPreset) hudPreset.textContent = 'default';
+          if (binding.blend) {
+            mixer.setBlendMode(binding.blend);
+            hudBlend.textContent = binding.blend;
+            selectBlend.value = binding.blend;
+          }
+          {
+            const lv = window.__vjLevelOf ? window.__vjLevelOf(binding) : undefined;
+            mixer.setShaderOpacity(lv !== undefined ? lv
+              : (binding.opacity !== undefined ? binding.opacity : 0.9));
+          }
+          try {
+            const resp = await fetch(binding.src);
+            if (!resp.ok) {
+              if (window.VJ_DIAG) VJ_DIAG('shader FETCH ' + resp.status + ': ' + binding.src);
+              return;
+            }
+            const src = await resp.text();
+            const ok = mixer.loadShader(src, binding.src);
+            if (window.VJ_DIAG) VJ_DIAG('shader compile: ' + (ok === false ? 'FAILED' : 'ok') +
+              ' (' + src.length + ' bytes)');
+            // A new shader starts on its own ISF defaults, so no preset is
+            // selected any more -- clear the lit key rather than leaving a
+            // stale one on, which is the only preset readout at the gig.
+            if (ok !== false && typeof activePreset !== 'undefined') {
+              activePreset = -1;
+              try { refreshPresetLeds(); } catch (_) {}
+            }
+          } catch (err) {
+            if (window.VJ_DIAG) VJ_DIAG('shader ERROR: ' + (err && err.message));
+          }
+        } else if (binding.type === 'scene') {
+          hudShader.textContent = binding.label || binding.name || 'SCENE';
+          if (binding.blend) {
+            mixer.setBlendMode(binding.blend);
+            hudBlend.textContent = binding.blend;
+            selectBlend.value = binding.blend;
+          }
+          if (binding.opacity !== undefined) {
+            mixer.setShaderOpacity(binding.opacity);
+          }
+          if (binding.mods) {
+            mixer.choreo.setMods(binding.mods);
+          }
+          if (binding.shader) {
+            try {
+              const resp = await fetch(binding.shader);
+              if (resp.ok) {
+                const src = await resp.text();
+                mixer.loadShader(src, binding.shader);
+              }
+            } catch (err) {
+              console.warn('[Show] Error fetching scene shader:', err);
+            }
+          }
+        }
+      },
+      onBpmChange: (bpm) => {
+        mixer.audio.clock.setBpm(bpm, true);
+      },
+      onBlackout: (isBlack) => {
+        mixer.blackout(isBlack);
+        hudBlackout.style.display = isBlack ? 'inline-block' : 'none';
+        btnBlackout.classList.toggle('active', isBlack);
+        try {
+          if (window.xt) {
+            window.xt.setButtonLed(23, isBlack); // Note 23 (16th Pad)
+          }
+        } catch (_) {}
+        try {
+          uploadIcons([31]); // Refresh Stream Deck Key 31 (Blackout button)
+        } catch (_) {}
+      }
+    });
+    window.showManager = showManager;   // debug handle, see window.mixer above
+
+    // The system row must be re-applied after EVERY rebuild, otherwise a bank
+    // change silently reverts keys 24-31 to whatever the show file says.
+    showManager.onRebuild = () => {
+      try { applySystemRow(); } catch (e) {}
+      // A show/bank rebuild changes all logical bindings. Repaint hardware;
+      // otherwise an early empty startup upload remains blank indefinitely.
+      setTimeout(() => uploadAllIcons(true).catch(() => {}), 0);
+    };
+
+    // Bind Keyboard for pad triggers / Space blackout
+    showManager.bindKeyboard(window);
+
+    // ---- Stream Deck XL ------------------------------------------------
+    // renderKeyIcon() existed in show.js but was never called, so the deck
+    // stayed dark even when connected. uploadAllIcons() closes that gap.
+    let streamDeck = null;
+    let deckRepaintTimer = null;
+    let deckRepaintAttempts = 0;
+
+    function scheduleDeckRepaint(reason) {
+      if (deckRepaintTimer || deckRepaintAttempts >= 5) return;
+      deckRepaintAttempts++;
+      if (window.VJ_DIAG) VJ_DIAG('stream deck: scheduling repaint ' + deckRepaintAttempts + '/5 (' + reason + ')');
+      deckRepaintTimer = setTimeout(async () => {
+        deckRepaintTimer = null;
+        const n = await uploadAllIcons(true);
+        if (n === 32) deckRepaintAttempts = 0;
+        else scheduleDeckRepaint('incomplete ' + n + '/32');
+      }, 1500);
+    }
+
+    function withTimeout(promise, ms, label) {
+      return Promise.race([promise,
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout ' + label)), ms))]);
+    }
+
+    // Only refresh the keys whose state actually changed. Re-rendering and
+    // re-uploading all 32 on every press cost ~1s of blocking work per key,
+    // which is what made triggering feel dead.
+    async function uploadIcons(indices) {
+      const live = streamDeck && (streamDeck.opened || streamDeck.connected);
+      if (!live) return 0;
+      let n = 0;
+      for (const i of indices) {
+        try {
+          const out = await withTimeout(showManager.renderKeyIcon(i), 1500, 'render ' + i);
+          let bytes = out;
+          if (out && typeof out.arrayBuffer === 'function') bytes = new Uint8Array(await out.arrayBuffer());
+          if (bytes && bytes.length) { await withTimeout(streamDeck.setIcon(i, bytes), 2000, 'setIcon ' + i); n++; }
+        } catch (e) {
+          if (window.VJ_DIAG) VJ_DIAG('icon refresh failed key ' + i + ': ' + e.message);
+        }
+      }
+      return n;
+    }
+
+    // One clip and one shader at a time. On a 2GB Pi, two decoding video
+    // decks plus a shader plus the post chain will not hold 60fps, and the
+    // screen turns to mush. Desktop can layer; this cannot.
+    function enforceExclusive(keyIdx) {
+      const b = showManager.keyBindings[keyIdx];
+      if (!b || !showManager.activeKeys.has(keyIdx)) return;
+      const t = b.type;
+      if (t !== 'clip' && t !== 'shader' && t !== 'videofx' && t !== 'shaderfx') return;
+      for (const k of [...showManager.activeKeys]) {
+        if (k === keyIdx) continue;
+        const ob = showManager.keyBindings[k];
+        if (ob && ob.type === t) showManager.activeKeys.delete(k);
+      }
+    }
+
+    // ---- PER-PAGE SYSTEM ROW -------------------------------------------
+    // Nav (24/25) and the two panic keys (30/31) never move — muscle memory in
+    // the dark depends on that. The middle four change per page.
+    const C = { nav:'#2b6cb0', tap:'#8a5cf6', hud:'#0f766e',
+                reset:'#05ffa1', black:'#ff5500', danger:'#ff1744', tempo:'#b45309' };
+
+    const SYS_COMMON = {
+      30: { label: 'RESET', color: C.reset,  act: 'reset' },
+      31: { label: 'BLACK', color: C.black,  act: 'black' }
+    };
+    // 2026-08-27: display names for the right nav key's primary label.
+    // Index-aligned to showData.banks -- page 3 (SYS) has no name the user
+    // specified, kept as 'System'; ask Frank to confirm if he wants
+    // something else there.
+    const PAGE_NAMES = ['1080p', 'Blend modes', 'System', 'Video FX', 'Effect FX', 'Quad Mirror', '50th', '720p', 'Neon'];
+    const SYS_PAGES = [
+      { // page 1 — clips + effects; speed trim and the two clears live with the clips
+        26: { label: 'SPEED', bigText: '\u2212', color: '#166534', act: 'slower' },
+        27: { label: 'SPEED', bigText: '+',        color: '#166534', act: 'faster' },
+        28: { label: 'CLR CLIP', color: '#0e7490', act: 'clearclips' },
+        29: { label: 'CLR FX',   color: '#7c3aed', act: 'clearfx'   }
+      },
+      { // page 2
+        26: { label: 'BPM',  bigText: '\u2212', color: C.tempo, act: 'bpmdown' },
+        27: { label: 'BPM',  bigText: '+',        color: C.tempo, act: 'bpmup'   },
+        28: { label: 'TAP',  color: C.tap, act: 'tap' },
+        29: { label: 'HUD',  color: C.hud, act: 'hud' }
+      },
+      { // page 3 — blend opacity presets
+        26: { label: 'OPACITY', bigText: '25',  color: '#334155', act: 'op25'  },
+        27: { label: 'OPACITY', bigText: '50',  color: '#475569', act: 'op50'  },
+        28: { label: 'OPACITY', bigText: '75',  color: '#64748b', act: 'op75'  },
+        29: { label: 'OPACITY', bigText: '100', color: '#94a3b8', act: 'op100' }
+      },
+      { // page 4 — clip FX intensity presets
+        26: { label: 'FX AMT', bigText: '25',  color: '#7c2d12', act: 'fx25'  },
+        27: { label: 'FX AMT', bigText: '50',  color: '#9a3412', act: 'fx50'  },
+        28: { label: 'FX AMT', bigText: '75',  color: '#c2410c', act: 'fx75'  },
+        29: { label: 'FX AMT', bigText: '100', color: '#ea580c', act: 'fx100' }
+      },
+      { // page 5 — effects-layer FX intensity presets
+        26: { label: 'FX AMT', bigText: '25',  color: '#4c1d95', act: 'sfx25'  },
+        27: { label: 'FX AMT', bigText: '50',  color: '#5b21b6', act: 'sfx50'  },
+        28: { label: 'FX AMT', bigText: '75',  color: '#6d28d9', act: 'sfx75'  },
+        29: { label: 'FX AMT', bigText: '100', color: '#7c3aed', act: 'sfx100' }
+      },
+      {}, // page 6 — 28 quad-mirror clips; keys 26-29 intentionally available
+      // Page 7 (50th), page 8 (720p), and subsequent clip banks are deliberately EMPTY.
+      // An empty def here means applySystemRow() only writes nav (24/25) and
+      // SYS_COMMON (30/31), leaving keys 26-29 free for show.json's own clips (28 clips per page).
+      {}
+    ];
+
+    let hudVisible = false;
+    let shutdownArmed = 0;
+
+    function pageIdx() {
+      const n = (showManager.showData && showManager.showData.banks) ? showManager.showData.banks.length : 1;
+      return Math.min(showManager.currentBankIndex, Math.max(0, n - 1));
+    }
+
+    function applySystemRow() {
+      const idx = pageIdx();
+      const page = idx < SYS_PAGES.length ? SYS_PAGES[idx] : {};
+      const n = (showManager.showData && showManager.showData.banks)
+        ? showManager.showData.banks.length : 1;
+      const cur = showManager.currentBankIndex;
+
+      // 2026-08-27: left key now shows the CURRENT page (big) with the
+      // destination in the corner; right key now shows the CURRENT page's
+      // NAME (big word) with the destination page number in the corner.
+      // Both keys still navigate the same direction as before (left=prev,
+      // right=next) -- only what's drawn on them changed.
+      const curNum = String(cur + 1);
+      const prevNum = String(((cur - 1 + n) % n) + 1);
+      const nextNum = String(((cur + 1) % n) + 1);
+      const curName = PAGE_NAMES[cur] || ('PAGE ' + curNum);
+
+      showManager.keyBindings[24] = { key: 24, type: 'system', label: '', sublabel: '',
+                                      bigText: curNum, corner: prevNum, cornerPos: 'tl',
+                                      color: C.nav, act: 'prev' };
+      showManager.keyBindings[25] = { key: 25, type: 'system', label: curName,
+                                      corner: nextNum, cornerPos: 'tr',
+                                      color: C.nav, act: 'next' };
+
+      for (const [k, def] of Object.entries(Object.assign({}, page, SYS_COMMON))) {
+        const i = Number(k);
+        showManager.keyBindings[i] = Object.assign({ key: i, type: 'system' }, def,
+          { name: def.label });
+      }
+
+      // Sync hdmi4k button label to current screen resolution mode
+      const is4k = (window.innerWidth > 2000 || canvas.width > 2000);
+      for (let i = 0; i < 32; i++) {
+        const b = showManager.keyBindings[i];
+        if (b && (b.act === 'hdmi4k' || b.action === 'hdmi4k')) {
+          b.label = is4k ? '4K' : '1080p';
+          b.name = b.label;
+          b.color = '#06b6d4'; // Cyan highlight
+        }
+      }
+    }
+
+    function setFxAmount(v) {
+      try { mixer.setVideoFxAmount(v); } catch (e) {}
+      if (window.__vjToast) window.__vjToast('FX AMOUNT ' + Math.round(v * 100) + '%');
+    }
+
+    function setSfxAmount(v) {
+      try { mixer.setShaderFxAmount(v); } catch (e) {}
+      if (window.__vjToast) window.__vjToast('FX LAYER AMOUNT ' + Math.round(v * 100) + '%');
+    }
+
+    function setShaderOpacity(v) {
+      try { mixer.setShaderOpacity(v); } catch (e) {}
+      if (window.__vjToast) window.__vjToast('OPACITY ' + Math.round(v * 100) + '%');
+      if (window.VJ_DIAG) VJ_DIAG('shader opacity -> ' + Math.round(v * 100) + '%');
+    }
+
+    // ---- CLIP SPEED TRIM ------------------------------------------------
+    // Multiplicative 1% steps: fine enough to beat-match a loop against the
+    // track by ear, and even-feeling across the whole range (a fixed +0.01
+    // step is coarse at 0.5x and negligible at 2x).
+    const SPEED_STEP = 1.01, SPEED_MIN = 0.25, SPEED_MAX = 4.0;
+    let clipSpeed = 1.0;
+
+    function applySpeed(v) {
+      clipSpeed = Math.max(SPEED_MIN, Math.min(SPEED_MAX, v));
+      for (const d of [mixer.deckA, mixer.deckB]) {
+        if (d && d.video) {
+          try {
+            d.video.playbackRate = clipSpeed;
+            // Keep pitch correction off -- clip audio is muted anyway, and
+            // preservesPitch costs CPU we do not have spare.
+            if ('preservesPitch' in d.video) d.video.preservesPitch = false;
+          } catch (e) {}
+        }
+      }
+      const pct = (clipSpeed * 100);
+      if (window.__vjToast) window.__vjToast('SPEED ' + pct.toFixed(1) + '%');
+      if (window.VJ_DIAG) VJ_DIAG('clip speed -> ' + pct.toFixed(1) + '%');
+      return clipSpeed;
+    }
+    function nudgeSpeed(dir) {
+      applySpeed(dir > 0 ? clipSpeed * SPEED_STEP : clipSpeed / SPEED_STEP);
+    }
+    function resetSpeed() {
+      if (clipSpeed !== 1.0) applySpeed(1.0);
+      else clipSpeed = 1.0;
+    }
+    window.__vjSetSpeed = applySpeed;
+
+    // PANIC: stop everything, instantly, from any state.
+    function resetAll() {
+      // stop() now also blanks the deck texture; belt-and-braces clear both
+      // decks so nothing stale can survive a panic press.
+      for (const d of [mixer.deckA, mixer.deckB]) {
+        if (!d) continue;
+        try { d.stop ? d.stop() : d.pause(); } catch (e) {}
+        try { d.clearTexture && d.clearTexture(); } catch (e) {}
+      }
+      __lastClipSrc = null;
+      resetSpeed();
+      try { mixer.setDeckLayout(0); } catch (_) {}
+      showManager.activeKeys.clear();
+      try { mixer.clearShader && mixer.clearShader(); } catch (e) {}
+      if (typeof hudShader !== 'undefined' && hudShader) hudShader.textContent = 'none';
+      try { showManager.isBlackout = false; mixer.blackout(false); } catch (e) {}
+      try { mixer.setShaderOpacity(0.9); mixer.setDeckOpacity(1.0); } catch (e) {}
+      hudClip.textContent = 'none';
+      if (window.VJ_DIAG) VJ_DIAG('RESET ALL');
+    }
+
+    function setHud(v) {
+      hudVisible = v;
+      hud.classList.toggle('hidden', !v);
+      const toastEl = document.getElementById('toast');
+      if (toastEl) toastEl.classList.toggle('hud-off', !v);
+      if (window.VJ_DIAG) VJ_DIAG('HUD ' + (v ? 'ON' : 'OFF'));
+    }
+
+    async function doShutdown() {
+      const el = document.createElement('div');
+      el.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#000;color:#ff2a6d;' +
+        'display:flex;align-items:center;justify-content:center;font:700 5vw ui-monospace,monospace';
+      el.textContent = 'SHUTTING DOWN';
+      document.body.appendChild(el);
+      if (window.VJ_DIAG) VJ_DIAG('SHUTDOWN confirmed — POSTing /system/shutdown');
+      try {
+        const r = await fetch('/system/shutdown', { method: 'POST' });
+        const t = await r.text().catch(() => '');
+        if (window.VJ_DIAG) VJ_DIAG('shutdown endpoint: HTTP ' + r.status + ' ' + t);
+        if (!r.ok) {
+          el.style.color = '#ffd166';
+          el.textContent = 'SHUTDOWN FAILED (' + r.status + ')';
+          setTimeout(() => el.remove(), 6000);
+        }
+      } catch (e) {
+        if (window.VJ_DIAG) VJ_DIAG('shutdown POST failed: ' + (e && e.message));
+        el.style.color = '#ffd166';
+        el.textContent = 'SHUTDOWN FAILED (no server)';
+        setTimeout(() => el.remove(), 6000);
+      }
+    }
+
+    // Returns true if the key was consumed as a system key.
+    function handleSystemKey(keyIdx) {
+      const b = showManager.keyBindings[keyIdx];
+      const act = b && b.act;
+      const now = performance.now();
+      // BLACK is the CONFIRM key, so it must not be treated as "some other
+      // key" by the disarm guard. Previously this cleared the arm on the way
+      // in and the confirm branch then found nothing armed -- the gesture
+      // could never fire.
+      if (shutdownArmed && act !== 'shutdown' && act !== 'black') {
+        shutdownArmed = 0;
+        if (window.VJ_DIAG) VJ_DIAG('shutdown disarmed (key: ' + act + ')');
+      }
+      switch (act) {
+        case 'prev':
+        case 'next': {
+          if (act === 'prev') showManager.prevBank(); else showManager.nextBank();
+          applySystemRow();
+          // Upload all keys for the newly selected bank
+          uploadIcons([...Array(32).keys()]).catch(() => {});
+          return true;
+        }
+        case 'blend': try { cycleBlend(1); } catch (e) {} return true;
+        case 'tap':   showManager.handleTapTempo(); return true;
+        case 'hud':   setHud(!hudVisible); return true;
+        case 'bpmdown':
+          try { if (mixer.choreo && mixer.choreo.nudgeBpm) mixer.choreo.nudgeBpm(-1);
+                else if (showManager.nudgeBpm) showManager.nudgeBpm(-1); } catch (e) {}
+          if (window.__vjToast) window.__vjToast('BPM \u2212');
+          return true;
+        case 'bpmup':
+          try { if (mixer.choreo && mixer.choreo.nudgeBpm) mixer.choreo.nudgeBpm(1);
+                else if (showManager.nudgeBpm) showManager.nudgeBpm(1); } catch (e) {}
+          if (window.__vjToast) window.__vjToast('BPM +');
+          return true;
+        case 'sfx25':  setSfxAmount(0.25); return true;
+        case 'sfx50':  setSfxAmount(0.50); return true;
+        case 'sfx75':  setSfxAmount(0.75); return true;
+        case 'sfx100': setSfxAmount(1.00); return true;
+        case 'fx25':  setFxAmount(0.25); return true;
+        case 'fx50':  setFxAmount(0.50); return true;
+        case 'fx75':  setFxAmount(0.75); return true;
+        case 'fx100': setFxAmount(1.00); return true;
+        case 'op25':  setShaderOpacity(0.25); return true;
+        case 'op50':  setShaderOpacity(0.50); return true;
+        case 'op75':  setShaderOpacity(0.75); return true;
+        case 'op100': setShaderOpacity(1.00); return true;
+        case 'slower': nudgeSpeed(-1); return true;
+        case 'faster': nudgeSpeed(+1); return true;
+        case 'clearclips': {
+          // Stop and blank both decks, and un-light every clip pad. Effects
+          // are left alone -- that is the point of having two separate keys.
+          for (const d of [mixer.deckA, mixer.deckB]) {
+            if (!d) continue;
+            try { d.stop ? d.stop() : d.pause(); } catch (e) {}
+            try { d.clearTexture && d.clearTexture(); } catch (e) {}
+          }
+          __lastClipSrc = null;
+          hudClip.textContent = 'none';
+          for (const k of [...showManager.activeKeys]) {
+            const b2 = showManager.keyBindings[k];
+            if (b2 && b2.type === 'clip') showManager.activeKeys.delete(k);
+          }
+          if (window.__vjToast) window.__vjToast('CLIPS CLEARED');
+          if (window.VJ_DIAG) VJ_DIAG('CLEAR CLIPS');
+          uploadIcons([...Array(32).keys()]);
+          return true;
+        }
+        case 'togglethumbs': {
+            showManager.disableThumbs = !showManager.disableThumbs;
+            if (window.__vjToast) window.__vjToast(showManager.disableThumbs ? 'THUMBS OFF' : 'THUMBS ON');
+            uploadIcons([...Array(32).keys()]);
+            return true;
+          }
+        case 'clearfx': {
+          try { mixer.clearShader && mixer.clearShader(); } catch (e) {}
+          hudShader.textContent = 'none';
+          for (const k of [...showManager.activeKeys]) {
+            const b2 = showManager.keyBindings[k];
+            if (b2 && b2.type === 'shader') showManager.activeKeys.delete(k);
+          }
+          if (window.__vjToast) window.__vjToast('EFFECTS CLEARED');
+          if (window.VJ_DIAG) VJ_DIAG('CLEAR FX');
+          uploadIcons([...Array(32).keys()]);
+          return true;
+        }
+        case 'reset':
+          resetAll();
+          uploadIcons([...Array(32).keys()]);
+          return true;
+        case 'black':
+          if (shutdownArmed) {
+            const age = performance.now() - shutdownArmed;
+            if (window.VJ_DIAG) VJ_DIAG('BLACK pressed while armed (' + Math.round(age) + 'ms)');
+            if (age < 5000) {
+              shutdownArmed = 0;
+              doShutdown();
+              return true;
+            }
+            shutdownArmed = 0;
+            if (window.__vjToast) window.__vjToast('shutdown window expired');
+          }
+          showManager.toggleBlackout();
+          try { mixer.blackout(showManager.isBlackout); } catch (e) {}
+          return true;
+        case 'shutdown':
+          if (shutdownArmed && now - shutdownArmed < 5000) { doShutdown(); return true; }
+          shutdownArmed = now;
+          if (window.__vjToast) window.__vjToast('SHUTDOWN ARMED — PRESS AGAIN', true);
+          if (window.VJ_DIAG) VJ_DIAG('SHUTDOWN ARMED — press again within 5s');
+          setTimeout(() => {
+            if (shutdownArmed && performance.now() - shutdownArmed >= 5000) {
+              shutdownArmed = 0; uploadIcons([keyIdx]);
+              if (window.VJ_DIAG) VJ_DIAG('shutdown auto-disarmed');
+            }
+          }, 5200);
+          return true;
+        case 'hdmi4k': {
+          const isCurrently4k = window.innerWidth > 2000 || canvas.width > 2000;
+          const targetMode = isCurrently4k ? '1080p' : '4k';
+          const endpoint = isCurrently4k ? '/system/hdmi-1080p' : '/system/hdmi-4k';
+          if (b) {
+            b.label = targetMode.toUpperCase();
+            b.name = b.label;
+            b.color = '#06b6d4';
+            uploadIcons([keyIdx]).catch(() => {});
+          }
+          if (window.__vjToast) window.__vjToast('SWITCHING TO ' + targetMode.toUpperCase() + '…');
+          fetch(endpoint, { method: 'POST' })
+            .then(r => { if (window.__vjToast) window.__vjToast(r.ok ? (targetMode.toUpperCase() + ' SET') : (targetMode.toUpperCase() + ' FAILED')); })
+            .catch(() => { if (window.__vjToast) window.__vjToast(targetMode.toUpperCase() + ' FAILED'); });
+          return true;
+        }
+        case 'none':  return true;
+      }
+      return false;
+    }
+
+    // ---- SHUTDOWN WITHOUT A DEDICATED KEY -------------------------------
+    // Page 3's flexible slots are now opacity presets, so shutdown moves to a
+    // gesture that cannot happen by accident: HOLD RESET (30) for 3 seconds to
+    // arm, then press BLACK (31) within 5s to confirm. Two physically distant
+    // keys plus a deliberate hold — safer than any single button.
+    let holdTimer = null;
+    function onKeyDown(keyIdx) {
+      if (keyIdx === 30) {
+        holdTimer = setTimeout(() => {
+          shutdownArmed = performance.now();
+          if (window.__vjToast) window.__vjToast('SHUTDOWN ARMED \u2014 PRESS BLACK TO CONFIRM', true);
+          if (window.VJ_DIAG) VJ_DIAG('shutdownArmed set at ' + Math.round(shutdownArmed));
+          if (window.VJ_DIAG) VJ_DIAG('SHUTDOWN ARMED via RESET hold');
+          setTimeout(() => {
+            if (shutdownArmed && performance.now() - shutdownArmed >= 5000) {
+              shutdownArmed = 0;
+              if (window.__vjToast) window.__vjToast('shutdown disarmed');
+            }
+          }, 5200);
+        }, 3000);
+      }
+    }
+    function onKeyUp(keyIdx) {
+      if (keyIdx === 30 && holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+    }
+
+    // Wrap a key press: toggle, enforce exclusivity, refresh only changed keys.
+    let __pressBusy = false;
+    async function handleKeyPress(keyIdx) {
+      if (__pressBusy) return;            // ignore re-entry while a press resolves
+      __pressBusy = true;
+      try {
+        if (keyIdx >= 24) {
+          const consumed = handleSystemKey(keyIdx);
+          if (consumed) { await uploadIcons([keyIdx]); return; }
+        }
+        // System-type pads anywhere in the layout (not just system row ≥ 24)
+        const _b_sys = showManager.keyBindings[keyIdx];
+        if (_b_sys && _b_sys.type === 'system') {
+          const consumed = handleSystemKey(keyIdx);
+          if (consumed) { await uploadIcons([keyIdx]); return; }
+        }
+        const b0 = showManager.keyBindings[keyIdx];
+        if (window.VJ_DIAG) VJ_DIAG('PRESS key=' + keyIdx + ' binding=' +
+          (b0 ? (b0.type + ':' + (b0.label || b0.src || '?')) : 'EMPTY') +
+          ' wasActive=' + showManager.activeKeys.has(keyIdx));
+        const before = new Set(showManager.activeKeys);
+        showManager.triggerKey(keyIdx);
+        enforceExclusive(keyIdx);
+        if (window.VJ_DIAG) VJ_DIAG('  -> nowActive=' + showManager.activeKeys.has(keyIdx) +
+          ' activeSet=[' + [...showManager.activeKeys].join(',') + ']');
+        const after = showManager.activeKeys;
+        const changed = new Set([keyIdx]);
+        before.forEach(k => { if (!after.has(k)) changed.add(k); });
+        after.forEach(k => { if (!before.has(k)) changed.add(k); });
+        await uploadIcons([...changed]);
+      } finally { __pressBusy = false; }
+    }
+    window.__vjPress = handleKeyPress;
+
+    async function uploadAllIcons(force) {
+      // NOTE: streamdeck.js exposes `opened`, not `connected`. Checking the
+      // wrong property silently skipped every upload.
+      const live = streamDeck && (streamDeck.opened || streamDeck.connected);
+      if (!live) {
+        if (window.VJ_DIAG) VJ_DIAG('uploadAllIcons: deck not open (opened=' +
+          (streamDeck && streamDeck.opened) + ')');
+        return 0;
+      }
+      if (force && streamDeck.invalidateIcons) streamDeck.invalidateIcons();
+      let n = 0;
+      for (let i = 0; i < 32; i++) {
+        try {
+          // renderKeyIcon() resolves with a Blob, but setIcon() calls
+          // new Uint8Array(x) -- which yields a ZERO-LENGTH array for a Blob,
+          // silently. That empty write stalled the deck's queue and its promise
+          // never settled, hanging startup. Convert explicitly.
+          const out = await withTimeout(showManager.renderKeyIcon(i), 2000, 'render ' + i);
+          let bytes = out;
+          if (out && typeof out.arrayBuffer === 'function') bytes = new Uint8Array(await out.arrayBuffer());
+          if (i === 0 && window.VJ_DIAG)
+            VJ_DIAG('icon[0] type=' + (out && out.constructor && out.constructor.name) +
+                    ' bytes=' + (bytes && bytes.length));
+          if (bytes && bytes.length) {
+            await withTimeout(streamDeck.setIcon(i, bytes), 2500, 'setIcon ' + i);
+            n++;
+          } else {
+            if (window.VJ_DIAG) VJ_DIAG('icon[' + i + '] produced no bytes');
+          }
+        } catch (e) {
+          if (window.VJ_DIAG) VJ_DIAG('icon upload failed at key ' + i + ': ' + e.message);
+          // Continue so one transient USB/key failure cannot blank everything
+          // after it. Failed hashes remain dirty and the repaint retries them.
+        }
+        if ((i & 3) === 3) await new Promise(r => setTimeout(r, 0));
+      }
+      if (window.VJ_DIAG) VJ_DIAG('stream deck: uploaded ' + n + '/32 icons');
+      if (n < 32) scheduleDeckRepaint('upload incomplete');
+      else deckRepaintAttempts = 0;
+      return n;
+    }
+    window.__vjUploadIcons = uploadAllIcons;
+
+    async function attachDeck(dev) {
+      streamDeck = dev;
+      const opened = await streamDeck.open();
+      if (!opened) { if (window.VJ_DIAG) VJ_DIAG('stream deck: open() FAILED'); return false; }
+      streamDeck.onKey((keyIdx, pressed) => { if (pressed) { onKeyDown(keyIdx); handleKeyPress(keyIdx); } else { onKeyUp(keyIdx); } });
+      streamDeck.onReconnect?.(() => { deckRepaintAttempts = 0; scheduleDeckRepaint('HID reconnect'); });
+      if (window.VJ_DIAG) VJ_DIAG('stream deck: OPEN, uploading icons');
+      await streamDeck.setBrightness?.(80);
+      await uploadAllIcons(true);
+      const b = document.getElementById('btn-pair-deck');
+      if (b) { b.textContent = 'DECK CONNECTED'; b.style.background = '#05ffa1'; b.style.color = '#000'; }
+      return true;
+    }
+
+    // One-time pairing. navigator.hid.requestDevice() REQUIRES a user gesture,
+    // so this can only be done with a mouse/keyboard attached. The pairing then
+    // persists in the Chromium profile and getPaired() works headless forever
+    // after — which is why the profile dir must never be wiped.
+    document.getElementById('btn-pair-deck').addEventListener('click', async () => {
+      try {
+        const dev = await StreamDeckXL.request();
+        if (!dev) { if (window.VJ_DIAG) VJ_DIAG('pair: user cancelled or no device offered'); return; }
+        await attachDeck(dev);
+      } catch (e) {
+        if (window.VJ_DIAG) VJ_DIAG('pair FAILED: ' + e.message);
+      }
+    });
+
+    async function initStreamDeck() {
+      try {
+        if (window.VJ_DIAG) VJ_DIAG('hid api: ' + (navigator.hid ? 'present' : 'MISSING'));
+        if (navigator.hid) {
+          const all = await navigator.hid.getDevices();
+          if (window.VJ_DIAG) VJ_DIAG('hid paired devices: ' + all.length +
+            (all.length ? ' [' + all.map(d => d.productName).join(', ') + ']' : ' — press PAIR STREAM DECK once with a mouse'));
+        }
+        streamDeck = await StreamDeckXL.getPaired();
+        if (streamDeck) {
+          const opened = await streamDeck.open();
+          if (opened) {
+            streamDeck.onKey((keyIdx, pressed) => { if (pressed) { onKeyDown(keyIdx); handleKeyPress(keyIdx); } else { onKeyUp(keyIdx); } });
+            streamDeck.onReconnect?.(() => { deckRepaintAttempts = 0; scheduleDeckRepaint('HID reconnect'); });
+            if (window.VJ_DIAG) VJ_DIAG('stream deck: reconnected from pairing');
+            try { await streamDeck.setBrightness?.(80); }
+            catch (e) { if (window.VJ_DIAG) VJ_DIAG('setBrightness failed: ' + e.message); }
+            applySystemRow();
+            // Decode every thumbnail before the first upload, so keys come up
+            // with artwork instead of filling in only as they are pressed.
+            if (!showManager.disableThumbs) {
+              try {
+                const n = await showManager.preloadThumbs();
+                if (window.VJ_DIAG) VJ_DIAG('thumbnails preloaded: ' + n);
+              } catch (e) { if (window.VJ_DIAG) VJ_DIAG('thumb preload failed: ' + e.message); }
+            }
+            try { await uploadAllIcons(true); }
+            catch (e) { if (window.VJ_DIAG) VJ_DIAG('uploadAllIcons THREW: ' + e.message); }
+            // Anything whose bitmap was still decoding gets redrawn once the
+            // decode lands, so a slow thumbnail cannot leave a key as text.
+            setTimeout(async () => {
+              try {
+                const late = [];
+                for (let i = 0; i < 32; i++) {
+                  const b2 = showManager.keyBindings[i];
+                  if (b2 && b2.thumb && showManager.thumbReady(b2.thumb)) late.push(i);
+                }
+                if (late.length) {
+                  await uploadIcons(late);
+                  if (window.VJ_DIAG) VJ_DIAG('thumbnail redraw pass: ' + late.length + ' keys');
+                }
+              } catch (e) {}
+            }, 4000);
+            const b = document.getElementById('btn-pair-deck');
+            if (b) { b.textContent = 'DECK CONNECTED'; b.style.background = '#05ffa1'; b.style.color = '#000'; }
+          }
+        }
+      } catch (e) {
+        if (window.VJ_DIAG) VJ_DIAG('stream deck INIT ERROR: ' + (e && e.message ? e.message : e));
+        console.warn('[StreamDeck] Init note:', e);
+      }
+    }
+    // Load initial show.json and default content
+    async function loadInitialShow() {
+      try {
+        const resp = await fetch('show.json');
+        if (resp.ok) {
+          const showJson = await resp.json();
+          await showManager.loadShow(showJson);
+        }
+      } catch (err) {
+        console.warn('[Show] Loading fallback show due to:', err);
+        await showManager.loadShow(ShowManager.getFallbackShow());
+      }
+
+      // Pre-load default shader: vs_cyber_wormhole (safe & stunning Tier B) or cyber_grid (Tier A)
+      try {
+        const shaderResp = await fetch('shaders/vs_cyber_wormhole.fs');
+        if (shaderResp.ok) {
+          const shaderSrc = await shaderResp.text();
+          mixer.loadShader(shaderSrc);
+          hudShader.textContent = 'WORMHOLE';
+        }
+      } catch (_) {}
+    }
+    // Startup order is deliberate: key bindings must exist before the first
+    // hardware upload. Previously the deck was painted from an empty show,
+    // then show.json loaded without a guaranteed hardware repaint.
+    (async function bootstrapShowAndDeck() {
+      await loadInitialShow();
+      await initStreamDeck();
+    })();
+
+    // User gesture handler (starts audio & unlocks autoplay)
+    let __activated = false;
+    async function activateShow() {
+      if (__activated) return;          // idempotent — auto + manual may both fire
+      __activated = true;
+      if (window.VJ_DIAG) VJ_DIAG('activateShow() running');
+      startOverlay.style.display = 'none';
+      // ?setup=1 keeps the cursor and controls usable for one-time pairing
+      // and permission grants. The gig URL has no query string, so the cursor
+      // stays hidden there.
+      // Show the cursor in setup mode; also reveal it on any mouse movement so
+      // calibration is usable without a keyboard, and hide it again when idle.
+      if (/[?&]setup=1/.test(location.search)) {
+        document.body.classList.add('show-cursor');
+        if (window.VJ_DIAG) VJ_DIAG('SETUP MODE — cursor visible');
+      } else {
+        document.body.classList.remove('show-cursor');
+      }
+
+      // ---- Start Audio Engine, AND KEEP TRYING --------------------------
+      //
+      // This used to be a single attempt: if it failed, the show came back
+      // running but DEAF, showing "Internal Clock (No Input)", with no
+      // keyboard at the gig to do anything about it. That is exactly what a
+      // watchdog restart mid-set would produce -- the soak report caught it.
+      //
+      // A restart races the previous Chromium releasing the USB audio device,
+      // so the first attempt can easily lose. Retry with backoff, then keep
+      // a slow retry running forever: a set that starts deaf and heals itself
+      // 30 seconds later is survivable; one that stays deaf is not.
+      let audioRetryTimer = null;
+      let audioStartInFlight = false;
+      async function tryStartAudio(attempt) {
+        // OVERLAP GUARD. getUserMedia can take longer than the retry interval,
+        // and a second attempt starting while the first is still pending would
+        // create a second AudioContext -- see below.
+        if (audioStartInFlight) return false;
+        audioStartInFlight = true;
+        try {
+          const ok = await mixer.audio.start('Sound Blaster');
+          if (ok) {
+            hudAudioStatus.textContent = mixer.audio.deviceName || 'Sound Blaster LIVE';
+            hudAudioStatus.classList.add('val');
+            if (window.VJ_DIAG)
+              VJ_DIAG('audio OK on attempt ' + attempt + ': ' + mixer.audio.deviceName);
+            if (audioRetryTimer) { clearTimeout(audioRetryTimer); audioRetryTimer = null; }
+            return true;
+          }
+          if (window.VJ_DIAG) VJ_DIAG('audio start returned false (attempt ' + attempt + ')');
+        } catch (err) {
+          if (window.VJ_DIAG)
+            VJ_DIAG('audio start THREW (attempt ' + attempt + '): ' + (err && err.message));
+        } finally {
+          audioStartInFlight = false;
+        }
+        hudAudioStatus.textContent = 'Internal Clock (No Input)';
+
+        // Say what the machine can actually see, so a missing device and a
+        // busy device are distinguishable without a monitor.
+        try {
+          const devs = await navigator.mediaDevices.enumerateDevices();
+          const ins = devs.filter((d) => d.kind === 'audioinput');
+          if (window.VJ_DIAG)
+            VJ_DIAG('  audio inputs visible: ' +
+              (ins.map((d) => d.label || '(unlabelled)').join(' | ') || 'NONE'));
+        } catch (_) {}
+        return false;
+      }
+
+      (async function audioStartup() {
+        // Fast backoff first: 0s, 1s, 2s, 4s, 8s covers a device still being
+        // released by the previous process.
+        const delays = [0, 1000, 2000, 4000, 8000];
+        for (let i = 0; i < delays.length; i++) {
+          if (delays[i]) await new Promise((r) => setTimeout(r, delays[i]));
+          if (await tryStartAudio(i + 1)) return;
+        }
+        // Still nothing: keep trying quietly for the rest of the night.
+        if (window.VJ_DIAG) VJ_DIAG('audio: backoff exhausted, slow retry every 15s');
+        // setTimeout CHAIN, not setInterval: an interval keeps firing while a
+        // slow attempt is still pending, and each failed attempt builds a new
+        // AudioContext. Left running for an hour that is ~240 contexts, which
+        // is a leak of my own making from last night's retry fix and a plausible
+        // contributor to the crashes. Chain the next attempt only after the
+        // previous one has finished.
+        let n = delays.length;
+        const again = () => {
+          audioRetryTimer = setTimeout(async () => {
+            const ok = await tryStartAudio(++n);
+            if (!ok) again();
+          }, 15000);
+        };
+        again();
+      })();
+
+      // Resume video deck if any loaded
+      if (mixer.deckA.video && mixer.deckA.video.src) {
+        mixer.deckA.play().catch(() => {});
+      }
+    }
+
+    startOverlay.addEventListener('click', activateShow);
+
+    // HEADLESS AUTOSTART — the gig has no keyboard and no mouse, so the show
+    // must never wait for a gesture. Chromium is launched with
+    // --autoplay-policy=no-user-gesture-required and (per G-19) auto-granted
+    // media permission, so nothing here needs a click.
+    // Manual click/keydown still work for desktop use; activateShow is idempotent.
+    // Disable for debugging with ?manual=1
+    if (!/[?&]manual=1/.test(location.search)) {
+      setTimeout(function () {
+        if (window.VJ_DIAG) VJ_DIAG('headless autostart firing');
+        activateShow();
+      }, 1200);
+    }
+
+    // ---- input level meter + gain -------------------------------------
+    // You cannot judge a booth level by looking at a shader. This is how you
+    // confirm the input is driving the effects before the first track.
+    // Fill the blend dropdown from the engine's actual mode list.
+    if (selectBlend) {
+      selectBlend.innerHTML = '';
+      BLEND_NAMES.forEach((n) => {
+        const o = document.createElement('option');
+        o.value = n; o.textContent = n.toUpperCase();
+        selectBlend.appendChild(o);
+      });
+      selectBlend.value = 'add';
+    }
+
+    let blendIdx = BLEND_NAMES.indexOf('add');
+    function setBlend(name) {
+      mixer.setBlendMode(name);
+      blendIdx = Math.max(0, BLEND_NAMES.indexOf(name));
+      if (hudBlend) hudBlend.textContent = name;
+      if (selectBlend) selectBlend.value = name;
+      if (window.__vjToast) window.__vjToast('BLEND: ' + name.toUpperCase());
+      if (window.VJ_DIAG) VJ_DIAG('blend -> ' + name);
+    }
+    function cycleBlend(dir) {
+      blendIdx = (blendIdx + (dir || 1) + BLEND_NAMES.length) % BLEND_NAMES.length;
+      setBlend(BLEND_NAMES[blendIdx]);
+    }
+    window.__vjSetBlend = setBlend;
+    window.__vjCycleBlend = cycleBlend;
+
+    const inBar = document.querySelector('.inbar');
+    const inRms = document.getElementById('in-rms');
+    const inPeak = document.getElementById('in-peak');
+    const inDb = document.getElementById('in-db');
+    const inGainEl = document.getElementById('in-gain');
+    let peakHold = 0, peakHoldT = 0;
+
+    // 100:1 range spread evenly in dB across the fader's travel.
+    const GAIN_MIN = 0.02, GAIN_MAX = 2.0;
+    function faderToGain(t) {
+      t = Math.max(0, Math.min(1, t));
+      // Bottom of the fader is OFF, not -34dB. A fader at zero must silence
+      // the effects completely.
+      if (t < 0.02) return 0;
+      const tt = (t - 0.02) / 0.98;
+      return GAIN_MIN * Math.pow(GAIN_MAX / GAIN_MIN, tt);
+    }
+    function gainToFader(g) {
+      if (g <= 0) return 0;
+      g = Math.max(GAIN_MIN, Math.min(GAIN_MAX, g));
+      return 0.02 + 0.98 * (Math.log(g / GAIN_MIN) / Math.log(GAIN_MAX / GAIN_MIN));
+    }
+
+    function setInputGain(g) {
+      const v = mixer.audio && mixer.audio.setGain ? mixer.audio.setGain(g) : g;
+      const db = 20 * Math.log10(Math.max(1e-4, v));
+      if (inGainEl) inGainEl.textContent = (v <= 0.0001) ? 'MUTE'
+        : ((db >= 0 ? '+' : '') + db.toFixed(0) + 'dB');
+      if (window.VJ_DIAG) VJ_DIAG('input gain -> x' + Number(v).toFixed(3) +
+        ' (' + (db >= 0 ? '+' : '') + db.toFixed(1) + ' dB)');
+      return v;
+    }
+    // G-18 binds the X-Touch Mini's large fader directly to this.
+    window.__vjSetGain = setInputGain;
+    window.__vjGetGain = () => (mixer.audio && mixer.audio.getGain ? mixer.audio.getGain() : 0.25);
+
+    (function meterLoop() {
+      try {
+        if (mixer.audio && mixer.audio.levels) {
+          const L = mixer.audio.levels();
+          const now = performance.now();
+          if (L.peak >= peakHold || now - peakHoldT > 1200) { peakHold = L.peak; peakHoldT = now; }
+          // Map -60..0 dB across the bar. A linear RMS bar is unreadable:
+          // everything musical sits in the top few percent.
+          const toPct = (v) => {
+            const db = 20 * Math.log10(Math.max(1e-5, v));
+            return Math.max(0, Math.min(100, (db + 60) / 60 * 100));
+          };
+          if (inRms) inRms.style.width = toPct(L.rms) + '%';
+          if (inPeak) inPeak.style.left = Math.min(99, toPct(peakHold)) + '%';
+          if (inDb) {
+            const db = L.rms > 0.0001 ? 20 * Math.log10(L.rms) : -Infinity;
+            inDb.textContent = isFinite(db) ? db.toFixed(0) + ' dB' : '-inf';
+          }
+          if (inBar) {
+            inBar.classList.toggle('clip', !!L.clip);
+            inBar.classList.toggle('hot', !L.clip && L.peak > 0.8);
+          }
+        }
+      } catch (e) {}
+      requestAnimationFrame(meterLoop);
+    })();
+
+    const btnCalib = document.getElementById('btn-calib');
+    function runCalibration() {
+      if (!mixer.audio || !mixer.audio.calibrateNoiseFloor) return;
+      const secs = mixer.audio.calibrateNoiseFloor(3);
+      if (btnCalib) {
+        btnCalib.textContent = 'CALIBRATING…';
+        btnCalib.style.background = '#ffd166';
+        btnCalib.style.color = '#000';
+        setTimeout(() => {
+          btnCalib.textContent = 'CALIBRATE NOISE';
+          btnCalib.style.background = '';
+          btnCalib.style.color = '';
+          const nf = mixer.audio.getNoiseFloor && mixer.audio.getNoiseFloor();
+          if (nf && window.VJ_DIAG)
+            VJ_DIAG('noise floor now: ' + Object.keys(nf).map(k => k + '=' + Number(nf[k]).toFixed(4)).join(' '));
+          if (nf && window.__vjToast) {
+            const worst = Math.max(nf.sub || 0, nf.bass || 0, nf.lowMid || 0, nf.highMid || 0, nf.treble || 0);
+            window.__vjToast('NOISE FLOOR SET  (peak ' + worst.toFixed(4) + ')');
+          }
+        }, secs * 1000 + 400);
+      }
+    }
+    function toast(msg, warn) {
+      const t = document.getElementById('toast');
+      if (!t) return;
+      t.textContent = msg;
+      t.classList.toggle('warn', !!warn);
+      t.style.display = 'block';
+      clearTimeout(t.__h);
+      t.__h = setTimeout(() => { t.style.display = 'none'; }, 3600);
+    }
+    window.__vjToast = toast;
+
+    // No spare USB port for a keyboard, so the two calibration actions live on
+    // the mouse buttons. Bound to the CANVAS only, so HUD buttons still work.
+    canvas.addEventListener('click', (e) => {
+      e.preventDefault();
+      runCalibration();
+      toast('CALIBRATING NOISE — keep input SILENT', true);
+    });
+    // Middle-click: measure the LOUDEST level you will play. No keyboard
+    // available, so the three calibration actions live on the three buttons.
+    canvas.addEventListener('auxclick', (e) => {
+      if (e.button !== 1) return;
+      e.preventDefault();
+      if (mixer.audio && mixer.audio.calibrateMax) {
+        const secs = mixer.audio.calibrateMax(8);
+        toast('MEASURING MAX ' + secs + 's — PLAY YOUR LOUDEST NOW', true);
+        setTimeout(() => {
+          const mr = mixer.audio.getMaxRef && mixer.audio.getMaxRef();
+          if (mr) toast('MAX SET  sub=' + Number(mr.sub).toFixed(3) +
+                        ' bass=' + Number(mr.bass).toFixed(3));
+        }, secs * 1000 + 400);
+      }
+    });
+
+    canvas.addEventListener('contextmenu', (e) => {
+      e.preventDefault();           // no browser context menu on the show
+      runMeasure();
+      toast('MEASURING 5s — check show.log');
+    });
+
+    if (btnCalib) btnCalib.addEventListener('click', runCalibration);
+    const btnMeasure = document.getElementById('btn-measure');
+    function runMeasure() { if (mixer.audio && mixer.audio.measure) mixer.audio.measure(5); }
+    if (btnMeasure) btnMeasure.addEventListener('click', runMeasure);
+    window.__vjMeasure = runMeasure;
+    window.__vjCalibrate = runCalibration;
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'c' || e.key === 'C') runCalibration();
+      if (e.key === 'm' || e.key === 'M') runMeasure();
+      if (e.key === ',') cycleBlend(-1);
+      if (e.key === '.') cycleBlend(1);
+      // Tune how much musical dynamic range the bands span. Smaller = punchier.
+      if (e.key === '-' && mixer.audio.setBandRangeDb)
+        toast('BAND RANGE ' + mixer.audio.setBandRangeDb(mixer.audio.getBandRangeDb() - 4) + ' dB');
+      if (e.key === '=' && mixer.audio.setBandRangeDb)
+        toast('BAND RANGE ' + mixer.audio.setBandRangeDb(mixer.audio.getBandRangeDb() + 4) + ' dB');
+      // step in dB so the increments feel even across the whole range
+      if (e.key === '[') setInputGain(faderToGain(Math.max(0, gainToFader(window.__vjGetGain()) - 0.03)));
+      if (e.key === ']') setInputGain(faderToGain(Math.min(1, gainToFader(window.__vjGetGain()) + 0.03)));
+    });
+    setTimeout(() => {
+      const g0 = window.__vjGetGain();
+      const db0 = 20 * Math.log10(Math.max(1e-4, g0));
+      if (inGainEl) inGainEl.textContent = (db0 >= 0 ? '+' : '') + db0.toFixed(0) + 'dB';
+    }, 1500);
+
+    // ── X-Touch Mini: permanent controls (both Layer A and Layer B) ──────────
+    // Knob 1  (CC 1, idx 0) : clip  opacity  0..1     ring mirrors value
+    // Knob 2  (CC 2, idx 1) : FX    opacity  0..1     ring mirrors value
+    // Knob 1 push (idx 32/40): reset clip opacity → 100 %
+    // Knob 2 push (idx 33/41): reset FX   opacity → 100 %
+    // Btn 11  (idx 10 / Layer B 26): clear clips
+    // Btn 12  (idx 11 / 27)        : clear effects
+    // Btn 13  (idx 12 / 28)        : tap tempo
+    // Btn 14  (idx 13 / 29)        : toggle HUD
+    // Btn 15  (idx 14 / 30)        : reset all
+    // Btn 16  (idx 15 / 31)        : blackout
+    // Buttons 1-10 and fader A (audio gain) / B (FX opacity) unchanged.
+    // BTN_COUNT is 48 in xtouch.js: 0-15 LayerA, 16-31 LayerB, 32-47 enc push.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // ---- SHADER PRESETS (X-Touch top row, buttons 4-8 = slots 3-7) ---------
+    // presets.json is generated by tools/build-presets.py, which validates
+    // every value against that shader's own ISF header -- so a preset can
+    // never name a parameter the shader does not have, or exceed its range.
+    // The five slots mean the same thing on every shader:
+    //   1 CALM  2 FLOW  3 DRIVE  4 HARD  5 PEAK
+    const PRESET_SLOT_FIRST = 3;   // 4th button of the top row
+    const PRESET_SLOT_COUNT = 5;   // slots 3,4,5,6,7
+    let PRESETS = null;
+    let activePreset = -1;
+
+    fetch('presets.json')
+      .then((r) => r.json())
+      .then((j) => {
+        PRESETS = j;
+        if (window.VJ_DIAG)
+          VJ_DIAG('presets loaded: ' + Object.keys(j.shaders || {}).length + ' shaders');
+      })
+      .catch((e) => { if (window.VJ_DIAG) VJ_DIAG('presets load FAILED: ' + e.message); });
+
+    function refreshPresetLeds() {
+      for (let k = 0; k < PRESET_SLOT_COUNT; k++) {
+        const on = (k === activePreset);
+        try {
+          xt.setButtonLed(PRESET_SLOT_FIRST + k, on);        // Layer A
+          xt.setButtonLed(PRESET_SLOT_FIRST + k + 16, on);   // Layer B
+        } catch (_) {}
+      }
+      if (hudPreset) {
+        if (activePreset >= 0 && PRESETS && PRESETS.slotNames && PRESETS.slotNames[activePreset]) {
+          hudPreset.textContent = `${activePreset + 1} (${PRESETS.slotNames[activePreset]})`;
+        } else if (activePreset >= 0) {
+          hudPreset.textContent = String(activePreset + 1);
+        } else if (hudShader && hudShader.textContent !== 'none') {
+          hudPreset.textContent = 'default';
+        } else {
+          hudPreset.textContent = 'none';
+        }
+      }
+    }
+
+    function applyPreset(slot) {
+      if (!PRESETS) { if (window.VJ_DIAG) VJ_DIAG('preset: not loaded yet'); return; }
+      const name = mixer.getActiveShaderName ? mixer.getActiveShaderName() : '';
+      if (!name) {
+        // No shader running: ignore outright, so a stray press during a
+        // clip-only passage cannot change anything.
+        if (window.VJ_DIAG) VJ_DIAG('preset ' + (slot + 1) + ': no shader, ignored');
+        return;
+      }
+      const list = PRESETS.shaders && PRESETS.shaders[name];
+      if (!list || !list[slot]) {
+        if (window.VJ_DIAG) VJ_DIAG('preset: none defined for ' + name);
+        return;
+      }
+      mixer.setShaderInputs(list[slot].inputs);
+      activePreset = slot;
+      refreshPresetLeds();
+      if (window.__vjToast) window.__vjToast(name.toUpperCase() + '  ' + list[slot].name);
+      if (window.VJ_DIAG)
+        VJ_DIAG('preset ' + (slot + 1) + ' ' + list[slot].name + ' -> ' + name);
+    }
+    window.__vjApplyPreset = applyPreset;
+
+    const xt = new XTouchMini();
+    window.xt = xt;  // global so onBlackout callback can drive the LED from any trigger path
+
+    let _xtClipOp   = 1.0;   // Knob 1: Clip Opacity (0..100%, reset 100%)
+    let _xtShaderOp = 1.0;   // Knob 2: Shader Master Opacity (0..100%, reset 100%)
+    let _xtBlendOp  = 0.5;   // Knob 3: Blending Opacity (0..100%, default 50%, reset 50%)
+    let _xtSpeedVal = 0.5;   // Knob 4: Clip Speed (0.5..1.5, center 0.5 = 1.0x / 100%, reset 100%)
+    let _xtVideoFxOp = 0.5;  // Knob 5: Video FX Amount (0..100%, reset 50%)
+    let _xtShaderFxOp = 0.5; // Knob 6: Shader FX Amount (0..100%, reset 50%)
+    let _xtBlackoutMs = 0;   // debounce: timestamp of last blackout toggle from X-Touch
+
+    let _autoClipOnDrop = false;
+    let _autoShaderOnDrop = false;
+
+    // Smart Song Change / Drop Detection
+    // Analyzes rolling energy, breakdown drops, and sudden onset bursts
+    let _energyShort = 0; // ~0.6s window
+    let _energyLong  = 0; // ~5.0s window
+    let _subBassLong = 0; // ~5.0s window
+    let _quietFrames = 0; // tracks breakdown/buildup silence
+    let _lastDropTime = 0;
+
+    function detectDropOrSongChange(audioData) {
+      if (!audioData || !audioData.ok) return false;
+      const now = performance.now();
+      if (now - _lastDropTime < 8000) return false; // 8-second cooldown between automatic changes
+
+      const e = (audioData.energy !== undefined ? audioData.energy : 0);
+      const sub = (audioData.subBass !== undefined ? audioData.subBass : 0);
+      const kick = (audioData.hitLow !== undefined ? audioData.hitLow : (audioData.kick || 0));
+
+      // Update rolling averages (exponential moving averages)
+      _energyShort = _energyShort * 0.85 + e * 0.15;
+      _energyLong  = _energyLong  * 0.995 + e * 0.005;
+      _subBassLong = _subBassLong * 0.995 + sub * 0.005;
+
+      // Track breakdown / buildup state (energy drops low for at least ~0.8s)
+      if (_energyShort < _energyLong * 0.45 || sub < 0.12) {
+        _quietFrames = Math.min(300, _quietFrames + 1);
+      } else {
+        // Drop / Impact condition:
+        // 1. We had at least 25 frames (~0.5s) of genuine tension/buildup or breakdown
+        // 2. High kick transient (kick >= 0.70) AND sudden energy surge (>135% of baseline)
+        const isBreakdownDrop = (_quietFrames >= 25) && (kick > 0.68 || (sub > 0.60 && _energyShort > _energyLong * 1.35));
+        
+        // Song change transition: sharp rise after a complete quiet gap
+        const isSongChange = (_quietFrames >= 40) && (_energyShort > 0.70 && _energyLong < 0.35);
+
+        _quietFrames = 0;
+
+        if (isBreakdownDrop || isSongChange) {
+          _lastDropTime = now;
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // Full pool of all 25 1080p clips
+    const ALL_1080_CLIPS = [
+      "media/1080/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic.mp4",
+      "media/1080/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_1.mp4",
+      "media/1080/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_10.mp4",
+      "media/1080/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_11.mp4",
+      "media/1080/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_2.mp4",
+      "media/1080/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_3.mp4",
+      "media/1080/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_4.mp4",
+      "media/1080/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_5.mp4",
+      "media/1080/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_6.mp4",
+      "media/1080/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_8.mp4",
+      "media/1080/4K_Abstract_Video_Background__Techno_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_9.mp4",
+      "media/1080/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic.mp4",
+      "media/1080/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_1.mp4",
+      "media/1080/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_10.mp4",
+      "media/1080/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_11.mp4",
+      "media/1080/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_2.mp4",
+      "media/1080/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_3.mp4",
+      "media/1080/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_4.mp4",
+      "media/1080/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_5.mp4",
+      "media/1080/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_6.mp4",
+      "media/1080/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_7.mp4",
+      "media/1080/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_8.mp4",
+      "media/1080/4K_Laser_Light_Show_DJ_Visuals__Neon_Laser_VJ_Loops_No_Copyright_Royalty_Free_VFX_Motion_Graphic_9.mp4",
+      "media/1080/4K_VJ_LOOP_EDM__4K_126_BPM_Neon_Laser_Light_DJ_Visuals__No_Copyright__Free_VFX_Motion_Graphic.mp4",
+      "media/1080/4K_VJ_LOOP_EDM__4K_128_BPM_Neon_Laser_Light_DJ_Visuals__No_Copyright__Free_VFX_Motion_Graphic.mp4"
+    ];
+
+    let _autoClipIndex = 0;
+
+    async function cycleNextClip() {
+      if (!ALL_1080_CLIPS.length) return;
+      
+      // Determine next clip index across all 25 clips
+      let curIdx = -1;
+      if (__lastClipSrc) {
+        curIdx = ALL_1080_CLIPS.findIndex(s => s === __lastClipSrc);
+      }
+      
+      let nextIdx = (curIdx !== -1) ? ((curIdx + 1) % ALL_1080_CLIPS.length) : ((_autoClipIndex + 1) % ALL_1080_CLIPS.length);
+      _autoClipIndex = nextIdx;
+      const targetSrc = ALL_1080_CLIPS[nextIdx];
+      _clipStartTime = performance.now();
+
+      // Check if target clip exists in active bank bindings to light Stream Deck pad
+      const activePad = showManager.keyBindings.find(b => b && b.type === 'clip' && b.src === targetSrc && b.key >= 0 && b.key < 24);
+      if (activePad) {
+        handleKeyPress(activePad.key);
+      } else {
+        // Directly load & play via deck and update HUD/LEDs
+        const clipBase = targetSrc.replace(/^.*\//, '').replace(/\.[^.]+$/, '') || 'clip';
+        if (hudClip) hudClip.textContent = clipBase;
+        try {
+          if (__lastClipSrc !== targetSrc) {
+            await mixer.deckA.load(targetSrc);
+            __lastClipSrc = targetSrc;
+          }
+          resetSpeed();
+          try { mixer.setDeckOpacity(1.0); } catch (_) {}
+          await mixer.deckA.play();
+          try { mixer.deckA.video.playbackRate = 1.0; } catch (_) {}
+          _lastPlayedClipBinding = { type: 'clip', src: targetSrc, label: clipBase };
+          
+          // Clear active clip highlights on deck
+          for (const k of [...showManager.activeKeys]) {
+            const b = showManager.keyBindings[k];
+            if (b && b.type === 'clip') showManager.activeKeys.delete(k);
+          }
+          uploadIcons([...Array(24).keys()]).catch(() => {});
+        } catch (e) {
+          if (window.VJ_DIAG) VJ_DIAG('AUTO DROP clip failed: ' + e.message);
+        }
+      }
+      if (window.VJ_DIAG) VJ_DIAG('AUTO DROP -> 1080p Clip [' + (nextIdx + 1) + '/' + ALL_1080_CLIPS.length + ']: ' + targetSrc);
+    }
+
+    // Full pool of all 18 unique shaders
+    const ALL_SHADERS = [
+      { src: "shaders/plasma_flow.fs", label: "PLASMA", blend: "add" },
+      { src: "shaders/neon_tunnel.fs", label: "TUNNEL", blend: "add" },
+      { src: "shaders/kaleidoscope_mirror.fs", label: "KALEIDO", blend: "add" },
+      { src: "shaders/particle_warp.fs", label: "PARTICLE", blend: "add" },
+      { src: "shaders/audio_oscilloscope.fs", label: "OSCILLO", blend: "add" },
+      { src: "shaders/multiband_rings.fs", label: "MULTIBAND", blend: "add" },
+      { src: "shaders/spectrum_flow.fs", label: "SPECTRUM", blend: "add" },
+      { src: "shaders/vs_cyber_wormhole.fs", label: "WORMHOLE", blend: "add" },
+      { src: "shaders/audio_wave_rings.fs", label: "WAVERINGS", blend: "add" },
+      { src: "shaders/beat_tunnel.fs", label: "BEATTUNNEL", blend: "add" },
+      { src: "shaders/liquid_metal.fs", label: "LIQMETAL", blend: "add" },
+      { src: "shaders/strobe_geometry.fs", label: "STROBEGEO", blend: "add" },
+      { src: "shaders/spectrum_bars.fs", label: "SPECBARS", blend: "add" },
+      { src: "shaders/cyber_grid.fs", label: "CYBERGRID", blend: "add" },
+      { src: "shaders/strata_drift.fs", label: "STRATA", blend: "add" },
+      { src: "shaders/vs_sacred_polyhedron.fs", label: "POLYHEDRA", blend: "add" },
+      { src: "shaders/vs_shattered_glitch_core.fs", label: "SHATTERED", blend: "add" },
+      { src: "shaders/deep_drift.fs", label: "DEEPDRIFT", blend: "add" }
+    ];
+
+    let _autoShaderIndex = 0;
+    let _clipStartTime = performance.now();
+    let _shaderStartTime = performance.now();
+
+    async function cycleNextShader() {
+      if (!ALL_SHADERS.length) return;
+
+      const curName = (mixer.getActiveShaderName ? mixer.getActiveShaderName() : '') || '';
+      let curIdx = -1;
+      if (curName) {
+        curIdx = ALL_SHADERS.findIndex(s => s.src.includes(curName) || s.label.toLowerCase() === curName.toLowerCase());
+      }
+
+      let nextIdx = (curIdx !== -1) ? ((curIdx + 1) % ALL_SHADERS.length) : ((_autoShaderIndex + 1) % ALL_SHADERS.length);
+      _autoShaderIndex = nextIdx;
+      const targetShader = ALL_SHADERS[nextIdx];
+
+      _shaderStartTime = performance.now();
+
+      // Check if target shader exists in active bank bindings to light Stream Deck pad
+      const activePad = showManager.keyBindings.find(b => b && b.type === 'shader' && b.src === targetShader.src && b.key >= 0 && b.key < 24);
+      if (activePad) {
+        handleKeyPress(activePad.key);
+      } else {
+        // Directly load & compile shader and update HUD
+        if (hudShader) hudShader.textContent = targetShader.label || targetShader.src;
+        if (hudPreset) hudPreset.textContent = 'default';
+        if (targetShader.blend) {
+          mixer.setBlendMode(targetShader.blend);
+          if (hudBlend) hudBlend.textContent = targetShader.blend;
+        }
+        mixer.setShaderOpacity(0.9);
+        try {
+          const resp = await fetch(targetShader.src);
+          if (resp.ok) {
+            const src = await resp.text();
+            const ok = mixer.loadShader(src, targetShader.src);
+            if (ok !== false && typeof activePreset !== 'undefined') {
+              activePreset = -1;
+              try { refreshPresetLeds(); } catch (_) {}
+            }
+            _lastPlayedShaderBinding = { type: 'shader', src: targetShader.src, label: targetShader.label };
+            // Clear active shader highlights on deck
+            for (const k of [...showManager.activeKeys]) {
+              const b = showManager.keyBindings[k];
+              if (b && b.type === 'shader') showManager.activeKeys.delete(k);
+            }
+            uploadIcons([...Array(24).keys()]).catch(() => {});
+          }
+        } catch (err) {
+          if (window.VJ_DIAG) VJ_DIAG('AUTO DROP shader failed: ' + err.message);
+        }
+      }
+      if (window.VJ_DIAG) VJ_DIAG('AUTO DROP -> Shader [' + (nextIdx + 1) + '/' + ALL_SHADERS.length + ']: ' + targetShader.src);
+    }
+
+    function showDropIndicator(label) {
+      const el = document.getElementById('drop-indicator');
+      const txt = document.getElementById('drop-indicator-text');
+      if (!el || !txt) return;
+      txt.textContent = label;
+      el.style.display = 'flex';
+      clearTimeout(el.__timer);
+      el.__timer = setTimeout(() => {
+        el.style.display = 'none';
+      }, 1800);
+    }
+
+    // Monitor audio drops inside interval using mixer's sampled audio data
+    // Maximum play duration: 3 minutes (180,000 ms) before forced shift to next
+    const MAX_AUTO_PLAY_MS = 180000;
+
+    window.setInterval(() => {
+      if (!_autoClipOnDrop && !_autoShaderOnDrop) return;
+      const now = performance.now();
+      const audioData = mixer._lastAudioData;
+      const dropDetected = detectDropOrSongChange(audioData);
+
+      // Auto Clip: change on drop OR if running for >= 3 minutes
+      if (_autoClipOnDrop) {
+        const clipElapsed = now - _clipStartTime;
+        if (dropDetected || clipElapsed >= MAX_AUTO_PLAY_MS) {
+          _clipStartTime = now;
+          cycleNextClip();
+          showDropIndicator('\u25B6 CLIP' + (clipElapsed >= MAX_AUTO_PLAY_MS ? ' (3M)' : ''));
+        }
+      }
+
+      // Auto Shader: change on drop OR if running for >= 3 minutes
+      if (_autoShaderOnDrop) {
+        const shaderElapsed = now - _shaderStartTime;
+        if (dropDetected || shaderElapsed >= MAX_AUTO_PLAY_MS) {
+          _shaderStartTime = now;
+          cycleNextShader();
+          showDropIndicator('\u2728 SHADER' + (shaderElapsed >= MAX_AUTO_PLAY_MS ? ' (3M)' : ''));
+        }
+      }
+    }, 50);
+
+    function xtPermanentAction(idx, pressed, rawNote) {
+      if (!pressed) return;
+      const n = (rawNote !== undefined) ? rawNote : idx;
+
+      switch (n) {
+        // ==== 8 KNOB CLICKS (Notes 0..7) ====
+        case 0: // Knob 1 click -> Clip opacity reset to 100%
+          _xtClipOp = 1.0;
+          try { mixer.setDeckOpacity(1.0); } catch (_) {}
+          xt.seedKnob(0, 1.0);
+          xt.setRing(0, 1.0);
+          if (window.__vjToast) window.__vjToast('CLIP OPACITY 100%');
+          return;
+
+        case 1: // Knob 2 click -> Shader opacity reset to 100%
+          _xtShaderOp = 1.0;
+          try { mixer.setShaderOpacity(1.0); } catch (_) {}
+          xt.seedKnob(1, 1.0);
+          xt.setRing(1, 1.0);
+          if (window.__vjToast) window.__vjToast('SHADER OPACITY 100%');
+          return;
+
+        case 2: // Knob 3 click -> Blending opacity reset to 50%
+          _xtBlendOp = 0.5;
+          try { mixer.setShaderOpacity(0.50); } catch (_) {}
+          xt.seedKnob(2, 0.5);
+          xt.setRing(2, 0.5);
+          if (window.__vjToast) window.__vjToast('BLEND OPACITY 50%');
+          return;
+
+        case 3: // Knob 4 click -> Reset clip speed to 100% (1.0x)
+          _xtSpeedVal = 0.5;
+          applySpeed(1.0);
+          xt.seedKnob(3, 0.5);
+          xt.setRing(3, 0.5);
+          if (window.__vjToast) window.__vjToast('SPEED 100% (1.0x)');
+          return;
+
+        case 4: // Knob 5 click -> Reset Video FX to 50%
+          _xtVideoFxOp = 0.5;
+          setFxAmount(0.5);
+          xt.seedKnob(4, 0.5);
+          xt.setRing(4, 0.5);
+          if (window.__vjToast) window.__vjToast('VIDEO FX 50%');
+          return;
+
+        case 5: // Knob 6 click -> Reset Shader FX to 50%
+          _xtShaderFxOp = 0.5;
+          setSfxAmount(0.5);
+          xt.seedKnob(5, 0.5);
+          xt.setRing(5, 0.5);
+          if (window.__vjToast) window.__vjToast('SHADER FX 50%');
+          return;
+
+        case 6: // Knob 7 click -> Toggle Auto Clip on Drop / Song Change
+          _autoClipOnDrop = !_autoClipOnDrop;
+          if (window.__vjToast) window.__vjToast(_autoClipOnDrop ? 'AUTO CLIP DROP: ON' : 'AUTO CLIP DROP: OFF');
+          return;
+
+        case 7: // Knob 8 click -> Toggle Auto Shader on Drop / Song Change
+          _autoShaderOnDrop = !_autoShaderOnDrop;
+          if (window.__vjToast) window.__vjToast(_autoShaderOnDrop ? 'AUTO SHADER DROP: ON' : 'AUTO SHADER DROP: OFF');
+          return;
+
+        // ==== FIRST ROW OF PADS 1 TO 8 (Notes 8..15) ====
+        case 8: { // Pad 1 (Note 8): Toggle Clip ON / OFF
+          const isClipPlaying = (mixer.deckA && mixer.deckA.video && !mixer.deckA.video.paused) || (hudClip && hudClip.textContent !== 'none');
+          if (isClipPlaying) {
+            for (const d of [mixer.deckA, mixer.deckB]) {
+              if (!d) continue;
+              try { d.stop ? d.stop() : d.pause(); } catch (_) {}
+              try { d.clearTexture && d.clearTexture(); } catch (_) {}
+            }
+            __lastClipSrc = null;
+            if (hudClip) hudClip.textContent = 'none';
+            for (const k of [...showManager.activeKeys]) {
+              const b2 = showManager.keyBindings[k];
+              if (b2 && b2.type === 'clip') showManager.activeKeys.delete(k);
+            }
+            if (window.__vjToast) window.__vjToast('CLIP OFF');
+          } else {
+            // Re-trigger last clip or first clip found in bindings
+            const b = _lastPlayedClipBinding || Object.values(showManager.keyBindings).find(k => k && k.type === 'clip');
+            if (b) {
+              showManager.triggerKey(b.key !== undefined ? b.key : 0);
+              if (window.__vjToast) window.__vjToast('CLIP ON');
+            }
+          }
+          uploadIcons([...Array(32).keys()]);
+          return;
+        }
+
+        case 9: { // Pad 2 (Note 9): Toggle Shader ON / OFF
+          const isShaderRunning = (mixer.getActiveShaderName && mixer.getActiveShaderName()) || (hudShader && hudShader.textContent !== 'none');
+          if (isShaderRunning) {
+            try { mixer.clearShader && mixer.clearShader(); } catch (_) {}
+            activePreset = -1;
+            refreshPresetLeds();
+            if (hudShader) hudShader.textContent = 'none';
+            if (hudPreset) hudPreset.textContent = 'none';
+            for (const k of [...showManager.activeKeys]) {
+              const b2 = showManager.keyBindings[k];
+              if (b2 && b2.type === 'shader') showManager.activeKeys.delete(k);
+            }
+            if (window.__vjToast) window.__vjToast('SHADER OFF');
+          } else {
+            // Re-trigger last shader or first shader found in bindings
+            const b = _lastPlayedShaderBinding || Object.values(showManager.keyBindings).find(k => k && k.type === 'shader');
+            if (b) {
+              showManager.triggerKey(b.key !== undefined ? b.key : 0);
+              if (window.__vjToast) window.__vjToast('SHADER ON');
+            }
+          }
+          uploadIcons([...Array(32).keys()]);
+          return;
+        }
+
+        case 10: // Pad 3 (Note 10): 25% Blend Mode Opacity
+          setShaderOpacity(0.25);
+          _xtBlendOp = 0.25;
+          xt.seedKnob(2, 0.25);
+          xt.setRing(2, 0.25);
+          if (window.__vjToast) window.__vjToast('BLEND 25%');
+          return;
+
+        case 11: // Pad 4 (Note 11): 50% Blend Mode Opacity
+          setShaderOpacity(0.50);
+          _xtBlendOp = 0.50;
+          xt.seedKnob(2, 0.50);
+          xt.setRing(2, 0.50);
+          if (window.__vjToast) window.__vjToast('BLEND 50%');
+          return;
+
+        case 12: // Pad 5 (Note 12): 75% Blend Mode Opacity
+          setShaderOpacity(0.75);
+          _xtBlendOp = 0.75;
+          xt.seedKnob(2, 0.75);
+          xt.setRing(2, 0.75);
+          if (window.__vjToast) window.__vjToast('BLEND 75%');
+          return;
+
+        case 13: // Pad 6 (Note 13): 100% Blend Mode Opacity
+          setShaderOpacity(1.00);
+          _xtBlendOp = 1.00;
+          xt.seedKnob(2, 1.00);
+          xt.setRing(2, 1.00);
+          if (window.__vjToast) window.__vjToast('BLEND 100%');
+          return;
+
+        case 14: // Pad 7 (Note 14): Cycle to prev Blending mode (wrap around)
+          cycleBlend(-1);
+          return;
+
+        case 15: // Pad 8 (Note 15): Cycle to next Blending mode (wrap around)
+          cycleBlend(1);
+          return;
+
+        // ==== 2ND ROW OF PADS 9 TO 16 (Notes 16..23) ====
+        case 16: { // Pad 9 (Note 16): Flip Layer Order (Clip on top vs Shader on top)
+          const inv = mixer.toggleLayerOrder ? mixer.toggleLayerOrder() : false;
+          if (window.__vjToast) window.__vjToast(inv ? 'LAYER: CLIP ON TOP' : 'LAYER: SHADER ON TOP');
+          return;
+        }
+
+        case 17: // Pad 10 (Note 17): Tempo TAP
+          showManager.handleTapTempo();
+          if (window.__vjToast) window.__vjToast('TEMPO TAP');
+          return;
+
+        case 18: // Pad 11 (Note 18): Tempo DOWN (BPM -)
+          try {
+            if (mixer.choreo && mixer.choreo.nudgeBpm) mixer.choreo.nudgeBpm(-1);
+            else if (showManager.nudgeBpm) showManager.nudgeBpm(-1);
+          } catch (e) {}
+          if (window.__vjToast) window.__vjToast('TEMPO \u2212');
+          return;
+
+        case 19: // Pad 12 (Note 19): Tempo UP (BPM +)
+          try {
+            if (mixer.choreo && mixer.choreo.nudgeBpm) mixer.choreo.nudgeBpm(1);
+            else if (showManager.nudgeBpm) showManager.nudgeBpm(1);
+          } catch (e) {}
+          if (window.__vjToast) window.__vjToast('TEMPO +');
+          return;
+
+        case 21: // Pad 14 (Note 21): HUD ON / OFF Toggle
+          setHud(!hudVisible);
+          return;
+
+        case 22: // Pad 15 (Note 22): Reset All (matches Stream Deck Reset)
+          resetAll();
+          uploadIcons([...Array(32).keys()]);
+          _xtClipOp = 1.0; _xtShaderOp = 1.0; _xtBlendOp = 0.5; _xtSpeedVal = 0.5; _xtVideoFxOp = 0.5; _xtShaderFxOp = 0.5;
+          xt.setRing(0, _xtClipOp);
+          xt.setRing(1, _xtShaderOp);
+          xt.setRing(2, _xtBlendOp);
+          xt.setRing(3, _xtSpeedVal);
+          xt.setRing(4, _xtVideoFxOp);
+          xt.setRing(5, _xtShaderFxOp);
+          if (window.__vjToast) window.__vjToast('RESET ALL');
+          return;
+
+        case 23: { // Pad 16 (Note 23): Black (Pad 16 LED is lit whenever Blackout is active)
+          const _now = performance.now();
+          if (_xtBlackoutMs && _now - _xtBlackoutMs < 150) return;
+          _xtBlackoutMs = _now;
+          handleSystemKey(31);
+          return;
+        }
+      }
+    }
+
+    (async function initXTouch() {
+      try {
+        const ok = await xt.open((m) => { if (window.VJ_DIAG) VJ_DIAG(m); });
+        if (!ok) { if (window.VJ_DIAG) VJ_DIAG('xtouch: not found'); return; }
+        // Hardware encoders send absolute 0..127 position matching the LED rings
+        xt.setEncoderMode('absolute');
+
+        // Seed encoders and rings to current initial state
+        xt.seedKnob(0, _xtClipOp);
+        xt.seedKnob(1, _xtShaderOp);
+        xt.seedKnob(2, _xtBlendOp);
+        xt.seedKnob(3, _xtSpeedVal);
+        xt.seedKnob(4, _xtVideoFxOp);
+        xt.seedKnob(5, _xtShaderFxOp);
+        xt.setRing(0, _xtClipOp);
+        xt.setRing(1, _xtShaderOp);
+        xt.setRing(2, _xtBlendOp);
+        xt.setRing(3, _xtSpeedVal);
+        xt.setRing(3, _xtVideoFxOp);
+        xt.setRing(5, _xtShaderFxOp);
+
+        xt.onKnob((i, v) => {
+          if (i === 0) { // Knob 1: Clip Opacity (0..100%)
+            _xtClipOp = v;
+            try { mixer.setDeckOpacity(v); } catch (_) {}
+            xt.setRing(0, v);
+            if (window.__vjToast) window.__vjToast('CLIP ' + Math.round(v * 100) + '%');
+          } else if (i === 1) { // Knob 2: Shader Master Opacity (0..100%)
+            _xtShaderOp = v;
+            try { mixer.setShaderOpacity(v); } catch (_) {}
+            xt.setRing(1, v);
+            if (window.__vjToast) window.__vjToast('SHADER ' + Math.round(v * 100) + '%');
+          } else if (i === 2) { // Knob 3: Blending Opacity (0..100%)
+            _xtBlendOp = v;
+            try { mixer.setShaderOpacity(v); } catch (_) {}
+            xt.setRing(2, v);
+            if (window.__vjToast) window.__vjToast('BLEND ' + Math.round(v * 100) + '%');
+          } else if (i === 3) { // Knob 4: Clip Speed (-50% to +50%, i.e. 0.5x to 1.5x)
+            _xtSpeedVal = v;
+            const targetSpeed = 0.5 + v * 1.0; // v=0 -> 0.5x (-50%), v=0.5 -> 1.0x (0%), v=1.0 -> 1.5x (+50%)
+            applySpeed(targetSpeed);
+            xt.setRing(3, v);
+            const deltaPct = Math.round((targetSpeed - 1.0) * 100);
+            const sign = deltaPct >= 0 ? '+' : '';
+            if (window.__vjToast) window.__vjToast('SPEED ' + sign + deltaPct + '% (' + targetSpeed.toFixed(2) + 'x)');
+          } else if (i === 4) { // Knob 5: Video Effect Opacity (0..100%)
+            _xtVideoFxOp = v;
+            setFxAmount(v);
+            xt.setRing(4, v);
+            if (window.__vjToast) window.__vjToast('VIDEO FX ' + Math.round(v * 100) + '%');
+          } else if (i === 5) { // Knob 6: Effect FX Opacity (0..100%)
+            _xtShaderFxOp = v;
+            setSfxAmount(v);
+            xt.setRing(5, v);
+            if (window.__vjToast) window.__vjToast('SHADER FX ' + Math.round(v * 100) + '%');
+          }
+        });
+
+        xt.onButton((i, pressed, rawNote) => { xtPermanentAction(i, pressed, rawNote); });
+
+        // Fader A → audio input gain
+        // Fader B → shader/FX opacity (mirrors knob 2)
+        xt.onFader((v, layer) => {
+          if (layer === 'B') {
+            _xtShaderOp = v;
+            try { mixer.setShaderOpacity(v); } catch (_) {}
+            xt.setRing(1, v);
+            if (window.__vjToast) window.__vjToast('SHADER ' + Math.round(v * 100) + '%');
+          } else {
+            const g = faderToGain(v);
+            setInputGain(g);
+            const db = 20 * Math.log10(Math.max(1e-4, g));
+            if (window.__vjToast) {
+              window.__vjToast('AUDIO ' + Math.round(v * 100) + '%   ' +
+                (g <= 0.0001 ? 'MUTE' : ((db >= 0 ? '+' : '') + db.toFixed(0) + ' dB')));
+            }
+          }
+        });
+
+        xt.allLedsOff();
+        // Seed encoders and rings to current initial state
+        xt.seedKnob(0, _xtClipOp);
+        xt.seedKnob(1, _xtShaderOp);
+        xt.seedKnob(2, _xtBlendOp);
+        xt.seedKnob(3, _xtSpeedVal);
+        xt.seedKnob(4, _xtVideoFxOp);
+        xt.seedKnob(5, _xtShaderFxOp);
+        xt.setRing(0, _xtClipOp);
+        xt.setRing(1, _xtShaderOp);
+        xt.setRing(2, _xtBlendOp);
+        xt.setRing(3, _xtSpeedVal);
+        xt.setRing(4, _xtVideoFxOp);
+        xt.setRing(5, _xtShaderFxOp);
+
+        // Reflect current blackout state on connect
+        if (showManager.isBlackout) {
+          xt.setButtonLed(23, true); // Note 23 = 16th pad
+        }
+      } catch (e) {
+        if (window.VJ_DIAG) VJ_DIAG('xtouch init FAILED: ' + (e && e.message));
+      }
+    })();
+
+    // Expose engine state for diagnostics (no monitor at the gig).
+    window.__vj = { mixer, showManager };
+
+    // Report live engine state — this is how we know the loop is actually
+    // drawing rather than merely constructed.
+    setInterval(function () {
+      try {
+        if (!window.VJ_DIAG) return;
+        VJ_DIAG('engine fps=' + (mixer.fps || 0).toFixed(1) +
+                ' scale=' + mixer.scale +
+                ' shader=' + (hudShader.textContent || 'none') +
+                ' clip=' + (hudClip.textContent || 'none') +
+                ' audio=' + (hudAudioStatus.textContent || '?'));
+      } catch (e) { VJ_DIAG('state probe: ' + e.message); }
+    }, 5000);
+
+    // BOOT TO A VISUAL, NOT TO BLACK.
+    // A rig that powers on showing nothing is indistinguishable from a broken
+    // one — and at the gig there is no monitor to investigate with.
+    // cyber_grid is the cheapest confirmed-safe shader (8x headroom, PERF.md).
+    setTimeout(async function () {
+      try {
+        if (hudShader.textContent && hudShader.textContent !== 'none') return;
+        const r = await fetch('./shaders/cyber_grid.fs');
+        if (!r.ok) { VJ_DIAG('default shader fetch failed: ' + r.status); return; }
+        mixer.loadShader(await r.text());
+        hudShader.textContent = 'cyber_grid (default)';
+        VJ_DIAG('default shader loaded: cyber_grid');
+      } catch (e) { VJ_DIAG('default shader FAILED: ' + e.message); }
+    }, 2500);
+    window.addEventListener('keydown', (e) => {
+      if (startOverlay.style.display !== 'none') {
+        activateShow();
+      }
+      if (e.code === 'KeyH') {
+        setHud(!hudVisible);
+      }
+    });
+
+    // UI Controls
+    btnBlackout.addEventListener('click', () => {
+      showManager.toggleBlackout();
+    });
+
+    async function audioDiag(tag) {
+      if (!window.VJ_DIAG) return;
+      try {
+        if (!navigator.mediaDevices) { VJ_DIAG(tag + ' mediaDevices: MISSING (insecure context?)'); return; }
+        let perm = 'unknown';
+        try { perm = (await navigator.permissions.query({ name: 'microphone' })).state; } catch (e) {}
+        VJ_DIAG(tag + ' mic permission: ' + perm);
+        const devs = await navigator.mediaDevices.enumerateDevices();
+        const ins = devs.filter(d => d.kind === 'audioinput');
+        VJ_DIAG(tag + ' audioinput count: ' + ins.length);
+        ins.forEach((d, i) => VJ_DIAG('   [' + i + '] "' + (d.label || '(label hidden until granted)') + '" id=' + d.deviceId.slice(0, 12)));
+        if (!ins.length) VJ_DIAG(tag + ' NO CAPTURE DEVICE — is the Sound Blaster plugged in? check `arecord -l`');
+      } catch (e) { VJ_DIAG(tag + ' audioDiag error: ' + e.message); }
+    }
+    audioDiag('startup:');
+
+    btnAudio.addEventListener('click', async () => {
+      if (window.VJ_DIAG) VJ_DIAG('Start Audio clicked');
+      await audioDiag('pre-grant:');
+      // raw getUserMedia so the REAL error surfaces instead of being swallowed
+      try {
+        const st = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+        });
+        const t = st.getAudioTracks()[0];
+        if (window.VJ_DIAG) VJ_DIAG('getUserMedia OK -> "' + (t && t.label) + '"');
+        st.getTracks().forEach(x => x.stop());
+      } catch (e) {
+        if (window.VJ_DIAG) VJ_DIAG('getUserMedia FAILED: ' + e.name + ' — ' + e.message);
+      }
+      await audioDiag('post-grant:');
+      const ok = await mixer.audio.start('Sound Blaster');
+      hudAudioStatus.textContent = ok ? (mixer.audio.deviceName || 'Sound Blaster LIVE') : 'Internal Clock';
+    });
+
+    selectBlend.addEventListener('change', (e) => {
+      mixer.setBlendMode(e.target.value);
+      hudBlend.textContent = e.target.value;
+    });
+
+    btnHudToggle.addEventListener('click', () => {
+      hud.classList.toggle('hidden');
+    });
+
+    // Periodic HUD telemetry update (~4 times/sec)
+    let lastHudUpdate = 0;
+    function updateHud(now) {
+      if (now - lastHudUpdate > 250) {
+        hudFps.textContent = mixer.fps.toFixed(1);
+        if (hudRes) hudRes.textContent = (canvas.width || window.innerWidth) + 'x' + (canvas.height || window.innerHeight);
+        if (hudMediaRes) {
+          const v = mixer.deckA?.video;
+          if (v && v.videoWidth > 0 && v.videoHeight > 0) {
+            hudMediaRes.textContent = v.videoWidth + 'x' + v.videoHeight;
+          } else {
+            hudMediaRes.textContent = 'none';
+          }
+        }
+        if (hudScale) hudScale.textContent = mixer.scale.toFixed(2);
+
+        // Update audio level meters if active
+        if (mixer.audio.ok) {
+          const sample = mixer.audio.sample();
+          if (vuBass) vuBass.style.width = Math.min(100, Math.round(sample.bass * 100)) + '%';
+          if (vuKick) vuKick.style.width = Math.min(100, Math.round(sample.kick * 100)) + '%';
+        }
+
+        lastHudUpdate = now;
+      }
+      requestAnimationFrame(updateHud);
+    }
+    requestAnimationFrame(updateHud);
+  </script>
+</body>
+</html>

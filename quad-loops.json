@@ -1,0 +1,554 @@
+{
+ "186371-877727709.mp4": {
+  "duration": 8.07,
+  "fps": 30.0,
+  "loop": {
+   "frames": 120,
+   "seconds": 4.0,
+   "window_err": 0.152,
+   "window_ratio": 0.013,
+   "seam_ratio": 1.258,
+   "confident": true,
+   "typical_step": 11.865
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.19,
+   "max_err": 0.23
+  }
+ },
+ "236829.mp4": {
+  "duration": 10.0,
+  "fps": 60.0,
+  "loop": {
+   "frames": 207,
+   "seconds": 3.45,
+   "window_err": 35.202,
+   "window_ratio": 6.836,
+   "seam_ratio": 4.816,
+   "confident": false,
+   "refined_from": 205,
+   "typical_step": 5.149
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.21,
+   "max_err": 0.25
+  }
+ },
+ "236830.mp4": {
+  "duration": 10.0,
+  "fps": 60.0,
+  "loop": {
+   "frames": 300,
+   "seconds": 5.0,
+   "window_err": 0.472,
+   "window_ratio": 0.4,
+   "seam_ratio": 0.477,
+   "confident": true,
+   "refined_from": 299,
+   "typical_step": 1.179
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.14,
+   "max_err": 0.17
+  }
+ },
+ "236831.mp4": {
+  "duration": 10.0,
+  "fps": 60.0,
+  "loop": {
+   "frames": 300,
+   "seconds": 5.0,
+   "window_err": 1.407,
+   "window_ratio": 0.42,
+   "seam_ratio": 0.596,
+   "confident": true,
+   "refined_from": 299,
+   "typical_step": 3.352
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.19,
+   "max_err": 0.21
+  }
+ },
+ "236832.mp4": {
+  "duration": 10.0,
+  "fps": 60.0,
+  "loop": {
+   "frames": 300,
+   "seconds": 5.0,
+   "window_err": 1.342,
+   "window_ratio": 0.484,
+   "seam_ratio": 0.472,
+   "confident": true,
+   "refined_from": 299,
+   "typical_step": 2.773
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.2,
+   "max_err": 0.24
+  }
+ },
+ "4K Abstract Video Background  Techno Laser VJ Loops No Copyright Royalty Free VFX Motion Graphic 1.mp4": {
+  "duration": 60.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 900,
+   "seconds": 30.0,
+   "window_err": 0.089,
+   "window_ratio": 0.016,
+   "seam_ratio": 0.014,
+   "confident": true,
+   "refined_from": 898,
+   "typical_step": 5.505
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.22,
+   "max_err": 0.32
+  }
+ },
+ "4K Abstract Video Background  Techno Laser VJ Loops No Copyright Royalty Free VFX Motion Graphic 11.mp4": {
+  "duration": 61.93,
+  "fps": 30.0,
+  "loop": {
+   "frames": 450,
+   "seconds": 15.0,
+   "window_err": 0.08,
+   "window_ratio": 0.007,
+   "seam_ratio": 2.061,
+   "confident": true,
+   "typical_step": 11.099
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.08,
+   "max_err": 0.14
+  }
+ },
+ "4K Abstract Video Background  Techno Laser VJ Loops No Copyright Royalty Free VFX Motion Graphic 2.mp4": {
+  "duration": 61.93,
+  "fps": 30.0,
+  "loop": {
+   "frames": 900,
+   "seconds": 30.0,
+   "window_err": 0.216,
+   "window_ratio": 0.036,
+   "seam_ratio": 0.906,
+   "confident": true,
+   "refined_from": 899,
+   "typical_step": 5.936
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 1.2,
+   "max_err": 1.73
+  }
+ },
+ "4K Abstract Video Background  Techno Laser VJ Loops No Copyright Royalty Free VFX Motion Graphic 3.mp4": {
+  "duration": 61.93,
+  "fps": 30.0,
+  "loop": {
+   "frames": 450,
+   "seconds": 15.0,
+   "window_err": 0.022,
+   "window_ratio": 0.016,
+   "seam_ratio": 0.079,
+   "confident": true,
+   "refined_from": 449,
+   "typical_step": 1.345
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.03,
+   "max_err": 0.1
+  }
+ },
+ "4K Abstract Video Background  Techno Laser VJ Loops No Copyright Royalty Free VFX Motion Graphic 4.mp4": {
+  "duration": 61.93,
+  "fps": 30.0,
+  "loop": {
+   "frames": 1908,
+   "seconds": 63.6,
+   "window_err": 0.18,
+   "window_ratio": 0.023,
+   "seam_ratio": 0.021,
+   "confident": true,
+   "typical_step": 7.965
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.19,
+   "max_err": 0.31
+  }
+ },
+ "4K Abstract Video Background  Techno Laser VJ Loops No Copyright Royalty Free VFX Motion Graphic 6.mp4": {
+  "duration": 61.93,
+  "fps": 30.0,
+  "loop": {
+   "frames": 900,
+   "seconds": 30.0,
+   "window_err": 0.14,
+   "window_ratio": 0.015,
+   "seam_ratio": 0.842,
+   "confident": true,
+   "refined_from": 899,
+   "typical_step": 9.132
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.1,
+   "max_err": 0.13
+  }
+ },
+ "4K Abstract Video Background  Techno Laser VJ Loops No Copyright Royalty Free VFX Motion Graphic 9.mp4": {
+  "duration": 61.93,
+  "fps": 30.0,
+  "loop": {
+   "frames": 900,
+   "seconds": 30.0,
+   "window_err": 3.673,
+   "window_ratio": 0.579,
+   "seam_ratio": 0.629,
+   "confident": true,
+   "refined_from": 898,
+   "typical_step": 6.347
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.09,
+   "max_err": 0.12
+  }
+ },
+ "4K Laser Light Show DJ Visuals  Neon Laser VJ Loops No Copyright Royalty Free VFX Motion Graphic 1.mp4": {
+  "duration": 61.93,
+  "fps": 30.0,
+  "loop": {
+   "frames": 233,
+   "seconds": 7.767,
+   "window_err": 3.111,
+   "window_ratio": 0.601,
+   "seam_ratio": 0.71,
+   "confident": true,
+   "refined_from": 231,
+   "typical_step": 5.177
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 2.91,
+   "max_err": 6.27
+  }
+ },
+ "4K Laser Light Show DJ Visuals  Neon Laser VJ Loops No Copyright Royalty Free VFX Motion Graphic 10.mp4": {
+  "duration": 61.93,
+  "fps": 30.0,
+  "loop": {
+   "frames": 1127,
+   "seconds": 37.567,
+   "window_err": 29.562,
+   "window_ratio": 2.253,
+   "seam_ratio": 1.82,
+   "confident": true,
+   "refined_from": 1128,
+   "typical_step": 13.122
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.21,
+   "max_err": 0.45
+  }
+ },
+ "4K Laser Light Show DJ Visuals  Neon Laser VJ Loops No Copyright Royalty Free VFX Motion Graphic 11.mp4": {
+  "duration": 61.93,
+  "fps": 30.0,
+  "loop": {
+   "frames": 889,
+   "seconds": 29.633,
+   "window_err": 4.2,
+   "window_ratio": 0.484,
+   "seam_ratio": 0.01,
+   "confident": true,
+   "refined_from": 888,
+   "typical_step": 8.675
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.11,
+   "max_err": 0.25
+  }
+ },
+ "4K Laser Light Show DJ Visuals  Neon Laser VJ Loops No Copyright Royalty Free VFX Motion Graphic 2.mp4": {
+  "duration": 61.93,
+  "fps": 30.0,
+  "loop": {
+   "frames": 900,
+   "seconds": 30.0,
+   "window_err": 0.18,
+   "window_ratio": 0.016,
+   "seam_ratio": 1.751,
+   "confident": true,
+   "refined_from": 901,
+   "typical_step": 11.191
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 8.63,
+   "max_err": 14.3
+  }
+ },
+ "4K Laser Light Show DJ Visuals  Neon Laser VJ Loops No Copyright Royalty Free VFX Motion Graphic 3.mp4": {
+  "duration": 60.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 67,
+   "seconds": 2.233,
+   "window_err": 34.91,
+   "window_ratio": 1.878,
+   "seam_ratio": 0.426,
+   "confident": true,
+   "typical_step": 18.59
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.46,
+   "max_err": 0.82
+  }
+ },
+ "4K Laser Light Show DJ Visuals  Neon Laser VJ Loops No Copyright Royalty Free VFX Motion Graphic 4.mp4": {
+  "duration": 61.93,
+  "fps": 30.0,
+  "loop": {
+   "frames": 901,
+   "seconds": 30.033,
+   "window_err": 0.133,
+   "window_ratio": 0.009,
+   "seam_ratio": 5.784,
+   "confident": true,
+   "refined_from": 902,
+   "typical_step": 14.436
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.3,
+   "max_err": 0.4
+  }
+ },
+ "4K Laser Light Show DJ Visuals  Neon Laser VJ Loops No Copyright Royalty Free VFX Motion Graphic 5.mp4": {
+  "duration": 61.93,
+  "fps": 30.0,
+  "loop": {
+   "frames": 60,
+   "seconds": 2.0,
+   "window_err": 0.093,
+   "window_ratio": 0.035,
+   "seam_ratio": 0.614,
+   "confident": true,
+   "typical_step": 2.651
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.05,
+   "max_err": 0.1
+  }
+ },
+ "4K Laser Light Show DJ Visuals  Neon Laser VJ Loops No Copyright Royalty Free VFX Motion Graphic 6.mp4": {
+  "duration": 60.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 900,
+   "seconds": 30.0,
+   "window_err": 0.101,
+   "window_ratio": 0.013,
+   "seam_ratio": 0.007,
+   "confident": true,
+   "refined_from": 897,
+   "typical_step": 7.729
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.26,
+   "max_err": 0.49
+  }
+ },
+ "4K Laser Light Show DJ Visuals  Neon Laser VJ Loops No Copyright Royalty Free VFX Motion Graphic 7.mp4": {
+  "duration": 61.93,
+  "fps": 30.0,
+  "loop": {
+   "frames": 450,
+   "seconds": 15.0,
+   "window_err": 0.165,
+   "window_ratio": 0.028,
+   "seam_ratio": 0.328,
+   "confident": true,
+   "refined_from": 449,
+   "typical_step": 5.91
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.49,
+   "max_err": 0.68
+  }
+ },
+ "4K Laser Light Show DJ Visuals  Neon Laser VJ Loops No Copyright Royalty Free VFX Motion Graphic 8.mp4": {
+  "duration": 61.93,
+  "fps": 30.0,
+  "loop": {
+   "frames": 225,
+   "seconds": 7.5,
+   "window_err": 14.275,
+   "window_ratio": 1.202,
+   "seam_ratio": 0.68,
+   "confident": true,
+   "refined_from": 224,
+   "typical_step": 11.88
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.06,
+   "max_err": 0.1
+  }
+ },
+ "4K Laser Light Show DJ Visuals  Neon Laser VJ Loops No Copyright Royalty Free VFX Motion Graphic 9.mp4": {
+  "duration": 61.93,
+  "fps": 30.0,
+  "loop": {
+   "frames": 2240,
+   "seconds": 74.667,
+   "window_err": 0.034,
+   "window_ratio": 0.034,
+   "seam_ratio": 8.76,
+   "confident": true,
+   "refined_from": 2241,
+   "typical_step": 1.0
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.04,
+   "max_err": 0.13
+  }
+ },
+ "4K Laser Light Show DJ Visuals  Neon Laser VJ Loops No Copyright Royalty Free VFX Motion Graphic.mp4": {
+  "duration": 61.93,
+  "fps": 30.0,
+  "loop": {
+   "frames": 899,
+   "seconds": 29.967,
+   "window_err": 0.158,
+   "window_ratio": 0.019,
+   "seam_ratio": 4.984,
+   "confident": true,
+   "typical_step": 8.399
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 4.79,
+   "max_err": 7.85
+  }
+ },
+ "4K VJ LOOP EDM  4K 126 BPM Neon Laser Light DJ Visuals  No Copyright  Free VFX Motion Graphic.mp4": {
+  "duration": 61.93,
+  "fps": 30.0,
+  "loop": {
+   "frames": 687,
+   "seconds": 22.9,
+   "window_err": 3.416,
+   "window_ratio": 0.437,
+   "seam_ratio": 9.243,
+   "confident": true,
+   "typical_step": 7.819
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.08,
+   "max_err": 0.2
+  }
+ },
+ "4K VJ LOOP EDM  4K 128 BPM Neon Laser Light DJ Visuals  No Copyright  Free VFX Motion Graphic.mp4": {
+  "duration": 61.93,
+  "fps": 30.0,
+  "loop": {
+   "frames": 455,
+   "seconds": 15.167,
+   "window_err": 5.589,
+   "window_ratio": 0.461,
+   "seam_ratio": 5.896,
+   "confident": true,
+   "typical_step": 12.13
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.36,
+   "max_err": 0.62
+  }
+ },
+ "63885-508273140.mp4": {
+  "duration": 10.0,
+  "fps": 60.0,
+  "loop": {
+   "frames": 122,
+   "seconds": 2.033,
+   "window_err": 11.578,
+   "window_ratio": 4.137,
+   "seam_ratio": 2.261,
+   "confident": false,
+   "refined_from": 123,
+   "typical_step": 2.799
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.23,
+   "max_err": 0.28
+  }
+ },
+ "65495-514501835.mp4": {
+  "duration": 10.0,
+  "fps": 60.0,
+  "loop": {
+   "frames": 120,
+   "seconds": 2.0,
+   "window_err": 6.607,
+   "window_ratio": 28.399,
+   "seam_ratio": 25.709,
+   "confident": false,
+   "refined_from": 121,
+   "typical_step": 0.233
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.13,
+   "max_err": 0.31
+  }
+ }
+}

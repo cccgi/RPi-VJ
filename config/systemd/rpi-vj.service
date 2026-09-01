@@ -1,0 +1,35 @@
+[Unit]
+Description=Raspberry Pi headless VJ engine
+After=pipewire.service wireplumber.service systemd-udev-settle.service
+Wants=pipewire.service wireplumber.service
+Conflicts=getty@tty1.service
+
+[Service]
+Type=simple
+User=vj
+Group=vj
+SupplementaryGroups=video render audio plugdev
+WorkingDirectory=/opt/rpi-vj
+Environment=RUST_LOG=info
+Environment=PIPEWIRE_LATENCY=256/48000
+ExecStart=/opt/rpi-vj/bin/rpi-vj /opt/rpi-vj/clips/01.mp4 /opt/rpi-vj/clips/02.mp4
+Restart=always
+RestartSec=1
+LimitRTPRIO=88
+LimitMEMLOCK=infinity
+Nice=-10
+CPUAffinity=1 2 3
+IOSchedulingClass=realtime
+IOSchedulingPriority=2
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/opt/rpi-vj
+DeviceAllow=/dev/dri/card1 rw
+DeviceAllow=/dev/dri/renderD128 rw
+DeviceAllow=char-alsa rw
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,110 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>RPi-VJ isf-test</title>
+<style>
+html, body { margin: 0; height: 100%; background: #111; color: #eee; font: 13px/1.4 ui-monospace, monospace; }
+#c { display: none; }
+#o { padding: 16px; white-space: pre; }
+.pass { color: #05ffa1; font-weight: bold; }
+.fail { color: #ff2a6d; font-weight: bold; }
+</style>
+<canvas id="c" width="640" height="360"></canvas>
+<pre id="o">Starting ISF compilation test...</pre>
+
+<script type="module">
+import { parseISF } from '../src/isf.js';
+import { ShaderHost } from '../src/gl.js';
+
+var L = [];
+var oEl = document.getElementById('o');
+function flush() {
+  try {
+    fetch('/collect?name=isftest', {
+      method: 'POST',
+      body: L.join('\n'),
+      keepalive: true
+    });
+  } catch (e) {}
+}
+
+function log(s) {
+  L.push(s === undefined ? '' : String(s));
+  oEl.textContent = L.join('\n');
+  flush();
+}
+
+function pad(s, w) {
+  s = '' + s;
+  while (s.length < w) s += ' ';
+  return s;
+}
+
+const SHADERS = [
+  'plasma_flow',
+  'particle_warp',
+  'kaleidoscope_mirror',
+  'audio_oscilloscope',
+  'audio_wave_rings',
+  'spectrum_bars',
+  'cyber_grid',
+  'neon_tunnel',
+  'vs_cyber_wormhole',
+  'vs_shattered_glitch_core',
+  'vs_sacred_polyhedron',
+  'vs_dimensional_monolith',
+  'vs_granular_nebula'
+];
+
+(async function() {
+  try {
+    const canvas = document.getElementById('c');
+    const host = new ShaderHost(canvas);
+    if (!host.gl) {
+      log('ERROR: WebGL2 not supported');
+      return;
+    }
+
+    log('================ ISF COMPILATION TEST (13 SHADERS) ================');
+    log(pad('SHADER', 32) + pad('STATUS', 10) + 'DETAILS');
+    log('-'.repeat(70));
+
+    let passedCount = 0;
+    let failedCount = 0;
+
+    for (const name of SHADERS) {
+      const url = `../shaders/${name}.fs`;
+      try {
+        const resp = await fetch(url);
+        if (!resp.ok) {
+          log(pad(name, 32) + pad('FAIL', 10) + `HTTP ${resp.status} fetching shader`);
+          failedCount++;
+          continue;
+        }
+
+        const raw = await resp.text();
+        const parsed = parseISF(raw);
+        const res = host.compile(parsed.glsl);
+
+        if (res.ok) {
+          log(pad(name, 32) + pad('PASS', 10) + `inputs: ${parsed.inputs.length}`);
+          passedCount++;
+        } else {
+          log(pad(name, 32) + pad('FAIL', 10) + (res.log || 'Unknown compile error'));
+          failedCount++;
+        }
+      } catch (err) {
+        log(pad(name, 32) + pad('ERROR', 10) + (err.message || String(err)));
+        failedCount++;
+      }
+    }
+
+    log('-'.repeat(70));
+    log(`SUMMARY: ${passedCount} passed, ${failedCount} failed out of ${SHADERS.length} shaders.`);
+    log('ISF TEST COMPLETE');
+    flush();
+  } catch (e) {
+    log('FATAL: ' + (e.message || e));
+    flush();
+  }
+})();
+</script>

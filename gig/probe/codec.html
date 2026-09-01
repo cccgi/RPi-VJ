@@ -1,0 +1,307 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>G-02 Codec Probe</title>
+<style>
+  body { background:#111; color:#eee; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 14px; padding: 16px; }
+  h1 { font-size: 18px; }
+  h2 { font-size: 15px; margin-top: 28px; border-top: 1px solid #444; padding-top: 12px; }
+  table { border-collapse: collapse; margin: 8px 0; }
+  td, th { border: 1px solid #444; padding: 4px 8px; text-align: left; }
+  button { font-size: 14px; padding: 6px 12px; margin: 4px 4px 4px 0; cursor: pointer; }
+  textarea { width: 100%; height: 180px; background:#000; color:#0f0; font-family: inherit; font-size: 13px; }
+  video { width: 320px; background: #000; display: block; margin-top: 6px; }
+  .clip { border: 1px solid #333; padding: 10px; margin: 10px 0; }
+  .pending { color: #999; }
+  .ok { color: #6f6; }
+  .bad { color: #f66; }
+</style>
+</head>
+<body>
+
+<h1>G-02 — Codec Support &amp; Playback Probe</h1>
+<p>All processing is local. Nothing leaves this page. Select one or more video files below.</p>
+
+<h2>1. Static codec support matrix</h2>
+<table id="matrix"></table>
+
+<h2>2. Per-clip playback test (10s &lt;video&gt; + 10s WebGL texture upload)</h2>
+<p>
+  <input type="file" id="fileInput" accept="video/*" multiple>
+  <button id="startBtn">Run tests on selected files</button>
+</p>
+<div id="clips"></div>
+
+<h2>3. Plain-text results (copy/paste into RESULTS.md)</h2>
+<textarea id="output" readonly></textarea>
+
+<canvas id="glcanvas" width="16" height="16" style="display:none"></canvas>
+
+<script>
+(function () {
+  "use strict";
+
+  var CODECS = [
+    { label: "H.264 High L4.0", mime: 'video/mp4; codecs="avc1.640028"' },
+    { label: "HEVC Main (hvc1)", mime: 'video/mp4; codecs="hvc1.1.6.L120.90"' },
+    { label: "HEVC Main (hev1)", mime: 'video/mp4; codecs="hev1.1.6.L120.90"' },
+    { label: "VP9 (webm)", mime: 'video/webm; codecs="vp9"' }
+  ];
+
+  var outputLines = [];
+
+  function log(line) {
+    outputLines.push(line);
+    document.getElementById("output").value = outputLines.join("\n");
+    if (window.__ct) clearTimeout(window.__ct);
+    window.__ct = setTimeout(function () {
+      try { fetch('/collect?name=codec', { method: 'POST', body: outputLines.join('\n') }); } catch (e) {}
+    }, 800);
+  }
+
+  // ---- 1. Static matrix ----
+  function buildMatrix() {
+    var table = document.getElementById("matrix");
+    var head = document.createElement("tr");
+    ["Codec", "MediaSource.isTypeSupported()", "video.canPlayType()"].forEach(function (h) {
+      var th = document.createElement("th");
+      th.textContent = h;
+      head.appendChild(th);
+    });
+    table.appendChild(head);
+
+    var probeVideo = document.createElement("video");
+    var msSupported = (typeof MediaSource !== "undefined");
+
+    log("== Static codec support matrix ==");
+    CODECS.forEach(function (c) {
+      var ms = "n/a (no MediaSource)";
+      if (msSupported) {
+        try { ms = MediaSource.isTypeSupported(c.mime) ? "true" : "false"; }
+        catch (e) { ms = "error: " + e.message; }
+      }
+      var cpt = probeVideo.canPlayType(c.mime) || "(empty string = no)";
+
+      var row = document.createElement("tr");
+      [c.label + " — " + c.mime, ms, cpt].forEach(function (v) {
+        var td = document.createElement("td");
+        td.textContent = v;
+        row.appendChild(td);
+      });
+      table.appendChild(row);
+
+      log(c.label + " [" + c.mime + "]  isTypeSupported=" + ms + "  canPlayType=" + JSON.stringify(cpt));
+    });
+    log("");
+  }
+  buildMatrix();
+
+  // ---- WebGL setup (shared context, reused per clip) ----
+  var glCanvas = document.getElementById("glcanvas");
+  var gl = glCanvas.getContext("webgl") || glCanvas.getContext("experimental-webgl");
+  var glProgram = null, glTexture = null, glPosBuf = null;
+
+  function initGL() {
+    if (!gl) return false;
+    var vsSrc = "attribute vec2 aPos; varying vec2 vUv;" +
+      "void main(){ vUv = (aPos + 1.0) * 0.5; gl_Position = vec4(aPos, 0.0, 1.0); }";
+    var fsSrc = "precision mediump float; varying vec2 vUv; uniform sampler2D uTex;" +
+      "void main(){ gl_FragColor = texture2D(uTex, vUv); }";
+
+    function compile(type, src) {
+      var s = gl.createShader(type);
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+        throw new Error("shader compile error: " + gl.getShaderInfoLog(s));
+      }
+      return s;
+    }
+
+    var vs = compile(gl.VERTEX_SHADER, vsSrc);
+    var fs = compile(gl.FRAGMENT_SHADER, fsSrc);
+    glProgram = gl.createProgram();
+    gl.attachShader(glProgram, vs);
+    gl.attachShader(glProgram, fs);
+    gl.linkProgram(glProgram);
+    if (!gl.getProgramParameter(glProgram, gl.LINK_STATUS)) {
+      throw new Error("program link error: " + gl.getProgramInfoLog(glProgram));
+    }
+
+    glPosBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, glPosBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+
+    glTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, glTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+    return true;
+  }
+  var glOk = false;
+  try { glOk = initGL(); } catch (e) { glOk = false; log("WebGL init failed: " + e.message); }
+
+  function drawFrameToGL(video) {
+    gl.viewport(0, 0, glCanvas.width, glCanvas.height);
+    gl.useProgram(glProgram);
+    gl.bindTexture(gl.TEXTURE_2D, glTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+    var aPos = gl.getAttribLocation(glProgram, "aPos");
+    gl.bindBuffer(gl.ARRAY_BUFFER, glPosBuf);
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
+  // ---- 2. Per-clip test harness ----
+  var DURATION_MS = 10000;
+
+  function runClipTest(file, container) {
+    return new Promise(function (resolve) {
+      var wrap = document.createElement("div");
+      wrap.className = "clip";
+      var title = document.createElement("div");
+      title.innerHTML = "<b>" + file.name + "</b> (" + (file.size / 1e6).toFixed(1) + " MB)";
+      wrap.appendChild(title);
+
+      var status = document.createElement("div");
+      status.className = "pending";
+      status.textContent = "loading...";
+      wrap.appendChild(status);
+
+      var video = document.createElement("video");
+      video.muted = true;
+      video.loop = true;
+      video.playsInline = true;
+      video.controls = false;
+      var url = URL.createObjectURL(file);
+      video.src = url;
+      wrap.appendChild(video);
+
+      container.appendChild(wrap);
+
+      var results = { name: file.name };
+
+      function finish(errMsg) {
+        URL.revokeObjectURL(url);
+        if (errMsg) {
+          status.className = "bad";
+          status.textContent = "ERROR: " + errMsg;
+          log("== " + file.name + " ==");
+          log("ERROR: " + errMsg);
+          log("");
+          resolve();
+          return;
+        }
+        status.className = "ok";
+        status.textContent = "done — see report below";
+        log("== " + file.name + " ==");
+        log("video-tag: totalFrames=" + results.videoTotal +
+            " droppedFrames=" + results.videoDropped +
+            " measuredFps=" + results.videoFps.toFixed(2));
+        log("webgl-texture: framesUploaded=" + results.glFrames +
+            " measuredFps=" + results.glFps.toFixed(2) +
+            (glOk ? "" : " (WebGL unavailable, skipped)"));
+        log("");
+        resolve();
+      }
+
+      video.addEventListener("error", function () {
+        finish("video element error " + (video.error ? video.error.code : "unknown"));
+      });
+
+      video.addEventListener("loadedmetadata", function () {
+        video.play().then(function () {
+          status.textContent = "phase 1/2: measuring <video> playback fps for 10s...";
+          runPhase1();
+        }).catch(function (e) {
+          finish("play() rejected: " + e.message);
+        });
+      });
+
+      function runPhase1() {
+        var startTime = performance.now();
+        var startQ = video.getVideoPlaybackQuality ? video.getVideoPlaybackQuality() : null;
+        var frameCount = 0;
+        var rafId;
+
+        function tick() {
+          frameCount++;
+          var elapsed = performance.now() - startTime;
+          if (elapsed < DURATION_MS) {
+            rafId = requestAnimationFrame(tick);
+          } else {
+            cancelAnimationFrame(rafId);
+            var q = video.getVideoPlaybackQuality ? video.getVideoPlaybackQuality() : null;
+            results.videoTotal = q ? q.totalVideoFrames : -1;
+            results.videoDropped = q ? q.droppedVideoFrames : -1;
+            results.videoFps = frameCount / (elapsed / 1000);
+            status.textContent = "phase 2/2: measuring WebGL texture-upload fps for 10s...";
+            runPhase2();
+          }
+        }
+        rafId = requestAnimationFrame(tick);
+      }
+
+      function runPhase2() {
+        if (!glOk) {
+          results.glFrames = 0;
+          results.glFps = 0;
+          finish();
+          return;
+        }
+        var startTime = performance.now();
+        var frameCount = 0;
+        var rafId;
+
+        function tick() {
+          try {
+            drawFrameToGL(video);
+            frameCount++;
+          } catch (e) {
+            // some browsers throw if video not ready yet; skip frame
+          }
+          var elapsed = performance.now() - startTime;
+          if (elapsed < DURATION_MS) {
+            rafId = requestAnimationFrame(tick);
+          } else {
+            cancelAnimationFrame(rafId);
+            results.glFrames = frameCount;
+            results.glFps = frameCount / (elapsed / 1000);
+            video.pause();
+            finish();
+          }
+        }
+        rafId = requestAnimationFrame(tick);
+      }
+    });
+  }
+
+  document.getElementById("startBtn").addEventListener("click", function () {
+    var input = document.getElementById("fileInput");
+    var files = Array.prototype.slice.call(input.files || []);
+    if (files.length === 0) {
+      alert("Pick one or more video files first.");
+      return;
+    }
+    var container = document.getElementById("clips");
+    container.innerHTML = "";
+    log("== Playback test run: " + new Date().toISOString() + " ==");
+    log("");
+
+    // Run sequentially so fps measurements don't compete for CPU/GPU.
+    files.reduce(function (p, file) {
+      return p.then(function () { return runClipTest(file, container); });
+    }, Promise.resolve()).then(function () {
+      log("== All clips done. Run `top -bn1 | head -5` over SSH during a clip's playback for CPU%. ==");
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>G-05 Web Audio Probe</title>
+  <style>
+    body {
+      background: #111;
+      color: #eee;
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 8px;
+    }
+    .status-panel {
+      margin-bottom: 20px;
+      padding: 12px;
+      background: #222;
+      border-radius: 6px;
+    }
+    button {
+      background: #3a7afe;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-right: 8px;
+    }
+    button:hover {
+      background: #2060e0;
+    }
+    .meters-container {
+      display: flex;
+      gap: 16px;
+      align-items: flex-end;
+      height: 240px;
+      background: #181818;
+      padding: 20px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+    .meter-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 60px;
+      height: 100%;
+      justify-content: flex-end;
+    }
+    .meter-bar-track {
+      width: 36px;
+      height: 180px;
+      background: #333;
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column-reverse;
+    }
+    .meter-bar-fill {
+      width: 100%;
+      height: 0%;
+      background: #00ff66;
+      transition: height 0.03s linear;
+    }
+    .meter-label {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #aaa;
+    }
+    .kick-indicator {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      background: #222;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    .kick-bulb {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #444;
+      box-shadow: 0 0 0px #ff0055;
+      transition: background 0.05s linear;
+    }
+    .raw-values {
+      margin-top: 20px;
+      background: #0a0a0a;
+      padding: 12px;
+      font-size: 13px;
+      border-radius: 4px;
+      color: #0f0;
+      white-space: pre;
+    }
+  </style>
+</head>
+<body>
+  <h1>G-05 Audio Engine Probe</h1>
+  <div class="status-panel">
+    <div><strong>Device:</strong> <span id="devName">None</span></div>
+    <div><strong>Status:</strong> <span id="status">Stopped</span></div>
+    <div style="margin-top: 10px;">
+      <button id="startBtn">Start Audio</button>
+      <button id="reacquireBtn">Reacquire Device</button>
+      <button id="stopBtn">Stop</button>
+    </div>
+  </div>
+
+  <h2>5-Band EQ Meter</h2>
+  <div class="meters-container">
+    <div class="meter-col">
+      <div class="meter-bar-track"><div id="bar-subBass" class="meter-bar-fill"></div></div>
+      <div class="meter-label">Sub</div>
+    </div>
+    <div class="meter-col">
+      <div class="meter-bar-track"><div id="bar-bass" class="meter-bar-fill"></div></div>
+      <div class="meter-label">Bass</div>
+    </div>
+    <div class="meter-col">
+      <div class="meter-bar-track"><div id="bar-lowMid" class="meter-bar-fill"></div></div>
+      <div class="meter-label">Lo-Mid</div>
+    </div>
+    <div class="meter-col">
+      <div class="meter-bar-track"><div id="bar-highMid" class="meter-bar-fill"></div></div>
+      <div class="meter-label">Hi-Mid</div>
+    </div>
+    <div class="meter-col">
+      <div class="meter-bar-track"><div id="bar-treble" class="meter-bar-fill"></div></div>
+      <div class="meter-label">Treble</div>
+    </div>
+    <div class="meter-col" style="margin-left: 20px;">
+      <div class="meter-bar-track"><div id="bar-energy" class="meter-bar-fill" style="background:#00c8ff;"></div></div>
+      <div class="meter-label">Energy</div>
+    </div>
+  </div>
+
+  <div class="kick-indicator">
+    <div id="kickBulb" class="kick-bulb"></div>
+    <div><strong>Kick Onset Trigger</strong> (Decay: 100ms)</div>
+  </div>
+
+  <div id="raw" class="raw-values"></div>
+
+  <script type="module">
+    import { AudioEngine } from '../src/audio.js';
+
+    const audio = new AudioEngine();
+    const devNameEl = document.getElementById('devName');
+    const statusEl = document.getElementById('status');
+    const rawEl = document.getElementById('raw');
+    const kickBulb = document.getElementById('kickBulb');
+
+    const bars = {
+      subBass: document.getElementById('bar-subBass'),
+      bass: document.getElementById('bar-bass'),
+      lowMid: document.getElementById('bar-lowMid'),
+      highMid: document.getElementById('bar-highMid'),
+      treble: document.getElementById('bar-treble'),
+      energy: document.getElementById('bar-energy')
+    };
+
+    document.getElementById('startBtn').addEventListener('click', async () => {
+      statusEl.textContent = 'Requesting audio permission...';
+      const ok = await audio.start('Sound Blaster');
+      statusEl.textContent = ok ? 'Running' : 'Failed / No Audio Stream';
+      devNameEl.textContent = audio.deviceName || '(default / unknown)';
+    });
+
+    document.getElementById('reacquireBtn').addEventListener('click', async () => {
+      statusEl.textContent = 'Reacquiring audio device...';
+      const ok = await audio.reacquire();
+      statusEl.textContent = ok ? 'Running' : 'Failed / No Audio Stream';
+      devNameEl.textContent = audio.deviceName || '(default / unknown)';
+    });
+
+    document.getElementById('stopBtn').addEventListener('click', () => {
+      audio.stop();
+      statusEl.textContent = 'Stopped';
+      devNameEl.textContent = 'None';
+    });
+
+    function update() {
+      const feat = audio.sample();
+
+      bars.subBass.style.height = `${(feat.subBass * 100).toFixed(1)}%`;
+      bars.bass.style.height = `${(feat.bass * 100).toFixed(1)}%`;
+      bars.lowMid.style.height = `${(feat.lowMid * 100).toFixed(1)}%`;
+      bars.highMid.style.height = `${(feat.highMid * 100).toFixed(1)}%`;
+      bars.treble.style.height = `${(feat.treble * 100).toFixed(1)}%`;
+      bars.energy.style.height = `${(feat.energy * 100).toFixed(1)}%`;
+
+      const kickVal = feat.kick;
+      if (kickVal > 0.05) {
+        kickBulb.style.background = `rgba(255, 0, 85, ${kickVal})`;
+        kickBulb.style.boxShadow = `0 0 ${kickVal * 25}px #ff0055`;
+      } else {
+        kickBulb.style.background = '#444';
+        kickBulb.style.boxShadow = 'none';
+      }
+
+      rawEl.textContent = JSON.stringify(feat, null, 2);
+
+      requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
+  </script>
+</body>
+</html>

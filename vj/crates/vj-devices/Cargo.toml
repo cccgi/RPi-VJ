@@ -1,0 +1,12 @@
+[package]
+name = "vj-devices"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+toml = { workspace = true }
+vj-types = { workspace = true }
+vj-surface = { workspace = true }
+thiserror = { workspace = true }

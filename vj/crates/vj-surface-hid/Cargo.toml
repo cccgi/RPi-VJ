@@ -1,0 +1,9 @@
+[package]
+name = "vj-surface-hid"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+vj-types = { workspace = true }
+vj-surface = { workspace = true }

@@ -1,0 +1,59 @@
+# CANONICAL. Written by install-units.sh. Do not hand-edit on the Pi.
+#
+# Every line here exists because something broke without it. Read the notes
+# before removing anything.
+[Unit]
+Description=RPi VJ Chromium Kiosk
+After=vj-server.service graphical-session.target
+Wants=vj-server.service
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStartPre=/home/rpi/RPi-VJ/gig/deploy/sanitize-profile.sh
+ExecStartPre=/bin/sh -c 'until curl -sf http://127.0.0.1:8080/gig/ >/dev/null; do sleep 0.5; done'
+
+# FORCE 1080p BEFORE Chromium opens a window.
+# index.html sizes the WebGL backing store from window.innerWidth/innerHeight,
+# so a 4K TV's preferred EDID mode meant running the compositor and every FBO
+# at 4x the 1080p pixel count on a 2GB Pi. Leading suspect for the idle-then-
+# press OOM crash. Failure is ignored (leading '-') so a TV without a 1080p
+# mode cannot stop the show starting.
+ExecStartPre=-/bin/sh -c '/usr/bin/wlr-randr --output HDMI-A-1 --mode 1920x1080@60 2>/dev/null || /usr/bin/wlr-randr --output HDMI-A-2 --mode 1920x1080@60 2>/dev/null || /usr/bin/xrandr --output HDMI-1 --mode 1920x1080 2>/dev/null || true'
+
+# /usr/lib/chromium/chromium, NOT /usr/bin/chromium.
+# /usr/bin/chromium is a wrapper that sources /etc/chromium.d/* and injects
+# --force-renderer-accessibility, --enable-remote-extensions, an on-device AI
+# model service, and --js-flags=--no-decommit-pooled-pages (which tells V8 to
+# HOLD pooled memory). All of that is dead weight on a 2GB VJ appliance.
+#
+# NOT set, on purpose:
+#   --disk-cache-size / --media-cache-size : forcing these to 1 keeps buffered
+#     video in RAM instead of spilling to disk, and made the clip-press crash
+#     worse. The media cache is the pressure valve here.
+#   --disable-breakpad : crash dumps are the only crash evidence we get.
+#   --remote-debugging-port : an open control interface on the network during
+#     a show. Add it back only while debugging.
+ExecStart=/usr/lib/chromium/chromium \
+  --password-store=basic --use-mock-keychain \
+  --kiosk --app=http://localhost:8080/gig/ \
+  --autoplay-policy=no-user-gesture-required \
+  --enable-gpu-rasterization --ignore-gpu-blocklist \
+  --renderer-process-limit=1 --process-per-site \
+  --js-flags=--max-old-space-size=256 \
+  --disable-extensions --disable-background-networking \
+  --disable-component-update --disable-sync \
+  --disable-session-crashed-bubble --hide-crash-restore-bubble \
+  --no-first-run --no-default-browser-check --disable-infobars --noerrdialogs \
+  --check-for-update-interval=31536000 \
+  --disable-features=Translate,InfiniteSessionRestore,OptimizationGuideModelDownloading,OptimizationGuideOnDeviceModel \
+  --disable-pinch --overscroll-history-navigation=0
+
+Restart=always
+RestartSec=3
+KillMode=control-group
+TimeoutStopSec=5
+SendSIGKILL=yes
+
+[Install]
+WantedBy=graphical-session.target

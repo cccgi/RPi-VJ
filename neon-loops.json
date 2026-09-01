@@ -1,0 +1,540 @@
+{
+ "107303-676158761.mp4": {
+  "duration": 10.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 60,
+   "seconds": 2.0,
+   "window_err": 36.061,
+   "window_ratio": 9.868,
+   "seam_ratio": 11.665,
+   "confident": false,
+   "typical_step": 3.655
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 16.28,
+   "max_err": 26.04
+  }
+ },
+ "127073-737747499.mp4": {
+  "duration": 10.0,
+  "fps": 60.0,
+  "loop": {
+   "frames": 150,
+   "seconds": 2.5,
+   "window_err": 0.142,
+   "window_ratio": 0.078,
+   "seam_ratio": 0.261,
+   "confident": true,
+   "refined_from": 149,
+   "typical_step": 1.821
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 21.64,
+   "max_err": 22.85
+  }
+ },
+ "185085-874634877.mp4": {
+  "duration": 10.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 63,
+   "seconds": 2.1,
+   "window_err": 36.135,
+   "window_ratio": 20.961,
+   "seam_ratio": 20.245,
+   "confident": false,
+   "refined_from": 66,
+   "typical_step": 1.724
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 39.91,
+   "max_err": 46.15
+  }
+ },
+ "185088-874634893.mp4": {
+  "duration": 10.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 103,
+   "seconds": 3.433,
+   "window_err": 2.39,
+   "window_ratio": 3.066,
+   "seam_ratio": 2.993,
+   "confident": false,
+   "refined_from": 106,
+   "typical_step": 0.78
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 2.02,
+   "max_err": 2.57
+  }
+ },
+ "185089-874634895.mp4": {
+  "duration": 18.02,
+  "fps": 29.97,
+  "loop": {
+   "frames": 60,
+   "seconds": 2.002,
+   "window_err": 25.141,
+   "window_ratio": 6.538,
+   "seam_ratio": 5.701,
+   "confident": false,
+   "refined_from": 59,
+   "typical_step": 3.845
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 22.69,
+   "max_err": 29.47
+  }
+ },
+ "185290-875022199.mp4": {
+  "duration": 10.0,
+  "fps": 60.0,
+  "loop": {
+   "frames": 120,
+   "seconds": 2.0,
+   "window_err": 13.819,
+   "window_ratio": 3.323,
+   "seam_ratio": 1.731,
+   "confident": false,
+   "refined_from": 121,
+   "typical_step": 4.158
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 7.45,
+   "max_err": 9.65
+  }
+ },
+ "185787-876545918.mp4": {
+  "duration": 12.8,
+  "fps": 25.0,
+  "loop": {
+   "frames": 130,
+   "seconds": 5.2,
+   "window_err": 26.822,
+   "window_ratio": 10.582,
+   "seam_ratio": 5.828,
+   "confident": false,
+   "refined_from": 133,
+   "typical_step": 2.535
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 20.59,
+   "max_err": 28.64
+  }
+ },
+ "186371-877727709.mp4": {
+  "duration": 8.07,
+  "fps": 30.0,
+  "loop": {
+   "frames": 120,
+   "seconds": 4.0,
+   "window_err": 0.152,
+   "window_ratio": 0.013,
+   "seam_ratio": 1.258,
+   "confident": true,
+   "typical_step": 11.865
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.19,
+   "max_err": 0.23
+  }
+ },
+ "186372-877727711.mp4": {
+  "duration": 8.07,
+  "fps": 30.0,
+  "loop": {
+   "frames": 113,
+   "seconds": 3.767,
+   "window_err": 15.562,
+   "window_ratio": 1.389,
+   "seam_ratio": 1.744,
+   "confident": false,
+   "refined_from": 114,
+   "typical_step": 11.207
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 10.33,
+   "max_err": 12.47
+  }
+ },
+ "236829.mp4": {
+  "duration": 10.0,
+  "fps": 60.0,
+  "loop": {
+   "frames": 207,
+   "seconds": 3.45,
+   "window_err": 35.202,
+   "window_ratio": 6.836,
+   "seam_ratio": 4.816,
+   "confident": false,
+   "refined_from": 205,
+   "typical_step": 5.149
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.21,
+   "max_err": 0.25
+  }
+ },
+ "236830.mp4": {
+  "duration": 10.0,
+  "fps": 60.0,
+  "loop": {
+   "frames": 300,
+   "seconds": 5.0,
+   "window_err": 0.472,
+   "window_ratio": 0.4,
+   "seam_ratio": 0.477,
+   "confident": true,
+   "refined_from": 299,
+   "typical_step": 1.179
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.14,
+   "max_err": 0.17
+  }
+ },
+ "236831.mp4": {
+  "duration": 10.0,
+  "fps": 60.0,
+  "loop": {
+   "frames": 300,
+   "seconds": 5.0,
+   "window_err": 1.407,
+   "window_ratio": 0.42,
+   "seam_ratio": 0.596,
+   "confident": true,
+   "refined_from": 299,
+   "typical_step": 3.352
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.19,
+   "max_err": 0.21
+  }
+ },
+ "236832.mp4": {
+  "duration": 10.0,
+  "fps": 60.0,
+  "loop": {
+   "frames": 300,
+   "seconds": 5.0,
+   "window_err": 1.342,
+   "window_ratio": 0.484,
+   "seam_ratio": 0.472,
+   "confident": true,
+   "refined_from": 299,
+   "typical_step": 2.773
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.2,
+   "max_err": 0.24
+  }
+ },
+ "26041-355469036.mp4": {
+  "duration": 20.02,
+  "fps": 60.0,
+  "loop": {
+   "frames": 600,
+   "seconds": 10.0,
+   "window_err": 4.603,
+   "window_ratio": 3.226,
+   "seam_ratio": 9.648,
+   "confident": false,
+   "refined_from": 599,
+   "typical_step": 1.427
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 6.9,
+   "max_err": 24.74
+  }
+ },
+ "26097-357512275.mp4": {
+  "duration": 20.02,
+  "fps": 60.0,
+  "loop": {
+   "frames": 601,
+   "seconds": 10.017,
+   "window_err": 0.705,
+   "window_ratio": 0.459,
+   "seam_ratio": 0.645,
+   "confident": true,
+   "refined_from": 599,
+   "typical_step": 1.535
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 5.3,
+   "max_err": 8.06
+  }
+ },
+ "26475-360248610.mp4": {
+  "duration": 20.02,
+  "fps": 60.0,
+  "loop": {
+   "frames": 300,
+   "seconds": 5.0,
+   "window_err": 0.873,
+   "window_ratio": 0.505,
+   "seam_ratio": 0.569,
+   "confident": true,
+   "refined_from": 299,
+   "typical_step": 1.727
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 6.68,
+   "max_err": 9.18
+  }
+ },
+ "27438-363642440.mp4": {
+  "duration": 20.02,
+  "fps": 60.0,
+  "loop": {
+   "frames": 542,
+   "seconds": 9.033,
+   "window_err": 10.061,
+   "window_ratio": 19.0,
+   "seam_ratio": 17.813,
+   "confident": false,
+   "refined_from": 539,
+   "typical_step": 0.53
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 4.94,
+   "max_err": 6.1
+  }
+ },
+ "27439-363642443.mp4": {
+  "duration": 20.02,
+  "fps": 60.0,
+  "loop": {
+   "frames": 601,
+   "seconds": 10.017,
+   "window_err": 2.625,
+   "window_ratio": 2.924,
+   "seam_ratio": 2.729,
+   "confident": false,
+   "refined_from": 599,
+   "typical_step": 0.898
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 18.53,
+   "max_err": 20.93
+  }
+ },
+ "31718-388172974.mp4": {
+  "duration": 10.0,
+  "fps": 120.0,
+  "loop": {
+   "frames": 600,
+   "seconds": 5.0,
+   "window_err": 5.092,
+   "window_ratio": 2.051,
+   "seam_ratio": 2.399,
+   "confident": false,
+   "refined_from": 599,
+   "typical_step": 2.483
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 6.62,
+   "max_err": 10.32
+  }
+ },
+ "33628-397860881.mp4": {
+  "duration": 10.0,
+  "fps": 60.0,
+  "loop": {
+   "frames": 290,
+   "seconds": 4.833,
+   "window_err": 2.15,
+   "window_ratio": 20.64,
+   "seam_ratio": 12.5,
+   "confident": false,
+   "refined_from": 293,
+   "typical_step": 0.104
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 1.46,
+   "max_err": 8.27
+  }
+ },
+ "35006-404534708.mp4": {
+  "duration": 10.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 152,
+   "seconds": 5.067,
+   "window_err": 136.558,
+   "window_ratio": 56.224,
+   "seam_ratio": 59.956,
+   "confident": false,
+   "refined_from": 149,
+   "typical_step": 2.429
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 12.33,
+   "max_err": 24.67
+  }
+ },
+ "36028-408417039.mp4": {
+  "duration": 10.0,
+  "fps": 30.0,
+  "loop": {
+   "frames": 71,
+   "seconds": 2.367,
+   "window_err": 25.455,
+   "window_ratio": 4.833,
+   "seam_ratio": 4.975,
+   "confident": false,
+   "refined_from": 72,
+   "typical_step": 5.267
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 13.8,
+   "max_err": 18.24
+  }
+ },
+ "63885-508273140.mp4": {
+  "duration": 10.0,
+  "fps": 60.0,
+  "loop": {
+   "frames": 122,
+   "seconds": 2.033,
+   "window_err": 11.578,
+   "window_ratio": 4.137,
+   "seam_ratio": 2.261,
+   "confident": false,
+   "refined_from": 123,
+   "typical_step": 2.799
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.23,
+   "max_err": 0.28
+  }
+ },
+ "64814-510851159.mp4": {
+  "duration": 10.0,
+  "fps": 60.0,
+  "loop": {
+   "frames": 168,
+   "seconds": 2.8,
+   "window_err": 6.402,
+   "window_ratio": 19.408,
+   "seam_ratio": 17.995,
+   "confident": false,
+   "refined_from": 165,
+   "typical_step": 0.33
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 2.53,
+   "max_err": 3.53
+  }
+ },
+ "65495-514501835.mp4": {
+  "duration": 10.0,
+  "fps": 60.0,
+  "loop": {
+   "frames": 120,
+   "seconds": 2.0,
+   "window_err": 6.607,
+   "window_ratio": 28.399,
+   "seam_ratio": 25.709,
+   "confident": false,
+   "refined_from": 121,
+   "typical_step": 0.233
+  },
+  "layout": "mirror_hv_tl",
+  "symmetry": {
+   "symmetric": true,
+   "avg_err": 0.13,
+   "max_err": 0.31
+  }
+ },
+ "65771-515379416.mp4": {
+  "duration": 10.0,
+  "fps": 60.0,
+  "loop": {
+   "frames": 134,
+   "seconds": 2.233,
+   "window_err": 10.847,
+   "window_ratio": 15.313,
+   "seam_ratio": 14.723,
+   "confident": false,
+   "refined_from": 137,
+   "typical_step": 0.708
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 5.32,
+   "max_err": 10.04
+  }
+ },
+ "65772-515379427.mp4": {
+  "duration": 10.0,
+  "fps": 60.0,
+  "loop": {
+   "frames": 178,
+   "seconds": 2.967,
+   "window_err": 21.223,
+   "window_ratio": 25.31,
+   "seam_ratio": 25.565,
+   "confident": false,
+   "refined_from": 181,
+   "typical_step": 0.839
+  },
+  "layout": "direct",
+  "symmetry": {
+   "symmetric": false,
+   "avg_err": 12.95,
+   "max_err": 26.61
+  }
+ }
+}

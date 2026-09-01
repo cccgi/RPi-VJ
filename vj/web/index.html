@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPi-VJ — Show Studio & Deck Matrix</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="brand">
+            <span class="logo-icon">⚡</span>
+            <h1>RPi-VJ <span class="badge">STUDIO</span></h1>
+        </div>
+        <div class="show-meta">
+            <input type="text" id="show-name" value="Warehouse Rave 2026" placeholder="Show Name">
+            <div class="bpm-box">
+                <label>BPM</label>
+                <input type="number" id="show-bpm" value="128.0" step="0.1" min="60" max="220">
+                <button id="tap-tempo-btn" class="btn-secondary">TAP</button>
+            </div>
+            <div class="quantize-box">
+                <label>QUANTIZE</label>
+                <select id="quantize-select">
+                    <option value="bar" selected>1 Bar</option>
+                    <option value="half_bar">1/2 Bar</option>
+                    <option value="beat">1 Beat</option>
+                    <option value="off">Off (Immediate)</option>
+                </select>
+            </div>
+        </div>
+        <div class="actions">
+            <button id="transfer-pi-btn" class="btn-secondary">🚀 Transfer to Pi 5</button>
+            <button id="export-show-btn" class="btn-primary">💾 Export .vjshow</button>
+        </div>
+    </header>
+
+    <main class="workspace">
+        <!-- Center Section: Resolume-style 4x8 Stream Deck XL Grid -->
+        <section class="composition-area">
+            <!-- Master HDMI Composition Live Preview Window -->
+            <div class="master-preview-dock" id="master-preview-dock">
+                <div class="master-preview-header">
+                    <div class="preview-title-group">
+                        <span class="live-dot"></span>
+                        <h2>MASTER HDMI COMPOSITION PREVIEW</h2>
+                        <span class="badge badge-hdmi">HDMI 1080p60 • DRM/KMS</span>
+                        <span class="fps-meter" id="preview-fps">60.0 FPS</span>
+                    </div>
+                    <div class="preview-controls-group">
+                        <button class="btn-secondary" id="toggle-audio-in-btn">🎤 Enable Audio Input</button>
+                        <button class="btn-secondary" id="popout-hdmi-btn">⛶ Popout Clean HDMI Feed</button>
+                        <button class="btn-secondary" id="toggle-preview-size-btn">⤢ Resize</button>
+                    </div>
+                </div>
+                <div class="master-canvas-container" id="master-canvas-container">
+                    <canvas id="master-output-canvas" width="960" height="540"></canvas>
+                    <div class="master-hud-overlay" id="master-hud">
+                        <div class="hud-layer-tag" id="hud-deck-a">DECK A: <span>cyber_tunnel (100%)</span></div>
+                        <div class="hud-layer-tag" id="hud-deck-b" style="display:none;">DECK B: <span>synthwave_grid (0%)</span></div>
+                        <div class="hud-layer-tag hud-shader-tag" id="hud-shader">SHADER: <span>neon_tunnel (Additive)</span></div>
+                        <div class="hud-audio-meter">
+                            <span class="meter-label">BASS/KICK:</span>
+                            <div class="meter-bar"><div class="meter-fill" id="hud-bass-fill"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bank-tabs-bar">
+                <div class="bank-tabs" id="bank-tabs">
+                    <button class="bank-tab active" data-bank="0">Bank 1 (Main Loops)</button>
+                    <button class="bank-tab" data-bank="1">Bank 2 (Visualizers)</button>
+                    <button class="bank-tab" data-bank="2">Bank 3 (Drops & Strobes)</button>
+                    <button class="bank-tab add-bank-btn" id="add-bank-btn">+ New Bank</button>
+                </div>
+                <div class="surface-hint">Stream Deck XL (32 Keys: 4 Rows × 8 Columns)</div>
+            </div>
+
+            <!-- 4x8 Grid Matrix -->
+            <div class="deck-grid" id="deck-grid">
+                <!-- 32 Slots generated via JS -->
+            </div>
+
+            <!-- Drag & Drop Ingest Helper Bar -->
+            <div class="drop-helper-bar">
+                <div class="drop-hint-text">
+                    <span class="drop-icon">📂</span>
+                    <span><strong>Drag & Drop Media:</strong> Drag video files (MP4, MOV, MKV, ProRes) from Windows Explorer / Finder directly onto any slot above.</span>
+                </div>
+                <div class="drop-actions">
+                    <input type="file" id="batch-file-input" multiple accept="video/*,image/*" style="display: none;">
+                    <button class="btn-secondary" id="browse-files-btn">📁 Browse & Batch Ingest</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Section: X-Touch Mini 8-Layer Mixer Strip -->
+        <aside class="mixer-sidebar">
+            <div class="sidebar-header">
+                <h2>X-TOUCH MINI MIXER</h2>
+                <span class="subtext">8 Layers & FX Encoders</span>
+            </div>
+
+            <div class="channel-strips" id="channel-strips">
+                <!-- 8 Channel Strips generated via JS -->
+            </div>
+        </aside>
+    </main>
+
+    <!-- Slot Config Modal -->
+    <div class="modal-backdrop" id="slot-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modal-title">Configure Key Slot (R1, C1)</h3>
+                <button class="close-btn" id="close-modal-btn">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Slot Type</label>
+                    <select id="slot-type">
+                        <option value="clip">Video Clip (HEVC / MP4)</option>
+                        <option value="shader">ISF Audio-Reactive Shader</option>
+                        <option value="action">Performance Action (Blackout, Tap, etc.)</option>
+                    </select>
+                </div>
+
+                <div id="clip-fields">
+                    <div class="form-group">
+                        <label>Video File</label>
+                        <input type="text" id="slot-video-path" placeholder="media/hevc/tunnel_loop_pi.mp4">
+                    </div>
+                    <div class="form-group">
+                        <label>Target Video Deck</label>
+                        <select id="slot-deck">
+                            <option value="0">Deck A (Primary)</option>
+                            <option value="1">Deck B (Secondary / Crossfade)</option>
+                        </select>
+                    </div>
+                    <div class="form-group inline">
+                        <label><input type="checkbox" id="slot-loop" checked> Seamless Loop</label>
+                    </div>
+                </div>
+
+                <div id="shader-fields" style="display: none;">
+                    <div class="form-group">
+                        <label>Shader Preset</label>
+                        <select id="slot-shader-id">
+                            <option value="vs_dimensional_monolith">3D Brutalist Monoliths & Lasers (VS Dimensional)</option>
+                            <option value="vs_sacred_polyhedron">3D Sacred Polyhedron & Shards (VS Battles)</option>
+                            <option value="vs_cyber_wormhole">3D Relativistic Cyber Wormhole (VS Cyber Spells)</option>
+                            <option value="vs_granular_nebula">3D Granular Fluid Nebula (VS Granular)</option>
+                            <option value="vs_shattered_glitch_core">3D Fractured Glitch Torus (VS Shattered Illusions)</option>
+                            <option value="neon_tunnel">Neon 3D Speed Tunnel (Kick Strobe)</option>
+                            <option value="audio_wave_rings">Audio Wave Rings (Concentric Pulsing)</option>
+                            <option value="spectrum_bars">5-Band Spectrum Equalizer</option>
+                            <option value="cyber_grid">Retro Synthwave 3D Grid</option>
+                            <option value="kaleidoscope_mirror">Kaleidoscope Mirror Prism</option>
+                            <option value="plasma_flow">Organic Liquid Plasma Flow</option>
+                            <option value="particle_warp">Hyperspace Particle Warp</option>
+                            <option value="audio_oscilloscope">Laser Oscilloscope Beam</option>
+                            <option value="glitch_strobe">Glitch Kick Invert Strobe</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Target Shader Layer</label>
+                        <select id="slot-layer">
+                            <option value="2">Visualizer Layer 1</option>
+                            <option value="3">Visualizer Layer 2</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="action-fields" style="display: none;">
+                    <div class="form-group">
+                        <label>System Action</label>
+                        <select id="slot-action-name">
+                            <option value="beat_sync">BEAT SYNC (Snap Phase to Downbeat)</option>
+                            <option value="phase_nudge_half">1/2 BEAT FLIP (Shift Phase by 1/2 Beat)</option>
+                            <option value="bpm_up">BPM +1.0 (Nudge Tempo Up)</option>
+                            <option value="bpm_down">BPM -1.0 (Nudge Tempo Down)</option>
+                            <option value="tap_tempo">Tap Tempo BPM</option>
+                            <option value="blackout">Toggle Master Blackout</option>
+                            <option value="bank_next">Next Bank Page (▶)</option>
+                            <option value="bank_prev">Previous Bank Page (◀)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Button Color</label>
+                        <input type="color" id="slot-action-color" value="#ff3366">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-danger" id="clear-slot-btn">Clear Slot</button>
+                <button class="btn-primary" id="save-slot-btn">Save Key</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fullscreen Video Theater Preview Modal -->
+    <div class="modal-backdrop theater-backdrop" id="theater-modal">
+        <div class="theater-modal">
+            <div class="theater-header">
+                <div class="theater-title-box">
+                    <span class="theater-icon">🎬</span>
+                    <h3 id="theater-title">Preview: Cyber Tunnel Loop</h3>
+                    <span class="badge" id="theater-badge">DECK A (HEVC 1080p60)</span>
+                </div>
+                <button class="close-btn" id="close-theater-btn">✕</button>
+            </div>
+            <div class="theater-body">
+                <video id="theater-video" loop playsinline autoplay muted></video>
+                <div class="theater-controls">
+                    <button class="btn-secondary" id="theater-play-btn">⏸ Pause</button>
+                    <button class="btn-secondary" id="theater-mute-btn">🔊 Unmute</button>
+                    <div class="theater-time" id="theater-time">0:00 / 0:00</div>
+                    <input type="range" id="theater-scrub" min="0" max="100" value="0" class="theater-scrub-bar">
+                    <button class="btn-primary" id="theater-fs-btn">⛶ Native Fullscreen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transfer to Pi 5 Modal -->
+    <div class="modal-backdrop" id="transfer-modal">
+        <div class="modal" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>🚀 Transfer Show & Media to Raspberry Pi 5</h3>
+                <button class="close-btn" id="close-transfer-btn">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
+                    Choose your preferred transfer method to copy all video loops, thumbnails, shaders, and <code>show.toml</code> to the Pi 5:
+                </p>
+
+                <div class="transfer-method-card">
+                    <h4>Option 1: 1-Click USB Thumb Drive (Easiest)</h4>
+                    <p>Copy the entire show bundle to a USB thumb drive. When plugged into the Pi 5, it auto-mounts and launches automatically.</p>
+                    <div class="cli-snippet">
+                        <code>cargo run -p vj-ingest -- export-usb ./my_show E:\</code>
+                    </div>
+                </div>
+
+                <div class="transfer-method-card" style="margin-top: 12px;">
+                    <h4>Option 2: Direct Network Sync (Wi-Fi / Ethernet)</h4>
+                    <p>Sync all files directly to your Pi 5 over your local network in seconds without touching the USB drive:</p>
+                    <div class="cli-snippet">
+                        <code>cargo run -p vj-ingest -- sync ./my_show pi@192.168.1.150</code>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="download-zip-btn">📦 Download .vjshow Package</button>
+                <button class="btn-primary" id="done-transfer-btn">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

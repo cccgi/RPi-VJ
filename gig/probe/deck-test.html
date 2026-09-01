@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>G-06 Dual Deck Test</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #000;
+      font-family: monospace;
+      color: #fff;
+    }
+    #c {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+    #hud {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(0,0,0,0.8);
+      padding: 12px 16px;
+      border-radius: 6px;
+      border: 1px solid #444;
+      pointer-events: auto;
+      z-index: 10;
+      max-width: 480px;
+    }
+    #hud div {
+      margin-bottom: 6px;
+    }
+    button, input {
+      font-family: monospace;
+      font-size: 12px;
+      padding: 4px 8px;
+      margin: 2px 4px 2px 0;
+      background: #222;
+      color: #eee;
+      border: 1px solid #666;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #444;
+    }
+    #error {
+      color: #ff5555;
+      white-space: pre-wrap;
+    }
+    .status {
+      font-weight: bold;
+      color: #4af;
+    }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    <div><strong>FPS:</strong> <span id="fps-val" class="status">--</span></div>
+    <div><strong>Active Decks:</strong> <span id="deck-count" class="status">0</span></div>
+    <div>
+      <strong>Deck A:</strong> <span id="deck-a-status">empty</span><br>
+      <input type="file" id="deck-a-file" accept="video/*">
+      <button id="deck-a-play">Play/Pause</button>
+    </div>
+    <div style="margin-top: 8px;">
+      <strong>Deck B:</strong> <span id="deck-b-status">empty</span><br>
+      <input type="file" id="deck-b-file" accept="video/*">
+      <button id="deck-b-play">Play/Pause</button>
+    </div>
+    <div style="margin-top: 8px;">
+      <button id="btn-both-play">Play Both</button>
+      <button id="btn-both-pause">Pause Both (0 decks)</button>
+    </div>
+    <div id="error"></div>
+  </div>
+  <canvas id="c"></canvas>
+
+  <script type="module">
+    import { ShaderHost } from '../src/gl.js';
+    import { Deck } from '../src/deck.js';
+
+    const canvas = document.getElementById('c');
+    const fpsVal = document.getElementById('fps-val');
+    const deckCountEl = document.getElementById('deck-count');
+    const deckAStatus = document.getElementById('deck-a-status');
+    const deckBStatus = document.getElementById('deck-b-status');
+    const deckAFile = document.getElementById('deck-a-file');
+    const deckBFile = document.getElementById('deck-b-file');
+    const deckAPlayBtn = document.getElementById('deck-a-play');
+    const deckBPlayBtn = document.getElementById('deck-b-play');
+    const btnBothPlay = document.getElementById('btn-both-play');
+    const btnBothPause = document.getElementById('btn-both-pause');
+    const errEl = document.getElementById('error');
+
+    const host = new ShaderHost(canvas, { scale: 1.0 });
+
+    // Side-by-side shader drawing Deck A on left half, Deck B on right half
+    const sideBySideShader = `#version 300 es
+    precision highp float;
+    out vec4 fragColor;
+    uniform vec2 u_resolution;
+    uniform sampler2D u_tex_a;
+    uniform sampler2D u_tex_b;
+    uniform int u_has_a;
+    uniform int u_has_b;
+
+    void main() {
+      vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+      vec3 col = vec3(0.05);
+
+      if (uv.x < 0.5) {
+        // Left half: Deck A mapped to [0, 1]
+        vec2 uvA = vec2(uv.x * 2.0, uv.y);
+        if (u_has_a == 1) {
+          col = texture(u_tex_a, uvA).rgb;
+        } else {
+          // Placeholder grid/tint for deck A
+          col = vec3(0.1, 0.2, 0.3) * (0.8 + 0.2 * sin(uvA.y * 50.0));
+        }
+      } else {
+        // Right half: Deck B mapped to [0, 1]
+        vec2 uvB = vec2((uv.x - 0.5) * 2.0, uv.y);
+        if (u_has_b == 1) {
+          col = texture(u_tex_b, uvB).rgb;
+        } else {
+          // Placeholder grid/tint for deck B
+          col = vec3(0.3, 0.2, 0.1) * (0.8 + 0.2 * sin(uvB.y * 50.0));
+        }
+      }
+
+      // Vertical separator line
+      if (abs(uv.x - 0.5) < (1.0 / u_resolution.x)) {
+        col = vec3(1.0, 1.0, 0.0);
+      }
+
+      fragColor = vec4(col, 1.0);
+    }
+    `;
+
+    const res = host.compile(sideBySideShader);
+    if (!res.ok) {
+      errEl.textContent = res.log;
+    } else {
+      host.use(res.program);
+    }
+
+    const deckA = new Deck(host.gl, 'A');
+    const deckB = new Deck(host.gl, 'B');
+
+    // Create 1x1 black fallback dummy textures for unbound samplers
+    const dummyTex = host.gl.createTexture();
+    host.gl.bindTexture(host.gl.TEXTURE_2D, dummyTex);
+    host.gl.texImage2D(host.gl.TEXTURE_2D, 0, host.gl.RGB, 1, 1, 0, host.gl.RGB, host.gl.UNSIGNED_BYTE, new Uint8Array([0,0,0]));
+    host.gl.bindTexture(host.gl.TEXTURE_2D, null);
+
+    function onResize() {
+      host.resize(window.innerWidth, window.innerHeight);
+    }
+    window.addEventListener('resize', onResize);
+    onResize();
+
+    async function loadDeck(deck, file, statusEl) {
+      try {
+        const url = URL.createObjectURL(file);
+        statusEl.textContent = `loading ${file.name}...`;
+        await deck.load(url);
+        deck.play();
+        statusEl.textContent = `playing (${file.name})`;
+      } catch (err) {
+        statusEl.textContent = 'error';
+        errEl.textContent = err.message;
+      }
+    }
+
+    deckAFile.addEventListener('change', (e) => {
+      if (e.target.files[0]) loadDeck(deckA, e.target.files[0], deckAStatus);
+    });
+
+    deckBFile.addEventListener('change', (e) => {
+      if (e.target.files[0]) loadDeck(deckB, e.target.files[0], deckBStatus);
+    });
+
+    deckAPlayBtn.addEventListener('click', () => {
+      if (!deckA.video.src) return;
+      if (deckA.video.paused) {
+        deckA.play();
+        deckAStatus.textContent = 'playing';
+      } else {
+        deckA.pause();
+        deckAStatus.textContent = 'paused';
+      }
+    });
+
+    deckBPlayBtn.addEventListener('click', () => {
+      if (!deckB.video.src) return;
+      if (deckB.video.paused) {
+        deckB.play();
+        deckBStatus.textContent = 'playing';
+      } else {
+        deckB.pause();
+        deckBStatus.textContent = 'paused';
+      }
+    });
+
+    btnBothPlay.addEventListener('click', () => {
+      if (deckA.video.src) { deckA.play(); deckAStatus.textContent = 'playing'; }
+      if (deckB.video.src) { deckB.play(); deckBStatus.textContent = 'playing'; }
+    });
+
+    btnBothPause.addEventListener('click', () => {
+      deckA.pause();
+      deckB.pause();
+      if (deckA.video.src) deckAStatus.textContent = 'paused';
+      if (deckB.video.src) deckBStatus.textContent = 'paused';
+    });
+
+    // Auto-attempt loading test video files if served alongside
+    async function tryDefaultClips() {
+      const candidates = [
+        ['test-a.mp4', 'test-b.mp4'],
+        ['../tools/test-a.mp4', '../tools/test-b.mp4'],
+        ['testsrc.mp4', 'testsrc.mp4']
+      ];
+      for (const [a, b] of candidates) {
+        try {
+          const resp = await fetch(a, { method: 'HEAD' });
+          if (resp.ok) {
+            await deckA.load(a);
+            deckA.play();
+            deckAStatus.textContent = `playing (${a})`;
+            await deckB.load(b);
+            deckB.play();
+            deckBStatus.textContent = `playing (${b})`;
+            break;
+          }
+        } catch (_) {}
+      }
+    }
+    tryDefaultClips();
+
+    let lastHud = 0;
+    function loop(time) {
+      deckA.update();
+      deckB.update();
+
+      const hasA = (deckA.ready && deckA.texture) ? 1 : 0;
+      const hasB = (deckB.ready && deckB.texture) ? 1 : 0;
+
+      host.setUniforms({
+        u_resolution: [canvas.width, canvas.height],
+        u_has_a: hasA,
+        u_has_b: hasB,
+        u_tex_a: hasA ? deckA.texture : dummyTex,
+        u_tex_b: hasB ? deckB.texture : dummyTex
+      });
+
+      host.render();
+
+      if (time - lastHud > 250) {
+        fpsVal.textContent = host.fps.toFixed(1);
+        const playingCount = (!deckA.video.paused && hasA ? 1 : 0) + (!deckB.video.paused && hasB ? 1 : 0);
+        deckCountEl.textContent = `${playingCount} (A: ${deckA.video.paused ? 'paused' : 'running'}, B: ${deckB.video.paused ? 'paused' : 'running'})`;
+        lastHud = time;
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

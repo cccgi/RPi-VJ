@@ -1,0 +1,36 @@
+# Rust and native build output
+/target/
+/vj/target/
+
+# User-owned media is intentionally not distributed through Git.
+/gig/media/*
+!/gig/media/README.md
+
+# Generated caches, test state, logs, and crash material
+**/__pycache__/
+*.py[cod]
+/gig/tools/test_tmp/
+/gig/tools/test_tmp_hb/
+*.log
+*.dmp
+
+# Local archives and screenshots captured during development
+/rpi-vj.zip
+/rpi-vj-v2-plan.zip
+/ss-arena.png
+/266787301-e1054afb-26b8-477e-bf47-67622c393616.png
+
+# Credentials and machine-local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# Editor and OS metadata
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

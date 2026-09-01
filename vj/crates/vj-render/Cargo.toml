@@ -1,0 +1,10 @@
+[package]
+name = "vj-render"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+thiserror = { workspace = true }
+vj-types = { workspace = true }
+vj-isf = { workspace = true }
