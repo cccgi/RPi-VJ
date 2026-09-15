@@ -30,6 +30,7 @@ vj-devices = { path = "crates/vj-devices" }
 vj-surface-midi = { path = "crates/vj-surface-midi" }
 vj-surface-hid = { path = "crates/vj-surface-hid" }
 vj-api = { path = "crates/vj-api" }
+vj-broker = { path = "crates/vj-broker" }
 
 [profile.release]
 lto = "thin"

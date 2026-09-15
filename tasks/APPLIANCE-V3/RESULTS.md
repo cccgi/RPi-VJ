@@ -46,6 +46,14 @@ actual: Native hidraw transport, single-edge triggers, key coalescing, 10 unplug
 hardware: Rust unit & integration test suite; udev rules staged on Pi 5.
 surprise: none
 
+## A3-05 — DONE
+files: vj/crates/vj-broker/**, scripts/appliance/rpi-vj-broker.service, docs/appliance/BROKER.md
+observable: cargo test -p vj-broker (9/9 passed); test-broker-live.py & service verification on Pi 5
+actual: Versioned JSON (v=1) Unix socket broker, UUID dedup, desired state store, non-blocking controller acceptance, monotonic supervisor with anti-reboot loop protection.
+hardware: Production Pi 5; rpi-vj-broker.service active; Unix socket /run/rpi-vj/broker.sock and HTTP http://127.0.0.1:8080 active.
+surprise: none
+
+
 
 
 

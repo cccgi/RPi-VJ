@@ -1,0 +1,26 @@
+﻿[Unit]
+Description=RPi-VJ Command Broker and Monotonic Supervisor
+Documentation=file:///opt/rpi-vj/docs/appliance/BROKER.md
+DefaultDependencies=no
+After=local-fs.target
+Before=rpi-vj-renderer.service
+
+[Service]
+Type=simple
+User=vj
+Group=vj
+SupplementaryGroups=video render input
+RuntimeDirectory=rpi-vj
+RuntimeDirectoryMode=0775
+StateDirectory=rpi-vj
+StateDirectoryMode=0775
+ExecStart=/opt/rpi-vj/bin/vj-broker --socket /run/rpi-vj/broker.sock --http 127.0.0.1:8080 --web-root /opt/rpi-vj/web --state-file /var/lib/rpi-vj/desired-state.json --supervisor-state /var/lib/rpi-vj/supervisor-state.json --boot-ledger /var/lib/rpi-vj/boot-ledger.jsonl
+Restart=always
+RestartSec=2
+KillMode=mixed
+TimeoutStopSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
