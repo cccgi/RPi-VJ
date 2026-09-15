@@ -354,7 +354,8 @@ done < "${MANIFEST_PATH}"
 MISSING_PACKAGES=()
 if [[ "${SKIP_APT}" -eq 0 && "${TARGET_ROOT}" == "/" && "$(id -u)" -eq 0 && -x "/usr/bin/dpkg-query" ]]; then
     for pkg in "${MANIFEST_PACKAGES[@]}"; do
-        if ! dpkg-query -W -f='${Status}' "${pkg}" 2>/dev/null | grep -q "install ok installed"; then
+        if ! dpkg-query -W -f='${Status}' "${pkg}" 2>/dev/null | grep -q "install ok installed" && \
+           ! dpkg-query -W -f='${Status}' "${pkg}t64" 2>/dev/null | grep -q "install ok installed"; then
             MISSING_PACKAGES+=("${pkg}")
         fi
     done
