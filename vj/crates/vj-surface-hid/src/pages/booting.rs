@@ -39,15 +39,15 @@ impl Page for BootingPage {
             // Row 0 (0..7): Appliance Title & Boot Banner
             0 => {
                 c.fill_rect(0, 0, 96, 96, Rgb::DARK_BLUE);
-                c.draw_text_centered("RPi-VJ", 0, 15, 96, 2, Rgb::CYAN);
-                c.draw_text_centered("BOOT", 0, 45, 96, 2, Rgb::YELLOW);
+                c.draw_text_centered_bold("RPi-VJ", 0, 16, 96, 2, Rgb::CYAN);
+                c.draw_text_centered_bold("BOOT", 0, 48, 96, 2, Rgb::YELLOW);
             }
             1..=6 => {
                 c.fill_rect(0, 0, 96, 96, Rgb::DARK_BLUE);
                 c.draw_rect_border(4, 4, 88, 88, 1, Rgb::MID_GRAY);
                 let step_num = key;
                 let step_text = format!("STEP {step_num}");
-                c.draw_text_centered(&step_text, 0, 20, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold(&step_text, 0, 18, 96, 1, Rgb::LIGHT_GRAY);
                 let p = ctx.boot_progress;
                 let threshold = (key as f32) / 7.0;
                 let color = if p >= threshold { Rgb::GREEN } else { Rgb::AMBER };
@@ -56,8 +56,8 @@ impl Page for BootingPage {
             7 => {
                 c.fill_rect(0, 0, 96, 96, Rgb::DARK_BLUE);
                 let pct = (ctx.boot_progress * 100.0).round() as u32;
-                c.draw_text_centered("INIT", 0, 15, 96, 1, Rgb::WHITE);
-                c.draw_text_centered(&format!("{pct}%"), 0, 40, 96, 2, Rgb::GREEN);
+                c.draw_text_centered_bold("INIT", 0, 14, 96, 1, Rgb::WHITE);
+                c.draw_text_centered_bold(&format!("{pct}%"), 0, 38, 96, 2, Rgb::GREEN);
             }
 
             // Row 1 (8..15): Subsystem Readiness Status
@@ -67,8 +67,8 @@ impl Page for BootingPage {
                 let bg = if ok { Rgb::new(10, 50, 20) } else { Rgb::new(60, 40, 10) };
                 c.fill_rect(0, 0, 96, 96, bg);
                 c.draw_rect_border(2, 2, 92, 92, 2, if ok { Rgb::GREEN } else { Rgb::AMBER });
-                c.draw_text_centered("STORAGE", 0, 15, 96, 1, Rgb::WHITE);
-                c.draw_text_centered(if ok { "READY" } else { "CHECK" }, 0, 40, 96, 2, if ok { Rgb::GREEN } else { Rgb::YELLOW });
+                c.draw_text_centered_bold("STORAGE", 0, 14, 96, 1, Rgb::WHITE);
+                c.draw_text_centered_bold(if ok { "READY" } else { "CHECK" }, 0, 38, 96, 2, if ok { Rgb::GREEN } else { Rgb::YELLOW });
             }
             10 | 11 => {
                 // Renderer Readiness (Cage/DRM)
@@ -76,8 +76,8 @@ impl Page for BootingPage {
                 let bg = if ok { Rgb::new(10, 50, 20) } else { Rgb::new(60, 40, 10) };
                 c.fill_rect(0, 0, 96, 96, bg);
                 c.draw_rect_border(2, 2, 92, 92, 2, if ok { Rgb::GREEN } else { Rgb::AMBER });
-                c.draw_text_centered("RENDERER", 0, 15, 96, 1, Rgb::WHITE);
-                c.draw_text_centered(if ok { "KMS OK" } else { "START" }, 0, 40, 96, 2, if ok { Rgb::GREEN } else { Rgb::YELLOW });
+                c.draw_text_centered_bold("RENDERER", 0, 14, 96, 1, Rgb::WHITE);
+                c.draw_text_centered_bold(if ok { "KMS OK" } else { "START" }, 0, 38, 96, 2, if ok { Rgb::GREEN } else { Rgb::YELLOW });
             }
             12 | 13 => {
                 // Media Readiness
@@ -85,31 +85,31 @@ impl Page for BootingPage {
                 let bg = if ok { Rgb::new(10, 50, 20) } else { Rgb::new(60, 40, 10) };
                 c.fill_rect(0, 0, 96, 96, bg);
                 c.draw_rect_border(2, 2, 92, 92, 2, if ok { Rgb::GREEN } else { Rgb::AMBER });
-                c.draw_text_centered("MEDIA", 0, 15, 96, 1, Rgb::WHITE);
-                c.draw_text_centered(if ok { "LOADED" } else { "VERIFY" }, 0, 40, 96, 2, if ok { Rgb::GREEN } else { Rgb::YELLOW });
+                c.draw_text_centered_bold("MEDIA", 0, 14, 96, 1, Rgb::WHITE);
+                c.draw_text_centered_bold(if ok { "LOADED" } else { "VERIFY" }, 0, 38, 96, 2, if ok { Rgb::GREEN } else { Rgb::YELLOW });
             }
             14 | 15 => {
                 // Network / Broker IPC
                 c.fill_rect(0, 0, 96, 96, Rgb::DARK_BLUE);
                 c.draw_rect_border(2, 2, 92, 92, 2, Rgb::CYAN);
-                c.draw_text_centered("BROKER", 0, 15, 96, 1, Rgb::WHITE);
-                c.draw_text_centered("SOCKET", 0, 35, 96, 1, Rgb::CYAN);
-                c.draw_text_centered("ONLINE", 0, 55, 96, 1, Rgb::GREEN);
+                c.draw_text_centered_bold("BROKER", 0, 14, 96, 1, Rgb::WHITE);
+                c.draw_text_centered_bold("SOCKET", 0, 36, 96, 1, Rgb::CYAN);
+                c.draw_text_centered_bold("ONLINE", 0, 58, 96, 1, Rgb::GREEN);
             }
 
             // Row 2 (16..23): Telemetry preview
             16..=19 => {
                 c.fill_rect(0, 0, 96, 96, Rgb::DARK_GRAY);
-                c.draw_text_centered("IP / HOST", 0, 15, 96, 1, Rgb::LIGHT_GRAY);
-                c.draw_text_centered(&ctx.telemetry.ip_address, 0, 40, 96, 1, Rgb::WHITE);
-                c.draw_text_centered(&ctx.telemetry.hostname, 0, 60, 96, 1, Rgb::CYAN);
+                c.draw_text_centered_bold("IP / HOST", 0, 14, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold(&ctx.telemetry.ip_address, 0, 38, 96, 1, Rgb::WHITE);
+                c.draw_text_centered_bold(&ctx.telemetry.hostname, 0, 60, 96, 1, Rgb::CYAN);
             }
             20..=23 => {
                 c.fill_rect(0, 0, 96, 96, Rgb::DARK_GRAY);
-                c.draw_text_centered("DISK / TEMP", 0, 15, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold("DISK / TEMP", 0, 14, 96, 1, Rgb::LIGHT_GRAY);
                 let free_gb = (ctx.telemetry.free_space_bytes as f32) / 1_000_000_000.0;
-                c.draw_text_centered(&format!("{free_gb:.1}G FREE"), 0, 40, 96, 1, Rgb::WHITE);
-                c.draw_text_centered(&format!("{:.0}C", ctx.telemetry.temperature_c), 0, 60, 96, 1, Rgb::YELLOW);
+                c.draw_text_centered_bold(&format!("{free_gb:.1}G FREE"), 0, 38, 96, 1, Rgb::WHITE);
+                c.draw_text_centered_bold(&format!("{:.0}C", ctx.telemetry.temperature_c), 0, 60, 96, 1, Rgb::YELLOW);
             }
 
             // Row 3 (24..31): Continuous Progress Bar & Skip/Arm
@@ -128,8 +128,8 @@ impl Page for BootingPage {
                 let bg = if is_ready { Rgb::new(20, 100, 30) } else { Rgb::MID_GRAY };
                 c.fill_rect(0, 0, 96, 96, bg);
                 c.draw_rect_border(3, 3, 90, 90, 2, if is_ready { Rgb::GREEN } else { Rgb::LIGHT_GRAY });
-                c.draw_text_centered("ENTER", 0, 20, 96, 2, Rgb::WHITE);
-                c.draw_text_centered("READY", 0, 50, 96, 2, if is_ready { Rgb::GREEN } else { Rgb::LIGHT_GRAY });
+                c.draw_text_centered_bold("ENTER", 0, 18, 96, 2, Rgb::WHITE);
+                c.draw_text_centered_bold("READY", 0, 50, 96, 2, if is_ready { Rgb::GREEN } else { Rgb::LIGHT_GRAY });
             }
 
             _ => {}

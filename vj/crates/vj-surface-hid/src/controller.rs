@@ -48,7 +48,7 @@ impl Default for ControllerConfig {
             reconnect_poll_interval: Duration::from_millis(50),
             broker_state_path: PathBuf::from("/run/rpi-vj/controller-state.json"),
             boot_ledger_path: PathBuf::from("/var/lib/rpi-vj/boot-ledger.jsonl"),
-            default_brightness: 80,
+            default_brightness: 100,
         }
     }
 }

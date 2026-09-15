@@ -43,48 +43,48 @@ impl Page for DegradedPage {
             0 | 1 => {
                 c.fill_rect(0, 0, 96, 96, Rgb::DARK_RED);
                 c.draw_rect_border(3, 3, 90, 90, 3, Rgb::RED);
-                c.draw_text_centered("FAULT", 0, 15, 96, 2, Rgb::YELLOW);
-                c.draw_text_centered(&ctx.fault.code, 0, 45, 96, 1, Rgb::WHITE);
-                c.draw_text_centered("ACTIVE", 0, 68, 96, 1, Rgb::RED);
+                c.draw_text_centered_bold("FAULT", 0, 14, 96, 2, Rgb::YELLOW);
+                c.draw_text_centered_bold(&ctx.fault.code, 0, 44, 96, 1, Rgb::WHITE);
+                c.draw_text_centered_bold("ACTIVE", 0, 68, 96, 1, Rgb::RED);
             }
             2 | 3 => {
                 c.fill_rect(0, 0, 96, 96, Rgb::new(60, 15, 15));
-                c.draw_text_centered("SUBSYSTEM", 0, 15, 96, 1, Rgb::LIGHT_GRAY);
-                c.draw_text_centered(&ctx.fault.subsystem, 0, 40, 96, 1, Rgb::YELLOW);
-                c.draw_text_centered(if ctx.fault.renderer_down { "DOWN" } else { "DEGRADED" }, 0, 65, 96, 1, Rgb::RED);
+                c.draw_text_centered_bold("SUBSYSTEM", 0, 14, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold(&ctx.fault.subsystem, 0, 38, 96, 1, Rgb::YELLOW);
+                c.draw_text_centered_bold(if ctx.fault.renderer_down { "DOWN" } else { "DEGRADED" }, 0, 65, 96, 1, Rgb::RED);
             }
             4..=7 => {
                 c.fill_rect(0, 0, 96, 96, Rgb::new(50, 10, 10));
-                c.draw_text_centered("DIAGNOSTIC", 0, 15, 96, 1, Rgb::LIGHT_GRAY);
-                c.draw_text_centered(&ctx.fault.message, 0, 40, 96, 1, Rgb::WHITE);
-                c.draw_text_centered(&ctx.fault.recovery_hint, 0, 65, 96, 1, Rgb::CYAN);
+                c.draw_text_centered_bold("DIAGNOSTIC", 0, 14, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold(&ctx.fault.message, 0, 38, 96, 1, Rgb::WHITE);
+                c.draw_text_centered_bold(&ctx.fault.recovery_hint, 0, 65, 96, 1, Rgb::CYAN);
             }
 
             // Row 1 (8..15): Live Telemetry during fault
             8 | 9 => {
                 c.fill_rect(0, 0, 96, 96, Rgb::DARK_GRAY);
-                c.draw_text_centered("RENDERER", 0, 15, 96, 1, Rgb::LIGHT_GRAY);
-                c.draw_text_centered(if ctx.fault.renderer_down { "STOPPED" } else { "ALIVE" }, 0, 40, 96, 1, if ctx.fault.renderer_down { Rgb::RED } else { Rgb::GREEN });
-                c.draw_text_centered("CAGE/KMS", 0, 65, 96, 1, Rgb::WHITE);
+                c.draw_text_centered_bold("RENDERER", 0, 14, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold(if ctx.fault.renderer_down { "STOPPED" } else { "ALIVE" }, 0, 38, 96, 1, if ctx.fault.renderer_down { Rgb::RED } else { Rgb::GREEN });
+                c.draw_text_centered_bold("CAGE/KMS", 0, 65, 96, 1, Rgb::WHITE);
             }
             10 | 11 => {
                 c.fill_rect(0, 0, 96, 96, Rgb::DARK_GRAY);
-                c.draw_text_centered("TEMP / CPU", 0, 15, 96, 1, Rgb::LIGHT_GRAY);
-                c.draw_text_centered(&format!("{:.0}C", ctx.telemetry.temperature_c), 0, 40, 96, 2, Rgb::YELLOW);
-                c.draw_text_centered(if ctx.telemetry.throttled { "THROTTLED" } else { "NORMAL" }, 0, 70, 96, 1, if ctx.telemetry.throttled { Rgb::RED } else { Rgb::GREEN });
+                c.draw_text_centered_bold("TEMP / CPU", 0, 14, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold(&format!("{:.0}C", ctx.telemetry.temperature_c), 0, 38, 96, 2, Rgb::YELLOW);
+                c.draw_text_centered_bold(if ctx.telemetry.throttled { "THROTTLED" } else { "NORMAL" }, 0, 68, 96, 1, if ctx.telemetry.throttled { Rgb::RED } else { Rgb::GREEN });
             }
             12 | 13 => {
                 c.fill_rect(0, 0, 96, 96, Rgb::DARK_GRAY);
-                c.draw_text_centered("STORAGE", 0, 15, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold("STORAGE", 0, 14, 96, 1, Rgb::LIGHT_GRAY);
                 let free_gb = (ctx.telemetry.free_space_bytes as f32) / 1_000_000_000.0;
-                c.draw_text_centered(&format!("{free_gb:.1}G"), 0, 40, 96, 2, Rgb::WHITE);
-                c.draw_text_centered("SPACE", 0, 70, 96, 1, Rgb::CYAN);
+                c.draw_text_centered_bold(&format!("{free_gb:.1}G"), 0, 38, 96, 2, Rgb::WHITE);
+                c.draw_text_centered_bold("SPACE", 0, 68, 96, 1, Rgb::CYAN);
             }
             14 | 15 => {
                 c.fill_rect(0, 0, 96, 96, Rgb::DARK_GRAY);
-                c.draw_text_centered("BROKER", 0, 15, 96, 1, Rgb::LIGHT_GRAY);
-                c.draw_text_centered("SOCKET", 0, 40, 96, 1, Rgb::CYAN);
-                c.draw_text_centered("RETRYING", 0, 65, 96, 1, Rgb::YELLOW);
+                c.draw_text_centered_bold("BROKER", 0, 14, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold("SOCKET", 0, 38, 96, 1, Rgb::CYAN);
+                c.draw_text_centered_bold("RETRYING", 0, 65, 96, 1, Rgb::YELLOW);
             }
 
             // Row 2 (16..23): Recovery Action Buttons
@@ -92,17 +92,17 @@ impl Page for DegradedPage {
                 // Restart Renderer Action
                 c.fill_rect(0, 0, 96, 96, Rgb::new(20, 70, 120));
                 c.draw_rect_border(3, 3, 90, 90, 2, Rgb::CYAN);
-                c.draw_text_centered("RESTART", 0, 15, 96, 2, Rgb::WHITE);
-                c.draw_text_centered("RENDERER", 0, 45, 96, 1, Rgb::YELLOW);
-                c.draw_text_centered("TAP TO RUN", 0, 68, 96, 1, Rgb::CYAN);
+                c.draw_text_centered_bold("RESTART", 0, 14, 96, 2, Rgb::WHITE);
+                c.draw_text_centered_bold("RENDERER", 0, 44, 96, 1, Rgb::YELLOW);
+                c.draw_text_centered_bold("TAP TO RUN", 0, 68, 96, 1, Rgb::CYAN);
             }
             20..=23 => {
                 // Replay State & Reload Show
                 c.fill_rect(0, 0, 96, 96, Rgb::new(30, 80, 50));
                 c.draw_rect_border(3, 3, 90, 90, 2, Rgb::GREEN);
-                c.draw_text_centered("RESTORE", 0, 15, 96, 2, Rgb::WHITE);
-                c.draw_text_centered("STATE", 0, 45, 96, 1, Rgb::YELLOW);
-                c.draw_text_centered("REPLAY >", 0, 68, 96, 1, Rgb::GREEN);
+                c.draw_text_centered_bold("RESTORE", 0, 14, 96, 2, Rgb::WHITE);
+                c.draw_text_centered_bold("STATE", 0, 44, 96, 1, Rgb::YELLOW);
+                c.draw_text_centered_bold("REPLAY >", 0, 68, 96, 1, Rgb::GREEN);
             }
 
             // Row 3 (24..31): Guarded Reboot & Exit
@@ -110,25 +110,25 @@ impl Page for DegradedPage {
                 // Guarded System Reboot
                 c.fill_rect(0, 0, 96, 96, Rgb::DARK_RED);
                 c.draw_rect_border(3, 3, 90, 90, 3, Rgb::RED);
-                c.draw_text_centered("FORCE", 0, 12, 96, 1, Rgb::WHITE);
-                c.draw_text_centered("REBOOT", 0, 32, 96, 2, Rgb::YELLOW);
+                c.draw_text_centered_bold("FORCE", 0, 12, 96, 1, Rgb::WHITE);
+                c.draw_text_centered_bold("REBOOT", 0, 32, 96, 2, Rgb::YELLOW);
                 if let Some((GuardedAction::Reboot, p)) = hold_progress {
                     c.draw_hold_ring(48, 68, 16, p, Rgb::YELLOW);
                 } else {
-                    c.draw_text_centered("HOLD 3S", 0, 68, 96, 1, Rgb::WHITE);
+                    c.draw_text_centered_bold("HOLD 3S", 0, 68, 96, 1, Rgb::WHITE);
                 }
             }
             28..=30 => {
                 c.fill_rect(0, 0, 96, 96, Rgb::DARK_GRAY);
-                c.draw_text_centered("DIAG", 0, 25, 96, 1, Rgb::LIGHT_GRAY);
-                c.draw_text_centered("LOGGED", 0, 50, 96, 1, Rgb::GREEN);
+                c.draw_text_centered_bold("DIAG", 0, 22, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold("LOGGED", 0, 50, 96, 1, Rgb::GREEN);
             }
             31 => {
                 // Return to Ready
                 c.fill_rect(0, 0, 96, 96, Rgb::new(40, 40, 55));
                 c.draw_rect_border(2, 2, 92, 92, 2, Rgb::LIGHT_GRAY);
-                c.draw_text_centered("EXIT", 0, 18, 96, 2, Rgb::WHITE);
-                c.draw_text_centered("READY >", 0, 55, 96, 1, Rgb::CYAN);
+                c.draw_text_centered_bold("EXIT", 0, 16, 96, 2, Rgb::WHITE);
+                c.draw_text_centered_bold("READY >", 0, 55, 96, 1, Rgb::CYAN);
             }
 
             _ => {}

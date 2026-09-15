@@ -192,6 +192,51 @@ impl Canvas {
         self.draw_text(text, start_x, y, scale, color);
     }
 
+    /// Render a single 5x7 character bitmap with bold 2px horizontal stroke.
+    pub fn draw_char_bold(&mut self, ch: char, x: usize, y: usize, scale: usize, color: Rgb) {
+        let glyph = get_glyph(ch);
+        let s = scale.max(1);
+        for row in 0..7 {
+            let row_bits = glyph[row];
+            for col in 0..5 {
+                if (row_bits & (1 << (4 - col))) != 0 {
+                    for dy in 0..s {
+                        for dx in 0..=s {
+                            self.set_pixel(x + col * s + dx, y + row * s + dy, color);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Render a string of text with bold stroke.
+    pub fn draw_text_bold(&mut self, text: &str, x: usize, y: usize, scale: usize, color: Rgb) {
+        let s = scale.max(1);
+        let char_width = 6 * s + 1;
+        let mut curr_x = x;
+        for ch in text.chars() {
+            if ch == '\n' {
+                break;
+            }
+            self.draw_char_bold(ch, curr_x, y, scale, color);
+            curr_x += char_width;
+        }
+    }
+
+    /// Draw centered bold text horizontally within a bounding box [x, x + w].
+    pub fn draw_text_centered_bold(&mut self, text: &str, x: usize, y: usize, w: usize, scale: usize, color: Rgb) {
+        let s = scale.max(1);
+        let char_width = 6 * s + 1;
+        let text_w = text.len() * char_width;
+        let start_x = if text_w < w {
+            x + (w - text_w) / 2
+        } else {
+            x
+        };
+        self.draw_text_bold(text, start_x, y, scale, color);
+    }
+
     /// Encode canvas into standard baseline JPEG format.
     pub fn encode_jpeg(&self) -> Vec<u8> {
         encode_baseline_jpeg(&self.pixels, ICON_WIDTH, ICON_HEIGHT)
@@ -278,25 +323,25 @@ fn get_glyph(ch: char) -> [u8; 7] {
 // ---------------------------------------------------------------------------
 
 const STD_LUMA_Q: [u8; 64] = [
-    16, 11, 10, 16, 24, 40, 51, 61,
-    12, 12, 14, 19, 26, 58, 60, 55,
-    14, 13, 16, 24, 40, 57, 69, 56,
-    14, 17, 22, 29, 51, 87, 80, 62,
-    18, 22, 37, 56, 68, 109, 103, 77,
-    24, 35, 55, 64, 81, 104, 113, 92,
-    49, 64, 78, 87, 103, 121, 120, 101,
-    72, 92, 95, 98, 112, 100, 103, 99,
+    2, 1, 1, 2, 2, 4, 5, 6,
+    1, 1, 1, 2, 3, 6, 6, 6,
+    1, 1, 2, 2, 4, 6, 7, 6,
+    1, 2, 2, 3, 5, 9, 8, 6,
+    2, 2, 4, 6, 7, 11, 10, 8,
+    2, 4, 6, 6, 8, 10, 11, 9,
+    5, 6, 8, 9, 10, 12, 12, 10,
+    7, 9, 10, 10, 11, 10, 10, 10,
 ];
 
 const STD_CHROMA_Q: [u8; 64] = [
-    17, 18, 24, 47, 99, 99, 99, 99,
-    18, 21, 26, 66, 99, 99, 99, 99,
-    24, 26, 56, 99, 99, 99, 99, 99,
-    47, 66, 99, 99, 99, 99, 99, 99,
-    99, 99, 99, 99, 99, 99, 99, 99,
-    99, 99, 99, 99, 99, 99, 99, 99,
-    99, 99, 99, 99, 99, 99, 99, 99,
-    99, 99, 99, 99, 99, 99, 99, 99,
+    2, 2, 2, 5, 10, 10, 10, 10,
+    2, 2, 3, 7, 10, 10, 10, 10,
+    2, 3, 6, 10, 10, 10, 10, 10,
+    5, 7, 10, 10, 10, 10, 10, 10,
+    10, 10, 10, 10, 10, 10, 10, 10,
+    10, 10, 10, 10, 10, 10, 10, 10,
+    10, 10, 10, 10, 10, 10, 10, 10,
+    10, 10, 10, 10, 10, 10, 10, 10,
 ];
 
 const ZIGZAG: [usize; 64] = [

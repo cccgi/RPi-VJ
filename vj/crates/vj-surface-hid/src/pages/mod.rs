@@ -52,30 +52,90 @@ impl PageId {
     }
 }
 
+/// USB Drive status
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum UsbDriveStatus {
+    NoMedia,
+    Plugged,
+    Scanning,
+    Ready,
+    Ejected,
+}
+
+impl UsbDriveStatus {
+    pub fn label(&self) -> &'static str {
+        match self {
+            UsbDriveStatus::NoMedia => "NO MEDIA",
+            UsbDriveStatus::Plugged => "PLUGGED",
+            UsbDriveStatus::Scanning => "SCANNING",
+            UsbDriveStatus::Ready => "READY",
+            UsbDriveStatus::Ejected => "EJECTED",
+        }
+    }
+}
+
+/// Media analysis recommendation from probe/analysis stage
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MediaRecommendation {
+    None,
+    Ok,
+    QuadMirrorDetected,
+    SeamGapDetected,
+    QuadAndSeamDetected,
+    CorruptOrUnsupported,
+}
+
+impl MediaRecommendation {
+    pub fn label(&self) -> &'static str {
+        match self {
+            MediaRecommendation::None => "NONE",
+            MediaRecommendation::Ok => "REC: OK",
+            MediaRecommendation::QuadMirrorDetected => "QUAD_MIRROR",
+            MediaRecommendation::SeamGapDetected => "SEAM_GAP",
+            MediaRecommendation::QuadAndSeamDetected => "QUAD+SEAM",
+            MediaRecommendation::CorruptOrUnsupported => "BAD FORMAT",
+        }
+    }
+}
+
 /// Ingest subsystem status
 #[derive(Clone, Debug)]
 pub struct IngestStatus {
     pub usb_inserted: bool,
+    pub usb_status: UsbDriveStatus,
+    pub file_count: usize,
+    pub current_file_index: usize,
     pub job_name: Option<String>,
+    pub current_file_name: Option<String>,
     pub step: String,
     pub progress: f32,
     pub warning: Option<String>,
+    pub error_code: Option<String>,
+    pub recommendation: MediaRecommendation,
     pub proposed_crop: bool,
     pub proposed_seam: bool,
     pub completed_generation: Option<String>,
+    pub transcode_paused_for_perf: bool,
 }
 
 impl Default for IngestStatus {
     fn default() -> Self {
         Self {
             usb_inserted: false,
+            usb_status: UsbDriveStatus::NoMedia,
+            file_count: 0,
+            current_file_index: 0,
             job_name: None,
+            current_file_name: None,
             step: "Idle".to_string(),
             progress: 0.0,
             warning: None,
+            error_code: None,
+            recommendation: MediaRecommendation::None,
             proposed_crop: false,
             proposed_seam: false,
             completed_generation: None,
+            transcode_paused_for_perf: false,
         }
     }
 }

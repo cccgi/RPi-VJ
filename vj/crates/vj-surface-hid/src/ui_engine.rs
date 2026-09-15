@@ -57,8 +57,16 @@ impl UIEngine {
         }
     }
 
-    pub fn set_page(&mut self, page: PageId) {
-        self.context.active_page = page;
+    pub fn set_page(&mut self, new_page: PageId) {
+        let old_page = self.context.active_page;
+        if new_page == PageId::Performance && old_page != PageId::Performance {
+            self.context.ingest.transcode_paused_for_perf = true;
+            self.broker.send_command("ingest.pause_transcode", serde_json::json!({ "reason": "performance_mode_active" }));
+        } else if old_page == PageId::Performance && new_page != PageId::Performance {
+            self.context.ingest.transcode_paused_for_perf = false;
+            self.broker.send_command("ingest.resume_transcode", serde_json::json!({}));
+        }
+        self.context.active_page = new_page;
         self.render_full_page();
     }
 
@@ -113,7 +121,12 @@ impl UIEngine {
 
     /// Process a button press event.
     pub fn on_key_press(&mut self, key: u8) {
-        self.context.now = Instant::now();
+        self.on_key_press_at(key, Instant::now());
+    }
+
+    /// Process a button press event at specific timestamp (for deterministic testing).
+    pub fn on_key_press_at(&mut self, key: u8, now: Instant) {
+        self.context.now = now;
         self.context.state = self.broker.state();
 
         let action = match self.context.active_page {
@@ -131,7 +144,12 @@ impl UIEngine {
 
     /// Process a button release event.
     pub fn on_key_release(&mut self, key: u8) {
-        self.context.now = Instant::now();
+        self.on_key_release_at(key, Instant::now());
+    }
+
+    /// Process a button release event at specific timestamp (for deterministic testing).
+    pub fn on_key_release_at(&mut self, key: u8, now: Instant) {
+        self.context.now = now;
         self.context.state = self.broker.state();
 
         let action = match self.context.active_page {
@@ -165,7 +183,20 @@ impl UIEngine {
                         self.broker.restart_renderer();
                         self.broker.replay_state();
                     }
-                    _ => {}
+                    GuardedAction::ActivateShow => {
+                        self.broker.send_command("show.activate", serde_json::json!({}));
+                    }
+                    GuardedAction::CancelIngest => {
+                        self.broker.send_command("ingest.cancel", serde_json::json!({}));
+                    }
+                    GuardedAction::DeleteShow => {
+                        self.broker.send_command("show.delete_staging", serde_json::json!({}));
+                    }
+                    GuardedAction::EjectUsb => {
+                        self.context.ingest.usb_status = crate::pages::UsbDriveStatus::Ejected;
+                        self.context.ingest.usb_inserted = false;
+                        self.broker.send_command("usb.eject", serde_json::json!({}));
+                    }
                 }
             }
             PageAction::None => {}
@@ -174,12 +205,17 @@ impl UIEngine {
 
     /// Periodic tick to handle hold progress updates, telemetry refresh, and state synchronization.
     pub fn tick(&mut self) {
-        self.context.now = Instant::now();
+        self.tick_at(Instant::now());
+    }
+
+    /// Explicit time tick for deterministic unit testing.
+    pub fn tick_at(&mut self, now: Instant) {
+        self.context.now = now;
         let prev_state = self.context.state.clone();
         self.context.state = self.broker.state();
 
         // 1. Poll hold timer
-        let (hold_progress, triggered_action) = self.guarded.poll_hold(self.context.now);
+        let (hold_progress, triggered_action) = self.guarded.poll_hold(now);
         if let Some(action) = triggered_action {
             self.handle_page_action(PageAction::TriggerGuarded(action));
             self.render_full_page();

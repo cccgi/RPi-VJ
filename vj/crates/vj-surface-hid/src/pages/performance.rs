@@ -89,17 +89,17 @@ impl Page for PerformancePage {
 
                 // Clip Pad Label & Status
                 let bank = ctx.state.active_bank;
-                c.draw_text_centered(&format!("B{bank}-C{clip_index}"), 0, 15, 96, 1, if is_active { Rgb::WHITE } else { Rgb::LIGHT_GRAY });
+                c.draw_text_centered_bold(&format!("B{bank}-C{clip_index}"), 0, 12, 96, 1, if is_active { Rgb::WHITE } else { Rgb::LIGHT_GRAY });
 
                 let main_label = format!("{clip_index}");
-                c.draw_text_centered(&main_label, 0, 35, 96, 3, if is_active { Rgb::WHITE } else { Rgb::CYAN });
+                c.draw_text_centered_bold(&main_label, 0, 32, 96, 3, if is_active { Rgb::WHITE } else { Rgb::CYAN });
 
                 let status_text = if is_active {
                     if is_blackout { "BLCKOUT" } else { "PLAYING" }
                 } else {
                     "READY"
                 };
-                c.draw_text_centered(status_text, 0, 70, 96, 1, if is_active { Rgb::YELLOW } else { Rgb::DARK_GRAY.blend(Rgb::WHITE, 0.5) });
+                c.draw_text_centered_bold(status_text, 0, 70, 96, 1, if is_active { Rgb::YELLOW } else { Rgb::LIGHT_GRAY });
             }
 
             // Row 3 (24..31): Controls & Navigation
@@ -108,33 +108,33 @@ impl Page for PerformancePage {
                 let is_b0 = ctx.state.active_bank == 0;
                 c.fill_rect(0, 0, 96, 96, if is_b0 { Rgb::new(0, 100, 120) } else { Rgb::new(25, 30, 45) });
                 c.draw_rect_border(2, 2, 92, 92, if is_b0 { 3 } else { 1 }, if is_b0 { Rgb::CYAN } else { Rgb::MID_GRAY });
-                c.draw_text_centered("BANK 0", 0, 25, 96, 1, if is_b0 { Rgb::WHITE } else { Rgb::CYAN });
-                c.draw_text_centered(if is_b0 { "ACTIVE" } else { "SELECT" }, 0, 50, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold("BANK 0", 0, 22, 96, 1, if is_b0 { Rgb::WHITE } else { Rgb::CYAN });
+                c.draw_text_centered_bold(if is_b0 { "ACTIVE" } else { "SELECT" }, 0, 48, 96, 1, Rgb::LIGHT_GRAY);
             }
             25 => {
                 // Bank 1 / Next
                 let is_b1 = ctx.state.active_bank == 1;
                 c.fill_rect(0, 0, 96, 96, if is_b1 { Rgb::new(0, 100, 120) } else { Rgb::new(25, 30, 45) });
                 c.draw_rect_border(2, 2, 92, 92, if is_b1 { 3 } else { 1 }, if is_b1 { Rgb::CYAN } else { Rgb::MID_GRAY });
-                c.draw_text_centered("BANK 1", 0, 25, 96, 1, if is_b1 { Rgb::WHITE } else { Rgb::CYAN });
-                c.draw_text_centered(if is_b1 { "ACTIVE" } else { "SELECT" }, 0, 50, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold("BANK 1", 0, 22, 96, 1, if is_b1 { Rgb::WHITE } else { Rgb::CYAN });
+                c.draw_text_centered_bold(if is_b1 { "ACTIVE" } else { "SELECT" }, 0, 48, 96, 1, Rgb::LIGHT_GRAY);
             }
             26 => {
                 // Bank 2 / More Banks Modal
                 let curr_b = ctx.state.active_bank;
                 c.fill_rect(0, 0, 96, 96, Rgb::new(30, 35, 50));
                 c.draw_rect_border(2, 2, 92, 92, 2, Rgb::CYAN);
-                c.draw_text_centered("BANK 0..7", 0, 20, 96, 1, Rgb::WHITE);
-                c.draw_text_centered(&format!("B{curr_b}"), 0, 42, 96, 2, Rgb::YELLOW);
-                c.draw_text_centered("MENU >", 0, 68, 96, 1, Rgb::CYAN);
+                c.draw_text_centered_bold("BANK 0..7", 0, 16, 96, 1, Rgb::WHITE);
+                c.draw_text_centered_bold(&format!("B{curr_b}"), 0, 40, 96, 2, Rgb::YELLOW);
+                c.draw_text_centered_bold("MENU >", 0, 70, 96, 1, Rgb::CYAN);
             }
             27 => {
                 // Stop Clip Key
                 let has_clip = ctx.state.active_clip.is_some();
-                c.fill_rect(0, 0, 96, 96, if has_clip { Rgb::new(80, 20, 20) } else { Rgb::DARK_GRAY });
+                c.fill_rect(0, 0, 96, 96, if has_clip { Rgb::new(90, 20, 20) } else { Rgb::DARK_GRAY });
                 c.draw_rect_border(2, 2, 92, 92, 2, if has_clip { Rgb::RED } else { Rgb::MID_GRAY });
-                c.draw_text_centered("STOP", 0, 25, 96, 2, Rgb::WHITE);
-                c.draw_text_centered("CLIP", 0, 55, 96, 1, Rgb::YELLOW);
+                c.draw_text_centered_bold("STOP", 0, 20, 96, 2, Rgb::WHITE);
+                c.draw_text_centered_bold("CLIP", 0, 52, 96, 1, Rgb::YELLOW);
             }
             28 => {
                 // Blackout Toggle
@@ -142,34 +142,34 @@ impl Page for PerformancePage {
                 let bg = if bo { Rgb::RED } else { Rgb::new(20, 25, 35) };
                 c.fill_rect(0, 0, 96, 96, bg);
                 c.draw_rect_border(3, 3, 90, 90, 3, if bo { Rgb::WHITE } else { Rgb::RED });
-                c.draw_text_centered("BLACKOUT", 0, 20, 96, 1, Rgb::WHITE);
-                c.draw_text_centered(if bo { "ENGAGED" } else { "TOGGLE" }, 0, 45, 96, 1, if bo { Rgb::YELLOW } else { Rgb::LIGHT_GRAY });
-                c.draw_text_centered(if bo { "DARK" } else { "LIVE" }, 0, 68, 96, 1, if bo { Rgb::WHITE } else { Rgb::GREEN });
+                c.draw_text_centered_bold("BLACKOUT", 0, 16, 96, 1, Rgb::WHITE);
+                c.draw_text_centered_bold(if bo { "ENGAGED" } else { "TOGGLE" }, 0, 42, 96, 1, if bo { Rgb::YELLOW } else { Rgb::LIGHT_GRAY });
+                c.draw_text_centered_bold(if bo { "DARK" } else { "LIVE" }, 0, 70, 96, 1, if bo { Rgb::WHITE } else { Rgb::GREEN });
             }
             29 => {
                 // BPM - / Tap Tempo
                 c.fill_rect(0, 0, 96, 96, Rgb::new(25, 30, 40));
                 c.draw_rect_border(2, 2, 92, 92, 1, Rgb::YELLOW);
-                c.draw_text_centered("BPM -", 0, 15, 96, 1, Rgb::LIGHT_GRAY);
-                c.draw_text_centered(&format!("{:.0}", ctx.state.tempo_bpm), 0, 38, 96, 2, Rgb::YELLOW);
-                c.draw_text_centered("TAP", 0, 68, 96, 1, Rgb::WHITE);
+                c.draw_text_centered_bold("BPM", 0, 14, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold(&format!("{:.0}", ctx.state.tempo_bpm), 0, 36, 96, 2, Rgb::YELLOW);
+                c.draw_text_centered_bold("TAP -", 0, 70, 96, 1, Rgb::WHITE);
             }
             30 => {
                 // BPM + / Master Opacity
                 c.fill_rect(0, 0, 96, 96, Rgb::new(25, 30, 40));
                 c.draw_rect_border(2, 2, 92, 92, 1, Rgb::YELLOW);
-                c.draw_text_centered("BPM +", 0, 15, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold("OPACITY", 0, 14, 96, 1, Rgb::LIGHT_GRAY);
                 let opacity_pct = (ctx.state.master_opacity * 100.0).round() as u32;
-                c.draw_text_centered(&format!("{opacity_pct}% OP"), 0, 38, 96, 1, Rgb::CYAN);
-                c.draw_text_centered("FAST", 0, 68, 96, 1, Rgb::WHITE);
+                c.draw_text_centered_bold(&format!("{opacity_pct}%"), 0, 36, 96, 2, Rgb::CYAN);
+                c.draw_text_centered_bold("FAST +", 0, 70, 96, 1, Rgb::WHITE);
             }
             31 => {
                 // Disarm / Return to System / Ready Page
                 c.fill_rect(0, 0, 96, 96, Rgb::new(40, 40, 50));
                 c.draw_rect_border(2, 2, 92, 92, 2, Rgb::LIGHT_GRAY);
-                c.draw_text_centered("EXIT", 0, 18, 96, 2, Rgb::WHITE);
-                c.draw_text_centered("DISARM", 0, 45, 96, 1, Rgb::AMBER);
-                c.draw_text_centered("READY >", 0, 68, 96, 1, Rgb::CYAN);
+                c.draw_text_centered_bold("EXIT", 0, 16, 96, 2, Rgb::WHITE);
+                c.draw_text_centered_bold("DISARM", 0, 44, 96, 1, Rgb::AMBER);
+                c.draw_text_centered_bold("READY >", 0, 70, 96, 1, Rgb::CYAN);
             }
 
             _ => {}

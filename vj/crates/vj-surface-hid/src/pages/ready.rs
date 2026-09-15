@@ -35,40 +35,43 @@ impl Page for ReadyPage {
                 let bank_idx = key as u32;
                 let is_active = ctx.state.active_bank == bank_idx;
                 let bg = if is_active {
-                    Rgb::new(0, 100, 120)
+                    Rgb::new(0, 90, 140)
                 } else {
-                    Rgb::new(20, 25, 35)
+                    Rgb::new(18, 22, 32)
                 };
                 c.fill_rect(0, 0, 96, 96, bg);
-                c.draw_rect_border(3, 3, 90, 90, 2, if is_active { Rgb::CYAN } else { Rgb::MID_GRAY });
-                c.draw_text_centered("BANK", 0, 15, 96, 1, Rgb::LIGHT_GRAY);
-                c.draw_text_centered(&format!("{bank_idx}"), 0, 35, 96, 3, if is_active { Rgb::WHITE } else { Rgb::CYAN });
-                c.draw_text_centered(if is_active { "ACTIVE" } else { "READY" }, 0, 70, 96, 1, if is_active { Rgb::GREEN } else { Rgb::MID_GRAY });
+                c.draw_rect_border(2, 2, 92, 92, if is_active { 3 } else { 1 }, if is_active { Rgb::CYAN } else { Rgb::MID_GRAY });
+                c.draw_text_centered_bold("BANK", 0, 12, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold(&format!("{bank_idx}"), 0, 32, 96, 3, if is_active { Rgb::WHITE } else { Rgb::CYAN });
+                c.draw_text_centered_bold(if is_active { "ACTIVE" } else { "STANDBY" }, 0, 70, 96, 1, if is_active { Rgb::GREEN } else { Rgb::MID_GRAY });
             }
 
             // Row 1 (8..15): Status details
             8 | 9 => {
                 // Show Name
-                c.fill_rect(0, 0, 96, 96, Rgb::new(30, 20, 45));
-                c.draw_rect_border(2, 2, 92, 92, 1, Rgb::PURPLE);
-                c.draw_text_centered("SHOW", 0, 15, 96, 1, Rgb::LIGHT_GRAY);
-                c.draw_text_centered(&ctx.state.show_name, 0, 40, 96, 1, Rgb::MAGENTA);
-                c.draw_text_centered("GEN V3", 0, 65, 96, 1, Rgb::WHITE);
+                c.fill_rect(0, 0, 96, 96, Rgb::new(35, 20, 50));
+                c.draw_rect_border(2, 2, 92, 92, 2, Rgb::PURPLE);
+                c.draw_text_centered_bold("SHOW", 0, 12, 96, 1, Rgb::LIGHT_GRAY);
+                let show_display = if ctx.state.show_name.is_empty() { "DEFAULT" } else { &ctx.state.show_name };
+                c.draw_text_centered_bold(show_display, 0, 38, 96, 1, Rgb::MAGENTA);
+                c.draw_text_centered_bold("GEN V3", 0, 68, 96, 1, Rgb::WHITE);
             }
             10 => {
                 // Master Opacity
-                c.fill_rect(0, 0, 96, 96, Rgb::new(25, 30, 40));
-                c.draw_text_centered("MASTER", 0, 15, 96, 1, Rgb::LIGHT_GRAY);
+                c.fill_rect(0, 0, 96, 96, Rgb::new(20, 28, 42));
+                c.draw_rect_border(2, 2, 92, 92, 1, Rgb::MID_GRAY);
+                c.draw_text_centered_bold("MASTER", 0, 12, 96, 1, Rgb::LIGHT_GRAY);
                 let pct = (ctx.state.master_opacity * 100.0).round() as u32;
-                c.draw_text_centered(&format!("{pct}%"), 0, 38, 96, 2, Rgb::WHITE);
-                c.draw_progress_bar(8, 70, 80, 12, ctx.state.master_opacity, Rgb::CYAN, Rgb::DARK_GRAY);
+                c.draw_text_centered_bold(&format!("{pct}%"), 0, 35, 96, 2, Rgb::WHITE);
+                c.draw_progress_bar(8, 70, 80, 14, ctx.state.master_opacity, Rgb::CYAN, Rgb::DARK_GRAY);
             }
             11 => {
                 // Tempo BPM
-                c.fill_rect(0, 0, 96, 96, Rgb::new(25, 30, 40));
-                c.draw_text_centered("TEMPO", 0, 15, 96, 1, Rgb::LIGHT_GRAY);
-                c.draw_text_centered(&format!("{:.0}", ctx.state.tempo_bpm), 0, 38, 96, 2, Rgb::YELLOW);
-                c.draw_text_centered("BPM", 0, 70, 96, 1, Rgb::LIGHT_GRAY);
+                c.fill_rect(0, 0, 96, 96, Rgb::new(20, 28, 42));
+                c.draw_rect_border(2, 2, 92, 92, 1, Rgb::MID_GRAY);
+                c.draw_text_centered_bold("TEMPO", 0, 12, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold(&format!("{:.0}", ctx.state.tempo_bpm), 0, 35, 96, 2, Rgb::YELLOW);
+                c.draw_text_centered_bold("BPM", 0, 70, 96, 1, Rgb::LIGHT_GRAY);
             }
             12 => {
                 // Blackout State
@@ -76,15 +79,19 @@ impl Page for ReadyPage {
                 let bg = if bo { Rgb::DARK_RED } else { Rgb::new(15, 35, 20) };
                 c.fill_rect(0, 0, 96, 96, bg);
                 c.draw_rect_border(2, 2, 92, 92, 2, if bo { Rgb::RED } else { Rgb::GREEN });
-                c.draw_text_centered("BLACKOUT", 0, 20, 96, 1, Rgb::WHITE);
-                c.draw_text_centered(if bo { "ON" } else { "OFF" }, 0, 45, 96, 2, if bo { Rgb::RED } else { Rgb::GREEN });
+                c.draw_text_centered_bold("BLACKOUT", 0, 16, 96, 1, Rgb::WHITE);
+                c.draw_text_centered_bold(if bo { "ON" } else { "OFF" }, 0, 42, 96, 2, if bo { Rgb::RED } else { Rgb::GREEN });
+                c.draw_text_centered_bold(if bo { "ENGAGED" } else { "PASSTHRU" }, 0, 70, 96, 1, Rgb::LIGHT_GRAY);
             }
             13 | 14 => {
                 // IP & Hostname
                 c.fill_rect(0, 0, 96, 96, Rgb::DARK_BLUE);
-                c.draw_text_centered("NETWORK", 0, 15, 96, 1, Rgb::LIGHT_GRAY);
-                c.draw_text_centered(&ctx.telemetry.ip_address, 0, 38, 96, 1, Rgb::WHITE);
-                c.draw_text_centered(&ctx.telemetry.hostname, 0, 60, 96, 1, Rgb::CYAN);
+                c.draw_rect_border(2, 2, 92, 92, 1, Rgb::CYAN);
+                c.draw_text_centered_bold("NETWORK", 0, 12, 96, 1, Rgb::LIGHT_GRAY);
+                let ip_disp = if ctx.telemetry.ip_address.is_empty() { "OFFLINE" } else { &ctx.telemetry.ip_address };
+                c.draw_text_centered_bold(ip_disp, 0, 38, 96, 1, Rgb::WHITE);
+                let host_disp = if ctx.telemetry.hostname.is_empty() { "rpi-vj.local" } else { &ctx.telemetry.hostname };
+                c.draw_text_centered_bold(host_disp, 0, 65, 96, 1, Rgb::CYAN);
             }
             15 => {
                 // Fault / Health Indicator
@@ -92,19 +99,19 @@ impl Page for ReadyPage {
                 let bg = if is_degraded { Rgb::DARK_RED } else { Rgb::new(10, 50, 20) };
                 c.fill_rect(0, 0, 96, 96, bg);
                 c.draw_rect_border(2, 2, 92, 92, 2, if is_degraded { Rgb::RED } else { Rgb::GREEN });
-                c.draw_text_centered("HEALTH", 0, 15, 96, 1, Rgb::WHITE);
-                c.draw_text_centered(if is_degraded { "FAULT" } else { "NORMAL" }, 0, 42, 96, 1, if is_degraded { Rgb::YELLOW } else { Rgb::GREEN });
-                c.draw_text_centered(if is_degraded { "TAP VIEW" } else { "100%" }, 0, 65, 96, 1, Rgb::WHITE);
+                c.draw_text_centered_bold("HEALTH", 0, 12, 96, 1, Rgb::WHITE);
+                c.draw_text_centered_bold(if is_degraded { "FAULT" } else { "OK" }, 0, 38, 96, 2, if is_degraded { Rgb::YELLOW } else { Rgb::GREEN });
+                c.draw_text_centered_bold(if is_degraded { "DIAG >" } else { "100%" }, 0, 68, 96, 1, Rgb::WHITE);
             }
 
             // Row 2 (16..23): Launchers
             16..=19 => {
                 // ARM PERFORMANCE MODE
-                c.fill_rect(0, 0, 96, 96, Rgb::new(15, 80, 40));
+                c.fill_rect(0, 0, 96, 96, Rgb::new(10, 70, 35));
                 c.draw_rect_border(3, 3, 90, 90, 3, Rgb::GREEN);
-                c.draw_text_centered("ARM", 0, 15, 96, 2, Rgb::WHITE);
-                c.draw_text_centered("PERFORMANCE", 0, 45, 96, 1, Rgb::YELLOW);
-                c.draw_text_centered("MODE", 0, 65, 96, 1, Rgb::GREEN);
+                c.draw_text_centered_bold("PERF", 0, 14, 96, 2, Rgb::WHITE);
+                c.draw_text_centered_bold("MODE", 0, 42, 96, 2, Rgb::YELLOW);
+                c.draw_text_centered_bold("ARM >", 0, 70, 96, 1, Rgb::WHITE);
             }
             20 | 21 => {
                 // INGEST
@@ -112,64 +119,78 @@ impl Page for ReadyPage {
                 let bg = if usb { Rgb::new(80, 50, 10) } else { Rgb::new(25, 30, 45) };
                 c.fill_rect(0, 0, 96, 96, bg);
                 c.draw_rect_border(2, 2, 92, 92, 2, if usb { Rgb::AMBER } else { Rgb::BLUE });
-                c.draw_text_centered("INGEST", 0, 15, 96, 2, Rgb::WHITE);
-                c.draw_text_centered(if usb { "USB DETECT" } else { "STANDBY" }, 0, 45, 96, 1, if usb { Rgb::YELLOW } else { Rgb::LIGHT_GRAY });
-                c.draw_text_centered("OPEN >", 0, 68, 96, 1, Rgb::CYAN);
+                c.draw_text_centered_bold("INGEST", 0, 14, 96, 2, Rgb::WHITE);
+                c.draw_text_centered_bold(if usb { "USB DETECT" } else { "MEDIA" }, 0, 45, 96, 1, if usb { Rgb::YELLOW } else { Rgb::LIGHT_GRAY });
+                c.draw_text_centered_bold("OPEN >", 0, 70, 96, 1, Rgb::CYAN);
             }
             22 | 23 => {
                 // SYSTEM
                 c.fill_rect(0, 0, 96, 96, Rgb::new(35, 35, 45));
                 c.draw_rect_border(2, 2, 92, 92, 2, Rgb::LIGHT_GRAY);
-                c.draw_text_centered("SYSTEM", 0, 15, 96, 2, Rgb::WHITE);
-                c.draw_text_centered("HEALTH / IP", 0, 45, 96, 1, Rgb::LIGHT_GRAY);
-                c.draw_text_centered("SETTINGS >", 0, 68, 96, 1, Rgb::CYAN);
+                c.draw_text_centered_bold("SYSTEM", 0, 14, 96, 2, Rgb::WHITE);
+                c.draw_text_centered_bold("SETTINGS", 0, 45, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold("VIEW >", 0, 70, 96, 1, Rgb::CYAN);
             }
 
             // Row 3 (24..31): Navigation & Fast controls
             24 => {
                 // Bank -
                 c.fill_rect(0, 0, 96, 96, Rgb::DARK_BLUE);
-                c.draw_text_centered("BANK -", 0, 35, 96, 1, Rgb::WHITE);
+                c.draw_rect_border(2, 2, 92, 92, 1, Rgb::CYAN);
+                c.draw_text_centered_bold("BANK", 0, 20, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold("PREV", 0, 45, 96, 2, Rgb::WHITE);
             }
             25 => {
                 // Bank +
                 c.fill_rect(0, 0, 96, 96, Rgb::DARK_BLUE);
-                c.draw_text_centered("BANK +", 0, 35, 96, 1, Rgb::WHITE);
+                c.draw_rect_border(2, 2, 92, 92, 1, Rgb::CYAN);
+                c.draw_text_centered_bold("BANK", 0, 20, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold("NEXT", 0, 45, 96, 2, Rgb::WHITE);
             }
             26 => {
                 // BPM -
-                c.fill_rect(0, 0, 96, 96, Rgb::DARK_GRAY);
-                c.draw_text_centered("BPM -", 0, 35, 96, 1, Rgb::YELLOW);
+                c.fill_rect(0, 0, 96, 96, Rgb::new(28, 28, 36));
+                c.draw_rect_border(2, 2, 92, 92, 1, Rgb::YELLOW);
+                c.draw_text_centered_bold("BPM", 0, 20, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold("- 1", 0, 45, 96, 2, Rgb::YELLOW);
             }
             27 => {
                 // BPM +
-                c.fill_rect(0, 0, 96, 96, Rgb::DARK_GRAY);
-                c.draw_text_centered("BPM +", 0, 35, 96, 1, Rgb::YELLOW);
+                c.fill_rect(0, 0, 96, 96, Rgb::new(28, 28, 36));
+                c.draw_rect_border(2, 2, 92, 92, 1, Rgb::YELLOW);
+                c.draw_text_centered_bold("BPM", 0, 20, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold("+ 1", 0, 45, 96, 2, Rgb::YELLOW);
             }
             28 => {
                 // Blackout toggle
                 let bo = ctx.state.blackout;
-                c.fill_rect(0, 0, 96, 96, if bo { Rgb::DARK_RED } else { Rgb::DARK_GRAY });
+                c.fill_rect(0, 0, 96, 96, if bo { Rgb::DARK_RED } else { Rgb::new(28, 28, 36) });
                 c.draw_rect_border(2, 2, 92, 92, 2, if bo { Rgb::RED } else { Rgb::LIGHT_GRAY });
-                c.draw_text_centered("BLACKOUT", 0, 25, 96, 1, Rgb::WHITE);
-                c.draw_text_centered(if bo { "ACTIVE" } else { "TOGGLE" }, 0, 50, 96, 1, if bo { Rgb::RED } else { Rgb::CYAN });
+                c.draw_text_centered_bold("BLACKOUT", 0, 18, 96, 1, Rgb::WHITE);
+                c.draw_text_centered_bold(if bo { "DARK" } else { "LIVE" }, 0, 45, 96, 2, if bo { Rgb::RED } else { Rgb::GREEN });
+                c.draw_text_centered_bold("TOGGLE", 0, 70, 96, 1, Rgb::LIGHT_GRAY);
             }
             29 => {
                 // Degraded / Fault view shortcut
-                c.fill_rect(0, 0, 96, 96, Rgb::DARK_GRAY);
-                c.draw_text_centered("FAULTS", 0, 35, 96, 1, Rgb::AMBER);
+                c.fill_rect(0, 0, 96, 96, Rgb::new(28, 28, 36));
+                c.draw_rect_border(2, 2, 92, 92, 1, Rgb::AMBER);
+                c.draw_text_centered_bold("FAULTS", 0, 20, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold("LOGS", 0, 45, 96, 2, Rgb::AMBER);
             }
             30 => {
                 // System Page shortcut
-                c.fill_rect(0, 0, 96, 96, Rgb::DARK_GRAY);
-                c.draw_text_centered("SYSTEM", 0, 35, 96, 1, Rgb::WHITE);
+                c.fill_rect(0, 0, 96, 96, Rgb::new(28, 28, 36));
+                c.draw_rect_border(2, 2, 92, 92, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold("SYSTEM", 0, 20, 96, 1, Rgb::LIGHT_GRAY);
+                c.draw_text_centered_bold("CONFIG", 0, 45, 96, 2, Rgb::WHITE);
             }
             31 => {
                 // Launch Performance
-                c.fill_rect(0, 0, 96, 96, Rgb::new(20, 120, 40));
+                c.fill_rect(0, 0, 96, 96, Rgb::new(20, 110, 40));
                 c.draw_rect_border(3, 3, 90, 90, 3, Rgb::GREEN);
-                c.draw_text_centered("PERF", 0, 20, 96, 2, Rgb::WHITE);
-                c.draw_text_centered("START >", 0, 55, 96, 1, Rgb::YELLOW);
+                c.draw_text_centered_bold("PERF", 0, 16, 96, 2, Rgb::WHITE);
+                c.draw_text_centered_bold("START", 0, 45, 96, 2, Rgb::YELLOW);
+                c.draw_text_centered_bold("LIVE >", 0, 70, 96, 1, Rgb::WHITE);
             }
 
             _ => {}

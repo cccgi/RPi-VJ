@@ -67,6 +67,43 @@ actual: Immutable generation directories under /srv/rpi-vj/shows, atomic symlink
 hardware: Production Pi 5 filesystem (/srv/rpi-vj and /var/lib/rpi-vj).
 surprise: none
 
+## A3-09 — DONE
+files: vj/crates/vj-storage/src/usb.rs, docs/appliance/USB_INGEST.md
+observable: cargo test -p vj-storage (11/11 tests passed on Pi 5)
+actual: Strict /RPI-VJ-INBOX/ scanning, nosuid/nodev/noexec/ro mount abstraction, streaming copy to staging with SHA-256, collision avoidance, 15% space guard, and duplicate detection.
+hardware: Production Pi 5 filesystem and udev mount paths.
+surprise: none
+
+## A3-10 — DONE
+files: vj/tools/vj-ingest/**, docs/appliance/TRANSCODE.md
+observable: cargo test -p vj-ingest (5/5 media corpus tests passed on Pi 5)
+actual: Full media analyzer (codec/profile/pix_fmt, true quad mirror detection, seam continuity scoring), 1080p60 progressive 4:2:0 transcode, 96x96 Stream Deck thumbnailer, and CPU/IO priority management.
+hardware: Production Pi 5 ffmpeg/ffprobe pipeline.
+surprise: none
+
+## A3-12 — DONE
+files: vj/crates/vj-broker/src/auth.rs, vj/crates/vj-broker/src/upload.rs, docs/appliance/PORTAL.md
+observable: cargo test -p vj-broker (17/17 tests passed on Pi 5)
+actual: Resumable chunked upload API with SHA-256 verification, single-page web UI at /portal/, setup auth code with constant-time check, per-IP rate limiting, and atomic show promotion/rollback.
+hardware: Production Pi 5 HTTP service on port 8080 and mDNS rpi-vj.local.
+surprise: none
+
+## A3-13 — DONE
+files: scripts/appliance/harden-appliance.sh, scripts/appliance/storage-gc.py, docs/appliance/HARDENING.md
+observable: harden-appliance.sh --test & storage-gc.py --test (9/9 passed)
+actual: Systemd service sandboxing (ProtectSystem=strict), Broadcom /dev/watchdog integration (15s runtime), automated staging quarantine GC (>24h), and boot cause ledger tracking.
+hardware: Production Pi 5 systemd units and /dev/watchdog.
+surprise: none
+
+## A3-11 — DONE
+files: vj/crates/vj-surface-hid/**, docs/appliance/STREAMDECK_INGEST.md
+observable: cargo test -p vj-surface-hid (36/36 passed) & test_observable_a3_11_streamdeck_usb_ingest_complete_workflow
+actual: Interactive INGEST page with USB status, step gauges, media decision triggers, guarded eject/activate actions, and performance mode CPU yielding.
+hardware: Stream Deck XL HID emulation and production Pi 5 filesystem.
+surprise: none
+
+
+
 
 
 

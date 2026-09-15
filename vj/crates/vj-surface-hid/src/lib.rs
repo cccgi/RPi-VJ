@@ -41,8 +41,9 @@ pub use device::{
 pub use graphics::{Canvas, Rgb, ICON_HEIGHT, ICON_PIXELS, ICON_WIDTH};
 pub use guarded::{GuardedAction, GuardedEngine, GuardedEngineState};
 pub use pages::{
-    BootingPage, DegradedPage, FaultInfo, IngestPage, IngestStatus, Page, PageAction, PageContext,
-    PageId, PerformancePage, ReadyPage, SystemPage, SystemTelemetry, KEY_COUNT,
+    BootingPage, DegradedPage, FaultInfo, IngestPage, IngestStatus, MediaRecommendation, Page,
+    PageAction, PageContext, PageId, PerformancePage, ReadyPage, SystemPage, SystemTelemetry,
+    UsbDriveStatus, KEY_COUNT,
 };
 pub use publisher::{BootLedgerEntry, ControllerState, StatePublisher};
 pub use queue::{BoundedInputQueue, CoalescingOutputQueue};

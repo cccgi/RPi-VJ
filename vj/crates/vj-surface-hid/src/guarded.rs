@@ -14,6 +14,7 @@ pub enum GuardedAction {
     ActivateShow,
     CancelIngest,
     DeleteShow,
+    EjectUsb,
 }
 
 impl GuardedAction {
@@ -25,6 +26,7 @@ impl GuardedAction {
             GuardedAction::ActivateShow => "ACTIVATE SHOW",
             GuardedAction::CancelIngest => "CANCEL INGEST",
             GuardedAction::DeleteShow => "DELETE SHOW",
+            GuardedAction::EjectUsb => "EJECT USB",
         }
     }
 }
