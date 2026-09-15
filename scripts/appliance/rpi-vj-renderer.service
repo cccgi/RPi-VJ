@@ -1,0 +1,54 @@
+[Unit]
+Description=RPi-VJ KMS and Cage Renderer Service
+Documentation=file:///opt/rpi-vj/docs/appliance/RENDERER.md file:///tasks/APPLIANCE-V3/ARCHITECTURE.md
+
+# Start strictly from local files and DRM devices, never network targets
+DefaultDependencies=no
+After=systemd-udevd.service local-fs.target systemd-tmpfiles-setup.service
+Requires=local-fs.target
+Wants=systemd-udevd.service
+
+# Prohibit concurrent display managers or desktop sessions
+Conflicts=display-manager.service lightdm.service gdm.service sddm.service nodm.service
+
+[Service]
+Type=simple
+User=vj
+Group=vj
+SupplementaryGroups=video render input audio
+
+# Storage layout & runtime directory ownership
+WorkingDirectory=/var/lib/rpi-vj
+RuntimeDirectory=rpi-vj/renderer
+RuntimeDirectoryMode=0700
+Environment=XDG_RUNTIME_DIR=/run/rpi-vj/renderer
+Environment=HOME=/var/lib/rpi-vj
+Environment=WLR_LIBINPUT_NO_DEVICES=1
+
+# Clean environment: suppress pointer themes and desktop sessions
+UnsetEnvironment=XCURSOR_THEME XCURSOR_SIZE DESKTOP_SESSION GDMSESSION XDG_CURRENT_DESKTOP
+
+# Primary launcher: owns XDG_RUNTIME_DIR, starts Cage, and execs Chromium
+ExecStart=/opt/rpi-vj/scripts/appliance/launch-renderer.sh
+
+# Restart policy and cgroup containment:
+# Cage and all Chromium children remain in one systemd cgroup.
+# Restart must kill the complete cgroup.
+Restart=always
+RestartSec=2s
+KillMode=control-group
+SendSIGKILL=yes
+TimeoutStopSec=5s
+TimeoutStartSec=30s
+
+# All failures go to journald
+StandardOutput=journal
+StandardError=journal
+
+# Resource limits & containment
+LimitNOFILE=65536
+LimitMEMLOCK=infinity
+MemoryMax=1600M
+
+[Install]
+WantedBy=multi-user.target

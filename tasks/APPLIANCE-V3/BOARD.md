@@ -4,7 +4,7 @@
 |---|---|---|---|---|
 | A3-00 | Freeze baseline and recovery image | — | cheap | DONE |
 | A3-01 | Lite OS and deterministic provisioning | A3-00 | mid | DONE |
-| A3-02 | Single-output KMS and Cage launcher | A3-01 | mid | WIP |
+| A3-02 | Single-output KMS and Cage launcher | A3-01 | mid | NEEDS-REVIEW |
 | A3-04 | Persistent logs and boot ledger | A3-01 | cheap | NEEDS-REVIEW |
 | A3-03 | Offline boot hardware gate | A3-02,A3-04 | reviewer/human | TODO |
 | A3-05 | Broker protocol and monotonic supervisor | A3-04 | mid | TODO |
