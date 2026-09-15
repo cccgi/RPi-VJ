@@ -1,0 +1,31 @@
+[Unit]
+Description=RPi-VJ Native Stream Deck XL Controller and State UI Service
+Documentation=file:///opt/rpi-vj/docs/appliance/STREAMDECK.md file:///tasks/APPLIANCE-V3/ARCHITECTURE.md
+DefaultDependencies=no
+After=systemd-udevd.service local-fs.target rpi-vj-broker.service
+Wants=systemd-udevd.service
+Requires=rpi-vj-broker.service
+
+[Service]
+Type=simple
+User=vj
+Group=vj
+SupplementaryGroups=video render input
+RuntimeDirectory=rpi-vj
+RuntimeDirectoryMode=0775
+StateDirectory=rpi-vj
+StateDirectoryMode=0775
+Environment=RPI_VJ_BROKER_SOCKET=/run/rpi-vj/broker.sock
+Environment=RPI_VJ_BROKER_STATE_PATH=/run/rpi-vj/controller-state.json
+Environment=RPI_VJ_BOOT_LEDGER_PATH=/var/lib/rpi-vj/boot-ledger.jsonl
+ExecStart=/opt/rpi-vj/bin/rpi-vj-controller
+Restart=always
+RestartSec=2s
+KillMode=mixed
+TimeoutStopSec=5s
+StandardOutput=journal
+StandardError=journal
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

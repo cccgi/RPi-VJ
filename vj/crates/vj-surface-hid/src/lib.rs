@@ -12,13 +12,24 @@
 //! - Automatic reconnection with cached page replay restoring all 32 icons within 5 seconds
 //! - Bounded raw-report diagnostics, off by default
 //! - Controller state and lifecycle event publishing to broker state file and persistent boot ledger
+//! - Deterministic pages: BOOTING, READY, PERFORMANCE, INGEST, DEGRADED, SYSTEM
+//! - Guarded actions with 3-second long hold and 2-key confirmation
+//! - Direct non-blocking broker IPC client (/run/rpi-vj/broker.sock) with automatic state replay
 
+pub mod broker_client;
 pub mod controller;
 pub mod device;
+pub mod graphics;
+pub mod guarded;
+pub mod pages;
 pub mod publisher;
 pub mod queue;
 pub mod transport;
+pub mod ui_engine;
 
+pub use broker_client::{AppState, BrokerClient, BrokerCommand, BrokerTransport, MockBrokerTransport};
+#[cfg(unix)]
+pub use broker_client::UnixSocketTransport;
 pub use controller::{ControllerConfig, StreamDeckController};
 pub use device::{
     diff_buttons, frame_brightness_report, frame_key_image_report, frame_reset_report,
@@ -27,9 +38,16 @@ pub use device::{
     STREAM_DECK_XL_KEY_COUNT, STREAM_DECK_XL_PAYLOAD_SIZE, STREAM_DECK_XL_PRODUCT_IDS,
     STREAM_DECK_XL_REPORT_SIZE, STREAM_DECK_XL_ROWS,
 };
+pub use graphics::{Canvas, Rgb, ICON_HEIGHT, ICON_PIXELS, ICON_WIDTH};
+pub use guarded::{GuardedAction, GuardedEngine, GuardedEngineState};
+pub use pages::{
+    BootingPage, DegradedPage, FaultInfo, IngestPage, IngestStatus, Page, PageAction, PageContext,
+    PageId, PerformancePage, ReadyPage, SystemPage, SystemTelemetry, KEY_COUNT,
+};
 pub use publisher::{BootLedgerEntry, ControllerState, StatePublisher};
 pub use queue::{BoundedInputQueue, CoalescingOutputQueue};
 pub use transport::{MockTransport, Transport};
+pub use ui_engine::UIEngine;
 
 use serde::{Deserialize, Serialize};
 
