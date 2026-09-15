@@ -246,6 +246,14 @@ fn handle_http_connection(
                 html_content.as_bytes(),
             );
         }
+        ("GET", "/health") | ("GET", "/api/v1/health") => {
+            let health = serde_json::json!({
+                "status": "ok",
+                "subsystem": "broker",
+                "v": 1
+            });
+            send_json(stream, 200, &health);
+        }
         ("GET", "/api/v1/state") => {
             let store = ctx.state_store.lock().unwrap();
             let state_json = serde_json::to_value(store.get_state()).unwrap_or_default();

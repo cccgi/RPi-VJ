@@ -408,12 +408,12 @@ fn main() {
                                 }
                             });
                         }
-                        Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                        Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock || e.kind() == std::io::ErrorKind::Interrupted => {
                             thread::sleep(Duration::from_millis(10));
                         }
                         Err(e) => {
                             eprintln!("[broker] Unix socket accept error: {}", e);
-                            break;
+                            thread::sleep(Duration::from_millis(50));
                         }
                     }
                 }
