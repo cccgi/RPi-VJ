@@ -184,13 +184,19 @@ suppress_pointer_and_desktop() {
 sanitize_profile() {
     # Marks the last Chromium session as a clean exit so the "Restore pages"
     # bubble never appears on TV display after power cuts or sudden termination.
-    local pref_file="${RENDERER_PROFILE_DIR}/Default/Preferences"
-    if ! mkdir -p "${RENDERER_PROFILE_DIR}/Default" 2>/dev/null; then
-        echo "[renderer] NOTICE: Cannot write to ${RENDERER_PROFILE_DIR}; falling back to profile in ${XDG_RUNTIME_DIR}/profile" >&2
-        RENDERER_PROFILE_DIR="${XDG_RUNTIME_DIR}/profile"
+    if [[ "$(id -u)" -eq 0 ]]; then
         mkdir -p "${RENDERER_PROFILE_DIR}/Default" 2>/dev/null || true
-        pref_file="${RENDERER_PROFILE_DIR}/Default/Preferences"
+        chown -R vj:vj "${RENDERER_PROFILE_DIR}" 2>/dev/null || true
+        chmod -R u+rwX "${RENDERER_PROFILE_DIR}" 2>/dev/null || true
+    elif [[ ! -w "${RENDERER_PROFILE_DIR}" ]]; then
+        if ! mkdir -p "${RENDERER_PROFILE_DIR}/Default" 2>/dev/null; then
+            echo "[renderer] NOTICE: Cannot write to ${RENDERER_PROFILE_DIR}; falling back to profile in ${XDG_RUNTIME_DIR}/profile" >&2
+            RENDERER_PROFILE_DIR="${XDG_RUNTIME_DIR}/profile"
+            mkdir -p "${RENDERER_PROFILE_DIR}/Default" 2>/dev/null || true
+        fi
     fi
+
+    local pref_file="${RENDERER_PROFILE_DIR}/Default/Preferences"
 
     # Remove stale singleton lock symlinks if present
     rm -f "${RENDERER_PROFILE_DIR}/SingletonLock" \
