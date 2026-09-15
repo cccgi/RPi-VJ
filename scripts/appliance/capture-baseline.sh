@@ -6,6 +6,8 @@
 
 set -euo pipefail
 
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 DEFAULT_OUT_DIR="${PWD}/baseline-${TIMESTAMP}"
@@ -62,6 +64,11 @@ safe_copy_file() {
         return 0
     fi
 
+    if [[ ! -r "$src" ]]; then
+        echo "[UNREADABLE (PERMISSION DENIED): ${src}]" > "$dst" || true
+        return 0
+    fi
+
     # Check for private keys
     if grep -qE -- "BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY" "$src" 2>/dev/null; then
         echo "[REDACTED PRIVATE KEY FILE: ${src}]" > "$dst"
@@ -69,7 +76,9 @@ safe_copy_file() {
     fi
 
     # Redact sensitive key/value pairs
-    redact_stream < "$src" > "$dst" 2>/dev/null || cp "$src" "$dst"
+    if ! redact_stream < "$src" > "$dst" 2>/dev/null; then
+        cp "$src" "$dst" 2>/dev/null || echo "[READ ERROR: ${src}]" > "$dst" || true
+    fi
 }
 
 # Helper: Safe directory copy with recursion and redaction
@@ -83,11 +92,13 @@ safe_copy_dir() {
 
     mkdir -p "$dst_dir"
     find "$src_dir" -maxdepth 2 -type f 2>/dev/null | while IFS= read -r file; do
-        local rel_path="${file#"$src_dir"/}"
-        local target_path="${dst_dir}/${rel_path}"
-        mkdir -p "$(dirname "$target_path")"
-        safe_copy_file "$file" "$target_path"
-    done
+        if [[ -n "$file" ]]; then
+            local rel_path="${file#"$src_dir"/}"
+            local target_path="${dst_dir}/${rel_path}"
+            mkdir -p "$(dirname "$target_path")"
+            safe_copy_file "$file" "$target_path" || true
+        fi
+    done || true
 }
 
 echo "--- 1/9: Operating System, Kernel & Package Versions ---"
