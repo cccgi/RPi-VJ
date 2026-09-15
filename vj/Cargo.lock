@@ -1681,8 +1681,9 @@ dependencies = [
 name = "vj-surface-hid"
 version = "0.1.0"
 dependencies = [
- "vj-surface",
- "vj-types",
+ "serde",
+ "serde_json",
+ "thiserror",
 ]
 
 [[package]]

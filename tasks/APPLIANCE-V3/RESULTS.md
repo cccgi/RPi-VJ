@@ -39,6 +39,14 @@ actual: Structured 9-field JSONL schema and monotonic watchdog validated; journa
 hardware: Tested on physical Pi 5 (kernel 6.18.34+rpt-rpi-2712); pending power-cut reboot verification.
 surprise: none
 
+## A3-06 — NEEDS-REVIEW
+files: vj/crates/vj-surface-hid/**, scripts/appliance/udev/60-rpi-vj-streamdeck.rules, docs/appliance/STREAMDECK.md
+observable: cargo test -p vj-surface-hid (18/18 tests passed)
+actual: Native hidraw transport, single-edge triggers, key coalescing, 10 unplug/replug page replay <5s, non-blocking icon writes.
+hardware: Rust unit & integration test suite; pending physical Stream Deck XL on Pi.
+surprise: none
+
+
 
 
 

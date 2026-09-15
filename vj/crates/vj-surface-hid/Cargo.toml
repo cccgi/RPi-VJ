@@ -5,5 +5,14 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-vj-types = { workspace = true }
-vj-surface = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+[[bin]]
+name = "rpi-vj-controller"
+path = "src/main.rs"
+
+[lib]
+name = "vj_surface_hid"
+path = "src/lib.rs"

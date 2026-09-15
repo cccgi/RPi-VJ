@@ -1,0 +1,6 @@
+# RPi-VJ Appliance V3 — Elgato Stream Deck XL Native Transport
+# Grants raw HID read/write permissions to the vj system service group.
+# Narrow match on Elgato VID (0x0fd9) and Stream Deck XL PIDs (0x006c, 0x008f).
+
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="006c", GROUP="vj", MODE="0660", TAG+="uaccess", SYMLINK+="streamdeck_xl"
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="008f", GROUP="vj", MODE="0660", TAG+="uaccess", SYMLINK+="streamdeck_xl"
