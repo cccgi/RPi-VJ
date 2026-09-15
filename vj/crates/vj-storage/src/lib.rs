@@ -40,6 +40,53 @@ pub enum StorageError {
 
     #[error("Storage corrupted: {0}")]
     Corrupted(String),
+
+    #[error("USB mount failed for {device:?} at {mount_point:?}: {reason}")]
+    UsbMountFailed {
+        device: PathBuf,
+        mount_point: PathBuf,
+        reason: String,
+    },
+
+    #[error("USB unmount failed for {mount_point:?}: {reason}")]
+    UsbUnmountFailed {
+        mount_point: PathBuf,
+        reason: String,
+    },
+
+    #[error("RPI-VJ-INBOX directory not found on removable media at {0:?}")]
+    InboxNotFound(PathBuf),
+
+    #[error("Mid-copy removal or I/O error during copy of {path:?}: {reason}")]
+    MidCopyRemoval {
+        path: PathBuf,
+        reason: String,
+    },
+
+    #[error("Short read on {path:?}: expected {expected} bytes, got {actual} bytes")]
+    ShortRead {
+        path: PathBuf,
+        expected: u64,
+        actual: u64,
+    },
+
+    #[error("Duplicate media detected for {path:?} with SHA-256 hash {hash}")]
+    DuplicateMedia {
+        path: PathBuf,
+        hash: String,
+    },
+
+    #[error("Unsupported media extension '{extension}' for file {path:?}")]
+    UnsupportedExtension {
+        path: PathBuf,
+        extension: String,
+    },
+
+    #[error("Security violation: Malicious symlink detected at {path:?} pointing to {target:?}")]
+    MaliciousSymlink {
+        path: PathBuf,
+        target: PathBuf,
+    },
 }
 
 pub type Result<T> = std::result::Result<T, StorageError>;
@@ -151,7 +198,13 @@ impl IngestJob {
 pub mod disk;
 pub mod job_store;
 pub mod manager;
+pub mod usb;
 
 pub use disk::DiskSpaceChecker;
 pub use job_store::JobStore;
 pub use manager::{BootRecoveryReport, GenerationInfo, ShowStorageManager, StorageConfig};
+pub use usb::{
+    is_os_metadata, is_supported_video_ext, sanitize_file_name, CandidateFile, FileIngestOutcome,
+    InboxScanner, MockMountProvider, MountProvider, ScanReport, SystemMountProvider, UsbCopyEngine,
+    OS_METADATA_PATTERNS, SUPPORTED_VIDEO_EXTENSIONS,
+};

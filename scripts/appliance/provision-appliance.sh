@@ -240,6 +240,17 @@ SystemMaxFileSize=20M
 MaxRetentionSec=1month"
 sync_file_content "/etc/systemd/journald.conf.d/00-rpi-vj-bounded.conf" "${JOURNALD_CONF}" "0644" "root" "root"
 
+# Hardware Watchdog Integration (bcm2835_wdt & systemd RuntimeWatchdogSec=15)
+WATCHDOG_CONF="[Manager]
+RuntimeWatchdogSec=15
+RebootWatchdogSec=30
+ShutdownWatchdogSec=10min
+WatchdogDevice=/dev/watchdog"
+sync_file_content "/etc/systemd/system.conf.d/00-watchdog.conf" "${WATCHDOG_CONF}" "0644" "root" "root"
+
+MODULES_WATCHDOG="bcm2835_wdt"
+sync_file_content "/etc/modules-load.d/watchdog.conf" "${MODULES_WATCHDOG}" "0644" "root" "root"
+
 # ---------------------------------------------------------------------------
 # 2. System User 'vj' & Hardware Access Groups
 # ---------------------------------------------------------------------------
@@ -666,7 +677,7 @@ echo ""
 echo "--> [7/7] Installing Appliance V3 Systemd Service Definitions..."
 
 # Unit 1: Renderer Service (Cage + Chromium kiosk)
-# Note: Specifically NOT started or enabled until A3-02 delivers the renderer implementation.
+# Unit 1: Renderer Service (Cage + Chromium kiosk)
 RENDERER_UNIT="[Unit]
 Description=RPi-VJ Cage and Chromium Kiosk Renderer
 Documentation=file:///tasks/APPLIANCE-V3/ARCHITECTURE.md
@@ -684,6 +695,13 @@ ExecStart=/opt/rpi-vj/bin/rpi-vj-renderer
 Restart=always
 RestartSec=2s
 LimitNOFILE=65536
+
+# Systemd Security Hardening
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+ReadWritePaths=/srv/rpi-vj /var/lib/rpi-vj /run/rpi-vj
 
 [Install]
 WantedBy=multi-user.target"
@@ -704,6 +722,13 @@ ExecStart=/opt/rpi-vj/bin/rpi-vj-controller
 Restart=always
 RestartSec=2s
 
+# Systemd Security Hardening
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+ReadWritePaths=/srv/rpi-vj /var/lib/rpi-vj /run/rpi-vj
+
 [Install]
 WantedBy=multi-user.target"
 
@@ -721,6 +746,13 @@ WorkingDirectory=/var/lib/rpi-vj
 ExecStart=/opt/rpi-vj/bin/rpi-vj-broker
 Restart=always
 RestartSec=2s
+
+# Systemd Security Hardening
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+ReadWritePaths=/srv/rpi-vj /var/lib/rpi-vj /run/rpi-vj
 
 [Install]
 WantedBy=multi-user.target"
@@ -740,6 +772,13 @@ ExecStart=/opt/rpi-vj/bin/rpi-vj-supervisor
 Restart=always
 RestartSec=2s
 
+# Systemd Security Hardening
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+ReadWritePaths=/srv/rpi-vj /var/lib/rpi-vj /run/rpi-vj
+
 [Install]
 WantedBy=multi-user.target"
 
@@ -754,7 +793,14 @@ Type=oneshot
 User=vj
 Group=vj
 WorkingDirectory=/var/lib/rpi-vj
-ExecStart=/opt/rpi-vj/bin/rpi-vj-ingest"
+ExecStart=/opt/rpi-vj/bin/rpi-vj-ingest
+
+# Systemd Security Hardening
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+ReadWritePaths=/srv/rpi-vj /var/lib/rpi-vj /run/rpi-vj"
 
 # Unit 6: USB Storage Path Watcher & Service Helper
 USB_PATH_UNIT="[Unit]
@@ -777,6 +823,61 @@ Documentation=file:///tasks/APPLIANCE-V3/ARCHITECTURE.md
 Type=oneshot
 ExecStart=/opt/rpi-vj/bin/rpi-vj-usb-helper"
 
+# Unit 7: Storage Garbage Collection Service & Timer
+STORAGE_GC_UNIT="[Unit]
+Description=RPi-VJ Storage Garbage Collector
+Documentation=file:///opt/rpi-vj/docs/appliance/HARDENING.md
+DefaultDependencies=no
+After=local-fs.target
+
+[Service]
+Type=oneshot
+User=vj
+Group=vj
+ExecStart=/opt/rpi-vj/scripts/appliance/storage-gc.py --max-staging-age-hours 24 --keep-generations 2
+StandardOutput=journal
+StandardError=journal
+
+# Security Hardening
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+ReadWritePaths=/srv/rpi-vj /var/lib/rpi-vj"
+
+STORAGE_GC_TIMER="[Unit]
+Description=RPi-VJ Periodic Storage Garbage Collection Timer
+Documentation=file:///opt/rpi-vj/docs/appliance/HARDENING.md
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target"
+
+# Unit 8: Clean Shutdown Logger Service
+SHUTDOWN_LOGGER_UNIT="[Unit]
+Description=RPi-VJ Clean Shutdown Logger
+Documentation=file:///opt/rpi-vj/docs/appliance/HARDENING.md
+DefaultDependencies=no
+Before=shutdown.target reboot.target halt.target poweroff.target final.target
+Wants=local-fs.target
+After=local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+ExecStop=/opt/rpi-vj/scripts/appliance/record-boot-event.sh clean-shutdown
+TimeoutStopSec=5s
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target"
+
 sync_file_content "/etc/systemd/system/rpi-vj-renderer.service" "${RENDERER_UNIT}" "0644" "root" "root"
 sync_file_content "/etc/systemd/system/rpi-vj-controller.service" "${CONTROLLER_UNIT}" "0644" "root" "root"
 sync_file_content "/etc/systemd/system/rpi-vj-broker.service" "${BROKER_UNIT}" "0644" "root" "root"
@@ -784,6 +885,9 @@ sync_file_content "/etc/systemd/system/rpi-vj-supervisor.service" "${SUPERVISOR_
 sync_file_content "/etc/systemd/system/rpi-vj-ingest.service" "${INGEST_UNIT}" "0644" "root" "root"
 sync_file_content "/etc/systemd/system/rpi-vj-usb.path" "${USB_PATH_UNIT}" "0644" "root" "root"
 sync_file_content "/etc/systemd/system/rpi-vj-usb.service" "${USB_SERVICE_UNIT}" "0644" "root" "root"
+sync_file_content "/etc/systemd/system/rpi-vj-storage-gc.service" "${STORAGE_GC_UNIT}" "0644" "root" "root"
+sync_file_content "/etc/systemd/system/rpi-vj-storage-gc.timer" "${STORAGE_GC_TIMER}" "0644" "root" "root"
+sync_file_content "/etc/systemd/system/rpi-vj-shutdown-logger.service" "${SHUTDOWN_LOGGER_UNIT}" "0644" "root" "root"
 
 # Ensure renderer service is NOT active (A3-01 observable contract)
 if [[ "${TARGET_ROOT}" == "/" && -x "/bin/systemctl" ]]; then
@@ -797,6 +901,8 @@ if [[ "${TARGET_ROOT}" == "/" && -x "/bin/systemctl" ]]; then
     fi
     if [[ "${DRY_RUN}" -eq 0 ]]; then
         systemctl daemon-reload 2>/dev/null || true
+        systemctl enable rpi-vj-storage-gc.timer 2>/dev/null || true
+        systemctl enable rpi-vj-shutdown-logger.service 2>/dev/null || true
     fi
 else
     record_ok "rpi-vj-renderer.service installed and inactive"

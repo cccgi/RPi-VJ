@@ -5,11 +5,21 @@ use std::path::Path;
 use std::process::Command;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct AudioStreamInfo {
+    pub index: u32,
+    pub codec_name: String,
+    pub sample_rate: Option<u32>,
+    pub channels: Option<u32>,
+    pub channel_layout: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct VideoMetadata {
     pub path: String,
     pub format_name: String,
     pub duration_secs: f64,
     pub codec_name: String,
+    pub profile: Option<String>,
     pub width: u32,
     pub height: u32,
     pub fps: f32,
@@ -17,6 +27,7 @@ pub struct VideoMetadata {
     pub is_hevc: bool,
     pub is_closed_gop: bool,
     pub max_gop_size: Option<u32>,
+    pub audio_streams: Vec<AudioStreamInfo>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -33,7 +44,7 @@ impl VideoMetadata {
     /// Check if this clip meets the native hardware playback requirements for Raspberry Pi 5.
     ///
     /// Requirements:
-    /// - Codec: HEVC (H.265 / hvc1)
+    /// - Codec: HEVC (H.265 / hvc1) or H.264
     /// - Resolution: <= 1920x1080
     /// - Pixel Format: 8-bit YUV420P / NV12
     /// - Framerate: <= 60.0 fps
@@ -78,6 +89,7 @@ impl VideoMetadata {
             .ok_or_else(|| ProbeError::NoVideoStream(file_path.to_string()))?;
 
         let codec_name = video_stream["codec_name"].as_str().unwrap_or("unknown").to_string();
+        let profile = video_stream["profile"].as_str().map(|s| s.to_string());
         let width = video_stream["width"].as_u64().unwrap_or(0) as u32;
         let height = video_stream["height"].as_u64().unwrap_or(0) as u32;
         let pixel_format = video_stream["pix_fmt"].as_str().unwrap_or("unknown").to_string();
@@ -94,11 +106,29 @@ impl VideoMetadata {
         let format_name = val["format"]["format_name"].as_str().unwrap_or("unknown").to_string();
         let is_hevc = codec_name.eq_ignore_ascii_case("hevc") || codec_name.eq_ignore_ascii_case("hvc1");
 
+        let mut audio_streams = Vec::new();
+        for s in streams.iter().filter(|s| s["codec_type"].as_str() == Some("audio")) {
+            let idx = s["index"].as_u64().unwrap_or(0) as u32;
+            let acodec = s["codec_name"].as_str().unwrap_or("unknown").to_string();
+            let srate = s["sample_rate"].as_str().and_then(|r| r.parse::<u32>().ok());
+            let channels = s["channels"].as_u64().map(|c| c as u32);
+            let channel_layout = s["channel_layout"].as_str().map(|cl| cl.to_string());
+
+            audio_streams.push(AudioStreamInfo {
+                index: idx,
+                codec_name: acodec,
+                sample_rate: srate,
+                channels,
+                channel_layout,
+            });
+        }
+
         Ok(VideoMetadata {
             path: file_path.to_string(),
             format_name,
             duration_secs,
             codec_name,
+            profile,
             width,
             height,
             fps,
@@ -106,9 +136,11 @@ impl VideoMetadata {
             is_hevc,
             is_closed_gop: true, // conservative default
             max_gop_size: None,
+            audio_streams,
         })
     }
 }
+
 
 fn parse_framerate(r_fps: &str) -> f32 {
     if let Some((num, den)) = r_fps.split_once('/') {

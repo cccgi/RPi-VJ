@@ -50,5 +50,12 @@ LimitNOFILE=65536
 LimitMEMLOCK=infinity
 MemoryMax=1600M
 
+# Systemd Security Hardening
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+ReadWritePaths=/srv/rpi-vj /var/lib/rpi-vj /run/rpi-vj
+
 [Install]
 WantedBy=multi-user.target

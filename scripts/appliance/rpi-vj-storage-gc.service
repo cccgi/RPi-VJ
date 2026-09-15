@@ -1,0 +1,20 @@
+[Unit]
+Description=RPi-VJ Storage Garbage Collector
+Documentation=file:///opt/rpi-vj/docs/appliance/HARDENING.md
+DefaultDependencies=no
+After=local-fs.target
+
+[Service]
+Type=oneshot
+User=vj
+Group=vj
+ExecStart=/opt/rpi-vj/scripts/appliance/storage-gc.py --max-staging-age-hours 24 --keep-generations 2
+StandardOutput=journal
+StandardError=journal
+
+# Security Hardening
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+ReadWritePaths=/srv/rpi-vj /var/lib/rpi-vj

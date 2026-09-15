@@ -1,4 +1,4 @@
-﻿[Unit]
+[Unit]
 Description=RPi-VJ Command Broker and Monotonic Supervisor
 Documentation=file:///opt/rpi-vj/docs/appliance/BROKER.md
 DefaultDependencies=no
@@ -21,6 +21,13 @@ KillMode=mixed
 TimeoutStopSec=5
 StandardOutput=journal
 StandardError=journal
+
+# Systemd Security Hardening
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+ReadWritePaths=/srv/rpi-vj /var/lib/rpi-vj /run/rpi-vj
 
 [Install]
 WantedBy=multi-user.target

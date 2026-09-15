@@ -1,12 +1,14 @@
 //! Ingest and show preparation library for the VJ engine.
 
+pub mod analyzer;
+pub mod priority;
 pub mod probe;
 pub mod thumb;
 pub mod transcode;
 
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use vj_types::{ClipId, ClipManifestEntry, ShowManifest, Tier};
 
 #[derive(Debug, thiserror::Error)]
@@ -40,14 +42,16 @@ pub fn init_show(name: &str, out_dir: impl AsRef<Path>) -> Result<ShowManifest, 
 
 /// Ingest and process a video clip into a show bundle.
 ///
-/// 1. Probes the video file for codec and resolution.
-/// 2. If non-compliant for Pi 5 (Appliance tier), automatically transcodes to 1080p60 HEVC.
-/// 3. Extracts a 96x96 JPEG thumbnail for Stream Deck XL.
-/// 4. Updates `show.toml` with the new clip entry.
+/// 1. Probes the video file for codec, resolution, and streams.
+/// 2. Analyzes media structure and perceptual features.
+/// 3. If non-compliant for Pi 5 (Appliance tier), automatically transcodes to 1080p60 HEVC/H.264.
+/// 4. Extracts a 96x96 JPEG thumbnail for Stream Deck XL.
+/// 5. Updates `show.toml` with the new clip entry.
 pub fn ingest_clip(
     input_file: impl AsRef<Path>,
     show_dir: impl AsRef<Path>,
     options: Option<transcode::TranscodeOptions>,
+    pause_token: Option<&priority::PauseToken>,
 ) -> Result<ClipManifestEntry, IngestError> {
     let in_path = input_file.as_ref();
     let base = show_dir.as_ref();
@@ -70,12 +74,16 @@ pub fn ingest_clip(
     let rel_hevc_path = format!("media/hevc/{}_pi.mp4", stem);
     let target_hevc = base.join(&rel_hevc_path);
 
-    if meta.is_pi5_compliant() && in_path.extension().map_or(false, |ext| ext == "mp4") {
-        // Already compliant, copy directly
+    if meta.is_pi5_compliant()
+        && opts.quadrant_crop.is_none()
+        && opts.crossfade_repair.is_none()
+        && in_path.extension().map_or(false, |ext| ext == "mp4")
+    {
+        // Already compliant and no crop/repair requested, copy directly
         fs::copy(in_path, &target_hevc)?;
     } else {
-        // Transcode to compliant Pi 5 HEVC format
-        transcode::transcode_file(in_path, &target_hevc, &opts)?;
+        // Transcode to compliant Pi format
+        transcode::transcode_file(in_path, &target_hevc, &opts, pause_token)?;
     }
 
     // Extract 96x96 Stream Deck thumbnail
@@ -89,7 +97,10 @@ pub fn ingest_clip(
 
     let entry = ClipManifestEntry {
         id: clip_id,
-        title: in_path.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| stem.clone()),
+        title: in_path
+            .file_stem()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_else(|| stem.clone()),
         duration_ms: (meta.duration_secs * 1000.0) as u64,
         thumb_path: rel_thumb_path,
         renditions,
@@ -108,7 +119,7 @@ pub fn ingest_clip(
     Ok(entry)
 }
 
-/// Copy all show assets (show.toml, media, thumbs, shaders) to a USB drive for Pi 5 appliance deployment.
+/// Copy all show assets (show.toml, media, thumbs, shaders) to a USB drive for Pi appliance deployment.
 pub fn export_to_usb(
     show_dir: impl AsRef<Path>,
     usb_target: impl AsRef<Path>,
@@ -124,7 +135,11 @@ pub fn export_to_usb(
     }
 
     fs::create_dir_all(dst)?;
-    println!("Exporting show bundle from '{}' to USB drive '{}'...", src.display(), dst.display());
+    println!(
+        "Exporting show bundle from '{}' to USB drive '{}'...",
+        src.display(),
+        dst.display()
+    );
 
     // 1. Copy show.toml
     let toml_src = src.join("show.toml");
@@ -142,7 +157,10 @@ pub fn export_to_usb(
             let entry = entry?;
             if entry.path().is_file() {
                 fs::copy(entry.path(), media_dst.join(entry.file_name()))?;
-                println!("  -> Copied media: {}", entry.file_name().to_string_lossy());
+                println!(
+                    "  -> Copied media: {}",
+                    entry.file_name().to_string_lossy()
+                );
             }
         }
     }
@@ -175,11 +193,11 @@ pub fn export_to_usb(
         println!("  -> Copied all ISF shaders");
     }
 
-    println!("\n✅ USB Export Complete! Ready to plug into Raspberry Pi 5.");
+    println!("\n? USB Export Complete! Ready to plug into Raspberry Pi.");
     Ok(())
 }
 
-/// Sync show directory directly to Raspberry Pi 5 over local network using rsync/scp.
+/// Sync show directory directly to Raspberry Pi over local network using rsync/scp.
 pub fn sync_to_pi(
     show_dir: impl AsRef<Path>,
     target_host: &str,
@@ -188,7 +206,11 @@ pub fn sync_to_pi(
     let src_str = format!("{}/", src.to_string_lossy());
     let remote_dest = format!("{}:/home/pi/show/", target_host);
 
-    println!("⚡ Syncing '{}' directly to '{}'...", src.display(), remote_dest);
+    println!(
+        "? Syncing '{}' directly to '{}'...",
+        src.display(),
+        remote_dest
+    );
 
     let status = std::process::Command::new("rsync")
         .args(["-avz", "--progress", &src_str, &remote_dest])
@@ -196,7 +218,7 @@ pub fn sync_to_pi(
 
     match status {
         Ok(s) if s.success() => {
-            println!("\n✅ Network Sync Complete! Pi 5 show is updated.");
+            println!("\n? Network Sync Complete! Pi show is updated.");
             Ok(())
         }
         _ => {
@@ -205,7 +227,7 @@ pub fn sync_to_pi(
                 .args(["-r", &src_str, &remote_dest])
                 .status()?;
             if scp_status.success() {
-                println!("\n✅ Network Sync Complete via scp!");
+                println!("\n? Network Sync Complete via scp!");
                 Ok(())
             } else {
                 Err(IngestError::Io(std::io::Error::new(

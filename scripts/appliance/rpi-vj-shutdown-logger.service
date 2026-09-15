@@ -1,0 +1,19 @@
+[Unit]
+Description=RPi-VJ Clean Shutdown Logger
+Documentation=file:///opt/rpi-vj/docs/appliance/HARDENING.md
+DefaultDependencies=no
+Before=shutdown.target reboot.target halt.target poweroff.target final.target
+Wants=local-fs.target
+After=local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+ExecStop=/opt/rpi-vj/scripts/appliance/record-boot-event.sh clean-shutdown
+TimeoutStopSec=5s
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

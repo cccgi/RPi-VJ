@@ -1,21 +1,27 @@
-//! CLI binary for vj-ingest: show initialization, automated transcoding, clip ingestion, and Pi 5 transfer.
+//! CLI binary for vj-ingest: show initialization, automated transcoding, clip ingestion, media analysis, and Pi transfer.
 
 use std::env;
+use std::path::Path;
+use vj_ingest::analyzer::{analyze_media, QuadrantCrop};
+use vj_ingest::priority::apply_low_priority;
+use vj_ingest::transcode::{TranscodeOptions, VideoCodec};
 use vj_ingest::{export_to_usb, ingest_clip, init_show, sync_to_pi};
 
 fn print_usage() {
     println!("vj-ingest: Automated Media Transcoding & Show Ingestion for RPi-VJ\n");
     println!("Usage:");
-    println!("  vj-ingest new <show_name> [output_directory]");
+    println!("  vj-ingest analyze <video_file> [--json]");
+    println!("  vj-ingest transcode <input_file> <output_file> [options]");
+    println!("  vj-ingest thumb <video_file> <output_jpg>");
     println!("  vj-ingest clip <video_file> <show_directory>");
-    println!("  vj-ingest probe <video_file>");
+    println!("  vj-ingest new <show_name> [output_directory]");
     println!("  vj-ingest export-usb <show_directory> <usb_mount_path>");
     println!("  vj-ingest sync <show_directory> <pi_ssh_target>\n");
-    println!("Examples:");
-    println!("  vj-ingest new \"Warehouse Set\" ./my_show");
-    println!("  vj-ingest clip ./raw_video.mov ./my_show");
-    println!("  vj-ingest export-usb ./my_show E:\\");
-    println!("  vj-ingest sync ./my_show pi@192.168.1.150");
+    println!("Transcode Options:");
+    println!("  --codec <hevc|h264>        (default: hevc)");
+    println!("  --crop <tl|tr|bl|br|center>");
+    println!("  --crossfade <seconds>      (e.g. 0.5)");
+    println!("  --low-priority             (apply nice/ionice background priority)\n");
 }
 
 fn main() {
@@ -26,6 +32,104 @@ fn main() {
     }
 
     match args[1].as_str() {
+        "analyze" => {
+            if args.len() < 3 {
+                eprintln!("Error: 'analyze' requires <video_file>");
+                return;
+            }
+            let file = &args[2];
+            let as_json = args.iter().any(|a| a == "--json");
+
+            let report = analyze_media(Path::new(file), None);
+            if as_json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&report).unwrap_or_default()
+                );
+            } else {
+                println!("Media Analysis Report for: {}", report.file_path);
+                if let Some(m) = &report.metadata {
+                    println!("  Codec: {} ({:?})", m.codec_name, m.profile);
+                    println!("  Resolution: {}x{}", m.width, m.height);
+                    println!("  FPS: {:.2}", m.fps);
+                    println!("  Duration: {:.2}s", m.duration_secs);
+                    println!("  Pixel Format: {}", m.pixel_format);
+                    println!("  Audio Streams: {}", m.audio_streams.len());
+                }
+                println!("  Decode Valid: {}", report.decode_valid);
+                println!(
+                    "  Perceptual Hashes: {}",
+                    report.perceptual_hashes.join(", ")
+                );
+                println!(
+                    "  Quadrant Scores: avg={:.2}, quad_mirror={}",
+                    report.quadrant_scores.avg_quad_similarity,
+                    report.quadrant_scores.is_true_quad_mirror
+                );
+                println!(
+                    "  Seam Continuity: {:.2} (seamless={})",
+                    report.seam_similarity_score, report.is_seamless_loop
+                );
+                println!("  Proposed Action: {:?}", report.proposed_action);
+                for note in &report.advisory_notes {
+                    println!("  Note: {}", note);
+                }
+            }
+        }
+        "transcode" => {
+            if args.len() < 4 {
+                eprintln!("Error: 'transcode' requires <input_file> <output_file>");
+                return;
+            }
+            let in_file = &args[2];
+            let out_file = &args[3];
+
+            if args.iter().any(|a| a == "--low-priority") {
+                apply_low_priority();
+            }
+
+            let mut opts = TranscodeOptions::default();
+            for i in 4..args.len() {
+                if args[i] == "--codec" && i + 1 < args.len() {
+                    match args[i + 1].as_str() {
+                        "h264" => opts.codec = VideoCodec::H264,
+                        "hevc" => opts.codec = VideoCodec::Hevc,
+                        _ => {}
+                    }
+                }
+                if args[i] == "--crop" && i + 1 < args.len() {
+                    opts.quadrant_crop = match args[i + 1].as_str() {
+                        "tl" | "top-left" => Some(QuadrantCrop::TopLeft),
+                        "tr" | "top-right" => Some(QuadrantCrop::TopRight),
+                        "bl" | "bottom-left" => Some(QuadrantCrop::BottomLeft),
+                        "br" | "bottom-right" => Some(QuadrantCrop::BottomRight),
+                        "center" => Some(QuadrantCrop::Center),
+                        _ => None,
+                    };
+                }
+                if args[i] == "--crossfade" && i + 1 < args.len() {
+                    opts.crossfade_repair = args[i + 1].parse::<f32>().ok();
+                }
+            }
+
+            println!("Transcoding '{}' -> '{}'...", in_file, out_file);
+            match vj_ingest::transcode::transcode_file(in_file, out_file, &opts, None) {
+                Ok(_) => println!("Transcode complete!"),
+                Err(e) => eprintln!("Transcode failed: {}", e),
+            }
+        }
+        "thumb" => {
+            if args.len() < 4 {
+                eprintln!("Error: 'thumb' requires <video_file> <output_jpg>");
+                return;
+            }
+            let in_file = &args[2];
+            let out_file = &args[3];
+            match vj_ingest::thumb::extract_thumbnail(in_file, out_file, 0.5) {
+                Ok(_) => println!("Thumbnail extracted to '{}'", out_file),
+                Err(e) => eprintln!("Thumbnail extraction failed: {}", e),
+            }
+        }
         "new" => {
             let name = args.get(2).cloned().unwrap_or_else(|| "Untitled Show".into());
             let out_dir = args.get(3).cloned().unwrap_or_else(|| "./show".into());
@@ -43,7 +147,7 @@ fn main() {
             let file = &args[2];
             let show_dir = &args[3];
             println!("Ingesting clip '{}' into show '{}'...", file, show_dir);
-            match ingest_clip(file, show_dir, None) {
+            match ingest_clip(file, show_dir, None, None) {
                 Ok(entry) => {
                     println!("Successfully ingested clip:");
                     println!("  ID: {}", entry.id);
@@ -54,25 +158,6 @@ fn main() {
                     }
                 }
                 Err(e) => eprintln!("Error ingesting clip: {}", e),
-            }
-        }
-        "probe" => {
-            if args.len() < 3 {
-                eprintln!("Error: 'probe' requires <video_file>");
-                return;
-            }
-            let file = &args[2];
-            match vj_ingest::probe::VideoMetadata::probe_file(file) {
-                Ok(meta) => {
-                    println!("Probe results for '{}':", file);
-                    println!("  Codec: {}", meta.codec_name);
-                    println!("  Resolution: {}x{}", meta.width, meta.height);
-                    println!("  FPS: {:.2}", meta.fps);
-                    println!("  Duration: {:.2}s", meta.duration_secs);
-                    println!("  Pixel format: {}", meta.pixel_format);
-                    println!("  Pi 5 Hardware Compliant: {}", if meta.is_pi5_compliant() { "YES (Zero-copy HEVC)" } else { "NO (Needs Transcode)" });
-                }
-                Err(e) => eprintln!("Probe failed: {}", e),
             }
         }
         "export-usb" => {

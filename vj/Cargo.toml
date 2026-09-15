@@ -18,6 +18,10 @@ winit = "0.29"
 pollster = "0.3"
 bytemuck = { version = "1", features = ["derive"] }
 
+chrono = { version = "0.4", features = ["serde"] }
+sha2 = "0.10"
+uuid = { version = "1", features = ["v4", "serde"] }
+
 vj-types = { path = "crates/vj-types" }
 vj-core = { path = "crates/vj-core" }
 vj-surface = { path = "crates/vj-surface" }
@@ -31,6 +35,7 @@ vj-surface-midi = { path = "crates/vj-surface-midi" }
 vj-surface-hid = { path = "crates/vj-surface-hid" }
 vj-api = { path = "crates/vj-api" }
 vj-broker = { path = "crates/vj-broker" }
+vj-storage = { path = "crates/vj-storage" }
 
 [profile.release]
 lto = "thin"

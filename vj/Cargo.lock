@@ -1757,9 +1757,14 @@ dependencies = [
 name = "vj-broker"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "serde",
  "serde_json",
+ "sha2",
+ "tempfile",
  "thiserror",
+ "uuid",
+ "vj-storage",
 ]
 
 [[package]]
@@ -1785,6 +1790,7 @@ dependencies = [
 name = "vj-ingest"
 version = "0.1.0"
 dependencies = [
+ "libc",
  "serde",
  "serde_json",
  "thiserror",
@@ -1816,6 +1822,7 @@ name = "vj-storage"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "libc",
  "serde",
  "serde_json",
  "sha2",
@@ -1838,6 +1845,7 @@ dependencies = [
 name = "vj-surface-hid"
 version = "0.1.0"
 dependencies = [
+ "libc",
  "serde",
  "serde_json",
  "thiserror",
