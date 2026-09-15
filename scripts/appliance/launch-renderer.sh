@@ -11,6 +11,10 @@ set -euo pipefail
 DEFAULT_SHOW_URL="http://localhost:8080/gig/"
 SHOW_URL="${SHOW_URL:-${DEFAULT_SHOW_URL}}"
 
+FALLBACK_SPLASH_PATH="/opt/rpi-vj/web/splash.html"
+FALLBACK_SPLASH_URL="file:///opt/rpi-vj/web/splash.html"
+TARGET_APP_URL="${TARGET_APP_URL:-${SHOW_URL}}"
+
 DEFAULT_PROFILE_DIR="/var/lib/rpi-vj/renderer-profile"
 RENDERER_PROFILE_DIR="${RENDERER_PROFILE_DIR:-${DEFAULT_PROFILE_DIR}}"
 
@@ -168,13 +172,19 @@ ensure_xdg_runtime_dir() {
 suppress_pointer_and_desktop() {
     # Non-negotiable decision #3: Cage owns sole program output.
     # No pointer UI, no cursor process, no desktop shell, no display manager.
-    unset XCURSOR_THEME
-    unset XCURSOR_SIZE
     unset DESKTOP_SESSION
     unset GDMSESSION
     unset XDG_CURRENT_DESKTOP
-    export XCURSOR_THEME=""
-    export XCURSOR_SIZE=0
+
+    # Ensure transparent cursor theme exists
+    local theme_dir="/opt/rpi-vj/theme/transparent"
+    if [[ ! -d "${theme_dir}/cursors" ]] && [[ -f "/opt/rpi-vj/scripts/appliance/generate-transparent-cursor.py" ]]; then
+        python3 /opt/rpi-vj/scripts/appliance/generate-transparent-cursor.py "${theme_dir}" 2>/dev/null || true
+    fi
+
+    export XCURSOR_THEME="transparent"
+    export XCURSOR_PATH="/opt/rpi-vj/theme:/usr/share/icons:~/.icons"
+    export XCURSOR_SIZE=1
     export WLR_LIBINPUT_NO_DEVICES="${WLR_LIBINPUT_NO_DEVICES:-1}"
 }
 
@@ -275,10 +285,18 @@ check_local_server_readiness() {
     done
 
     if [[ "${server_ready}" -eq 1 ]]; then
-        echo "[renderer] Local server is responding."
+        echo "[renderer] Local server is responding: ${SHOW_URL}"
+        TARGET_APP_URL="${SHOW_URL}"
     else
-        echo "[renderer] Local server check ended (elapsed: ${RENDERER_SERVER_WAIT_SECS}s). Launching browser."
+        if [[ -f "${FALLBACK_SPLASH_PATH}" ]]; then
+            echo "[renderer] Local server not reachable; falling back to offline splash: ${FALLBACK_SPLASH_URL}"
+            TARGET_APP_URL="${FALLBACK_SPLASH_URL}"
+        else
+            echo "[renderer] Local server check ended (elapsed: ${RENDERER_SERVER_WAIT_SECS}s). Launching browser with ${SHOW_URL}"
+            TARGET_APP_URL="${SHOW_URL}"
+        fi
     fi
+    export TARGET_APP_URL
 }
 
 # ---------------------------------------------------------------------------
@@ -294,11 +312,18 @@ exec_browser_session() {
         wlr-randr --output HDMI-A-2 --off 2>/dev/null || true
     fi
 
+    local url_to_open="${TARGET_APP_URL:-${SHOW_URL}}"
+    if [[ -z "${TARGET_APP_URL:-}" ]] && command -v curl >/dev/null 2>&1; then
+        if ! curl -sf --connect-timeout 1 "${SHOW_URL}" >/dev/null 2>&1 && [[ -f "${FALLBACK_SPLASH_PATH}" ]]; then
+            url_to_open="${FALLBACK_SPLASH_URL}"
+        fi
+    fi
+
     local chromium_args=(
         "--ozone-platform=wayland"
         "--enable-features=UseOzonePlatform"
         "--kiosk"
-        "--app=${SHOW_URL}"
+        "--app=${url_to_open}"
         "--user-data-dir=${RENDERER_PROFILE_DIR}"
         "--password-store=basic"
         "--use-mock-keychain"
@@ -322,9 +347,11 @@ exec_browser_session() {
         "--disable-features=Translate,InfiniteSessionRestore,OptimizationGuideModelDownloading,OptimizationGuideOnDeviceModel"
         "--disable-pinch"
         "--overscroll-history-navigation=0"
+        "--hide-scrollbars"
+        "--blink-settings=primaryHoverType=0,availableHoverTypes=0,primaryPointerType=0,availablePointerTypes=0"
     )
 
-    echo "[renderer] Executing Chromium: ${CHROMIUM_BIN} (app=${SHOW_URL})"
+    echo "[renderer] Executing Chromium: ${CHROMIUM_BIN} (app=${url_to_open})"
     exec "${CHROMIUM_BIN}" "${chromium_args[@]}"
 }
 
@@ -352,9 +379,9 @@ run_self_tests() {
     rm -rf "${test_xdg_dir}"
 
     # Test 2: Pointer suppression
-    echo -n "Test 2: suppress_pointer_and_desktop clears cursor vars ... "
-    XCURSOR_THEME="Adwaita" XCURSOR_SIZE="24" suppress_pointer_and_desktop
-    if [[ "${XCURSOR_THEME}" == "" && "${XCURSOR_SIZE}" == "0" ]]; then
+    echo -n "Test 2: suppress_pointer_and_desktop configures transparent cursor ... "
+    XCURSOR_THEME="Adwaita" XCURSOR_SIZE="24" suppress_pointer_and_desktop >/dev/null 2>&1
+    if [[ "${XCURSOR_THEME}" == "transparent" && "${XCURSOR_SIZE}" == "1" ]]; then
         echo "PASS"
         tests_passed=$((tests_passed + 1))
     else
