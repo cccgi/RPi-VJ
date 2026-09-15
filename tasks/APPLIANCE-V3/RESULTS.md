@@ -102,6 +102,14 @@ actual: Interactive INGEST page with USB status, step gauges, media decision tri
 hardware: Stream Deck XL HID emulation and production Pi 5 filesystem.
 surprise: none
 
+## A3-14 — DONE
+files: scripts/appliance/qualify-release.sh, /var/lib/rpi-vj/release-manifest.json
+observable: qualify-release.sh (12/12 automated qualification regression tests passed on Pi 5)
+actual: Verified broker IPC socket, REST health endpoint, Stream Deck XL state publishing, immutable show generation invariants, fast renderer kill recovery (<3s), security sandboxing, hardware watchdog drop-in, and generated SHA-256 release manifest.
+hardware: Production Pi 5 (kernel 6.18.34+rpt-rpi-2712 aarch64), Stream Deck XL, and physical HDMI monitor.
+surprise: none
+
+
 
 
 
