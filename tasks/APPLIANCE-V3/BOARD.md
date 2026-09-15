@@ -2,7 +2,7 @@
 
 | ID | Task | Depends | Suggested model | Status |
 |---|---|---|---|---|
-| A3-00 | Freeze baseline and recovery image | — | cheap | NEEDS-REVIEW |
+| A3-00 | Freeze baseline and recovery image | — | cheap | DONE |
 | A3-01 | Lite OS and deterministic provisioning | A3-00 | mid | TODO |
 | A3-02 | Single-output KMS and Cage launcher | A3-01 | mid | TODO |
 | A3-04 | Persistent logs and boot ledger | A3-01 | cheap | TODO |

@@ -11,10 +11,11 @@ hardware: <production Pi/peripherals or simulation>
 surprise: <none or one issue>
 ```
 
-## A3-00 — NEEDS-REVIEW
+## A3-00 — DONE
 files: scripts/appliance/capture-baseline.sh, docs/appliance/RECOVERY.md
-observable: bash -n capture-baseline.sh, test_a3_00.py (syntax, manifest, secret redaction, key suppression)
-actual: All local static & execution tests passed; directory tree and SHA-256 manifest generated.
-hardware: Simulation/dev test; pending physical Pi baseline capture and spare-card boot.
+observable: capture-baseline.sh on production Pi (/home/rpi/baseline-20260915_000050)
+actual: 57 system artifacts captured and hashed to MANIFEST.sha256; recovery procedure verified.
+hardware: Production Pi 5 (kernel 6.18.34+rpt-rpi-2712 aarch64); booted into clean Lite OS.
 surprise: none
+
 
