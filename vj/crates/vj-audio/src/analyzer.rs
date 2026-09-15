@@ -101,7 +101,9 @@ impl AudioAnalyzer {
         let normalized_volume = (rms - self.config.noise_floor).max(0.0) / (1.0 - self.config.noise_floor);
         let smoothed_vol = self.env_volume.update(normalized_volume, dt_secs);
 
-        let smoothed_sub = self.env_sub_bass.update(sub_bass_energy / num_frames as f32, dt_secs);
+        let inst_sub = sub_bass_energy / num_frames as f32;
+        let prev_sub = self.env_sub_bass.value;
+        let smoothed_sub = self.env_sub_bass.update(inst_sub, dt_secs);
         let smoothed_bass = self.env_bass.update(bass_energy / num_frames as f32, dt_secs);
         let smoothed_mid = self.env_low_mid.update(mid_energy / num_frames as f32, dt_secs);
         let smoothed_treble = self.env_high.update(treble_energy / num_frames as f32, dt_secs);
@@ -110,9 +112,10 @@ impl AudioAnalyzer {
         let refractory_samples = (self.config.sample_rate as f32 * 0.120) as u64; // 120ms cooldown
         let mut beat_trigger = 0;
 
-        if (sub_bass_energy / num_frames as f32) > (smoothed_sub * 1.35 + 0.02)
-            && (self.total_samples - self.last_onset_sample) > refractory_samples
-        {
+        let refractory_passed = self.last_onset_sample == 0
+            || (self.total_samples.saturating_sub(self.last_onset_sample) > refractory_samples);
+
+        if inst_sub > (prev_sub * 1.35 + 0.02) && refractory_passed {
             self.last_onset_sample = self.total_samples;
             self.onset_decay = 1.0;
             beat_trigger = 1;

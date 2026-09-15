@@ -174,10 +174,16 @@ mod tests {
         assert!(matches!(result, Err(VideoError::NotFound(_))));
         assert_eq!(deck.state(), DeckState::Faulted);
 
-        // Corrupt clip path
-        let corrupt_clip = make_test_clip("corrupt_video.mp4");
+        // Corrupt clip path that exists on disk (e.g. Cargo.toml renamed logically to contain 'corrupt')
+        let temp_dir = std::env::temp_dir();
+        let corrupt_path = temp_dir.join("corrupt_video.mp4");
+        let _ = std::fs::write(&corrupt_path, b"dummy corrupted data");
+
+        let corrupt_clip = make_test_clip(&corrupt_path.to_string_lossy());
         let result_corrupt = deck.prepare(&corrupt_clip);
         assert!(matches!(result_corrupt, Err(VideoError::Decoder(_))));
         assert_eq!(deck.state(), DeckState::Faulted);
+
+        let _ = std::fs::remove_file(corrupt_path);
     }
 }

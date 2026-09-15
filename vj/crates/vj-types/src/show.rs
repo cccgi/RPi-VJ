@@ -17,7 +17,7 @@ pub const SHOW_SCHEMA_VERSION: u32 = 1;
 pub struct ShowManifest {
     pub schema_version: u32,
     pub name: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     #[serde(default = "default_authored_tier")]
     pub authored_tier: Tier,
@@ -77,7 +77,7 @@ pub struct TierDegradation {
     pub render_scale: f32,
     #[serde(default)]
     pub disable_layers: Vec<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub shader_quality: Option<String>,
 }
 
@@ -90,7 +90,7 @@ pub struct LayerConfig {
     pub opacity: f32,
     #[serde(default)]
     pub blend: BlendMode,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub default_shader: Option<ShaderId>,
     #[serde(default = "default_true")]
     pub enabled: bool,
@@ -110,7 +110,48 @@ pub struct BankSpec {
     pub id: u32,
     pub name: String,
     /// 4 rows x 8 columns = 32 keys
+    #[serde(default, serialize_with = "serialize_grid", deserialize_with = "deserialize_grid")]
     pub grid: [[Option<GridSlot>; 8]; 4],
+}
+
+#[derive(Serialize, Deserialize)]
+struct SlotPosition {
+    row: usize,
+    col: usize,
+    slot: GridSlot,
+}
+
+fn serialize_grid<S>(grid: &[[Option<GridSlot>; 8]; 4], serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let mut non_empty = Vec::new();
+    for row in 0..4 {
+        for col in 0..8 {
+            if let Some(slot) = &grid[row][col] {
+                non_empty.push(SlotPosition {
+                    row,
+                    col,
+                    slot: slot.clone(),
+                });
+            }
+        }
+    }
+    non_empty.serialize(serializer)
+}
+
+fn deserialize_grid<'de, D>(deserializer: D) -> Result<[[Option<GridSlot>; 8]; 4], D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let slots = Vec::<SlotPosition>::deserialize(deserializer)?;
+    let mut grid: [[Option<GridSlot>; 8]; 4] = Default::default();
+    for item in slots {
+        if item.row < 4 && item.col < 8 {
+            grid[item.row][item.col] = Some(item.slot);
+        }
+    }
+    Ok(grid)
 }
 
 impl BankSpec {
@@ -152,21 +193,21 @@ pub enum GridSlot {
         transition: TransitionSpec,
         #[serde(default)]
         quantize: Quantize,
-        #[serde(default)]
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         thumb_path: Option<String>,
     },
     /// Activates an audio-reactive ISF shader on a layer.
     Shader {
         shader_id: ShaderId,
         layer: LayerId,
-        #[serde(default)]
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         thumb_path: Option<String>,
     },
     /// Performs a system or performance action.
     Action {
         action: SystemAction,
         label: String,
-        #[serde(default)]
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         color: Option<[u8; 3]>,
     },
 }
@@ -206,7 +247,7 @@ pub struct ShaderManifestEntry {
     pub id: ShaderId,
     pub name: String,
     pub file_path: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub thumb_path: Option<String>,
     #[serde(default)]
     pub is_audio_reactive: bool,

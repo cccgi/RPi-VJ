@@ -57,12 +57,12 @@ string_id! {
 }
 
 /// A video deck within the deck pool.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct DeckId(pub u16);
 
 /// A compositor layer, ordered back-to-front by index.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct LayerId(pub u16);
 
@@ -122,7 +122,7 @@ pub enum BlendMode {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum TransitionKind {
     Cut,
     Crossfade,
@@ -148,7 +148,7 @@ impl Default for TransitionSpec {
 
 /// When a queued action should take effect.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "quantize", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum Quantize {
     /// Next vblank.
     #[default]

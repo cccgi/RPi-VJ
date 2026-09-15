@@ -15,7 +15,9 @@ pub fn blend_colors(bottom: [f32; 4], top: [f32; 4], mode: BlendMode, opacity: f
     }
 
     let a_out = match mode {
-        BlendMode::Alpha => at + ab * (1.0 - at),
+        BlendMode::Alpha | BlendMode::LumaKey { .. } | BlendMode::ChromaKey { .. } => {
+            at + ab * (1.0 - at)
+        }
         BlendMode::Additive | BlendMode::Multiply | BlendMode::Screen => (ab + at).min(1.0),
     };
 
@@ -27,7 +29,7 @@ pub fn blend_colors(bottom: [f32; 4], top: [f32; 4], mode: BlendMode, opacity: f
     out[3] = a_out;
 
     match mode {
-        BlendMode::Alpha => {
+        BlendMode::Alpha | BlendMode::LumaKey { .. } | BlendMode::ChromaKey { .. } => {
             for i in 0..3 {
                 out[i] = (top[i] * at + bottom[i] * ab * (1.0 - at)) / a_out;
             }
