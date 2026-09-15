@@ -1,0 +1,44 @@
+# RPi-VJ Appliance V3 Package Manifest
+# Target Platform: Raspberry Pi OS Lite 64-bit (Debian Bookworm)
+# Format: <package> [version_spec] # <category> - <purpose>
+
+# --- Compositor & Kiosk Display Stack ---
+cage                                # Compositor - Wayland kiosk compositor (runs single fullscreen window)
+seatd                               # Compositor - Minimal seat management daemon for Cage/wlroots
+chromium                            # Browser - Hardware-accelerated browser for UI rendering
+
+# --- Multimedia Engine ---
+ffmpeg                              # Multimedia - Video decoding, quadrant inspection & ffprobe
+
+# --- Native Runtime Libraries & Hardware Access ---
+libhidapi-hidraw0                   # Hardware - Native hidraw communication for Stream Deck XL
+libudev1                            # Hardware - Device event & dynamic detection library
+udev                                # Hardware - Dynamic device management daemon & rules
+libdrm2                             # Hardware - Direct Rendering Manager runtime library
+libgbm1                             # Hardware - Generic Buffer Management graphics library
+libasound2                          # Hardware - ALSA audio library
+ca-certificates                     # System - Trusted CA certificates for outbound HTTPS
+curl                                # Utilities - Lightweight HTTP client for health inspection
+
+# --- Networking & System Identity ---
+avahi-daemon                        # Network - mDNS responder for rpi-vj.local resolution
+libnss-mdns                         # Network - NSS plugin for local mDNS resolution
+openssh-server                      # Network - SSH server for maintenance access (key-auth only)
+
+# --- Storage & Removable Media Mount Helpers ---
+udisks2                             # Storage - Daemon for managing removable USB drives
+dosfstools                          # Storage - FAT32 filesystem utilities
+exfatprogs                          # Storage - exFAT filesystem utilities
+e2fsprogs                           # Storage - ext4 filesystem utilities
+util-linux                          # Storage - Core mount, blkid, lsblk, findmnt tools
+
+# --- Hardware Diagnostics & Performance Telemetry ---
+drm-info                            # Diagnostics - KMS/DRM display status inspection
+libdrm-tests                        # Diagnostics - modetest utility for DRM pipeline debugging
+usbutils                            # Diagnostics - lsusb USB topology inspector
+pciutils                            # Diagnostics - lspci diagnostic utility
+htop                                # Diagnostics - Interactive process & resource monitor
+iotop                               # Diagnostics - Per-process disk I/O monitor
+lsof                                # Diagnostics - Active file and socket descriptor inspector
+evtest                              # Diagnostics - Input device event debugging tool
+jq                                  # Diagnostics - Command-line JSON parser for state and APIs
