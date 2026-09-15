@@ -25,5 +25,13 @@ actual: Pass 1 applied 33 changes; Pass 2 reported 0 changes (SUCCESS IDEMPOTENT
 hardware: Production Pi 5 (kernel 6.18.34+rpt-rpi-2712 aarch64); rpi-vj.local resolved; renderer staged inactive.
 surprise: none
 
+## A3-04 — NEEDS-REVIEW
+files: scripts/appliance/boot-ledger.py, scripts/appliance/record-boot-event.sh, docs/appliance/OBSERVABILITY.md
+observable: boot-ledger.py test (6 unit tests passed); marker A recorded on live Pi 5
+actual: Structured 9-field JSONL schema and monotonic watchdog validated; journald bounded to 200M/15%.
+hardware: Tested on physical Pi 5 (kernel 6.18.34+rpt-rpi-2712); pending power-cut reboot verification.
+surprise: none
+
+
 
 

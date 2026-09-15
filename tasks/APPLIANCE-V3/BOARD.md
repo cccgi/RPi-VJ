@@ -4,11 +4,11 @@
 |---|---|---|---|---|
 | A3-00 | Freeze baseline and recovery image | — | cheap | DONE |
 | A3-01 | Lite OS and deterministic provisioning | A3-00 | mid | DONE |
-| A3-02 | Single-output KMS and Cage launcher | A3-01 | mid | TODO |
-| A3-04 | Persistent logs and boot ledger | A3-01 | cheap | TODO |
+| A3-02 | Single-output KMS and Cage launcher | A3-01 | mid | WIP |
+| A3-04 | Persistent logs and boot ledger | A3-01 | cheap | NEEDS-REVIEW |
 | A3-03 | Offline boot hardware gate | A3-02,A3-04 | reviewer/human | TODO |
 | A3-05 | Broker protocol and monotonic supervisor | A3-04 | mid | TODO |
-| A3-06 | Native Stream Deck transport | A3-01 | mid | TODO |
+| A3-06 | Native Stream Deck transport | A3-01 | mid | WIP |
 | A3-07 | Stream Deck state UI and command integration | A3-05,A3-06 | mid | TODO |
 | A3-08 | Immutable show storage and job model | A3-05 | mid | TODO |
 | A3-09 | USB discovery and transactional copy | A3-08 | cheap | TODO |

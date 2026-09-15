@@ -197,7 +197,13 @@ ensure_directory() {
             fi
         fi
     else
-        record_ok "Directory ${dir_path} exists"
+        if [[ "${DRY_RUN}" -eq 0 ]]; then
+            chmod "${mode}" "${full_path}" 2>/dev/null || true
+            if [[ "$(id -u)" -eq 0 && "${TARGET_ROOT}" == "/" ]]; then
+                chown "${owner}:${group}" "${full_path}" 2>/dev/null || true
+            fi
+        fi
+        record_ok "Directory ${dir_path} exists (${mode} ${owner}:${group})"
     fi
 }
 
