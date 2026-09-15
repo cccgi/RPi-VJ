@@ -9,8 +9,8 @@
 | A3-03 | Offline boot hardware gate | A3-02,A3-04 | reviewer/human | TODO |
 | A3-05 | Broker protocol and monotonic supervisor | A3-04 | mid | DONE |
 | A3-06 | Native Stream Deck transport | A3-01 | mid | DONE |
-| A3-07 | Stream Deck state UI and command integration | A3-05,A3-06 | mid | TODO |
-| A3-08 | Immutable show storage and job model | A3-05 | mid | TODO |
+| A3-07 | Stream Deck state UI and command integration | A3-05,A3-06 | mid | DONE |
+| A3-08 | Immutable show storage and job model | A3-05 | mid | DONE |
 | A3-09 | USB discovery and transactional copy | A3-08 | cheap | TODO |
 | A3-10 | Media analysis and appliance transcode | A3-08 | mid | TODO |
 | A3-11 | Stream Deck-only ingest workflow | A3-07,A3-09,A3-10 | mid | TODO |

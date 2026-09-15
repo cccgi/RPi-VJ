@@ -53,6 +53,21 @@ actual: Versioned JSON (v=1) Unix socket broker, UUID dedup, desired state store
 hardware: Production Pi 5; rpi-vj-broker.service active; Unix socket /run/rpi-vj/broker.sock and HTTP http://127.0.0.1:8080 active.
 surprise: none
 
+## A3-07 — DONE
+files: vj/crates/vj-surface-hid/**, scripts/appliance/rpi-vj-controller.service
+observable: cargo test -p vj-surface-hid (34/34 passed) & state_ui_integration test
+actual: Deterministic BOOTING, READY, PERFORMANCE, INGEST, DEGRADED, SYSTEM pages; guarded 2-key/long-hold action engine; non-blocking broker socket client with state replay.
+hardware: Production Pi 5 (kernel 6.18.34+rpt-rpi-2712 aarch64); rpi-vj-controller binary staged.
+surprise: none
+
+## A3-08 — DONE
+files: vj/crates/vj-storage/**, docs/appliance/STORAGE.md
+observable: cargo test -p vj-storage (4/4 tests passed on Pi 5)
+actual: Immutable generation directories under /srv/rpi-vj/shows, atomic symlink swap, rollback preservation, 15% free reserve check, durable 10-state job ledger with crash recovery & staging quarantine.
+hardware: Production Pi 5 filesystem (/srv/rpi-vj and /var/lib/rpi-vj).
+surprise: none
+
+
 
 
 
