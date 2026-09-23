@@ -18,6 +18,17 @@ TARGET_APP_URL="${TARGET_APP_URL:-${SHOW_URL}}"
 DEFAULT_PROFILE_DIR="/var/lib/rpi-vj/renderer-profile"
 RENDERER_PROFILE_DIR="${RENDERER_PROFILE_DIR:-${DEFAULT_PROFILE_DIR}}"
 
+# The cursor theme is generated at runtime by the unprivileged `vj` user, so
+# it must live under a path that's actually writable in the renderer
+# service's mount namespace. rpi-vj-renderer.service runs with
+# ProtectSystem=strict, which makes the whole filesystem read-only except
+# ReadWritePaths= (/srv/rpi-vj, /var/lib/rpi-vj, /run/rpi-vj) — /opt/rpi-vj
+# is NOT writable there regardless of file ownership. /var/lib/rpi-vj is
+# already used for HOME and the renderer profile, so the theme lives there
+# too rather than under /opt/rpi-vj/theme.
+DEFAULT_THEME_DIR="/var/lib/rpi-vj/theme/transparent"
+RENDERER_THEME_DIR="${RENDERER_THEME_DIR:-${DEFAULT_THEME_DIR}}"
+
 RENDERER_SERVER_WAIT_SECS="${RENDERER_SERVER_WAIT_SECS:-10}"
 RENDERER_DRM_WAIT_SECS="${RENDERER_DRM_WAIT_SECS:-5}"
 DRM_CARD="${DRM_CARD:-/dev/dri/card0}"
@@ -149,17 +160,18 @@ ensure_xdg_runtime_dir() {
     # The launcher owns XDG_RUNTIME_DIR.
     # Must exist with permissions 0700 and be writable by the current process user.
     if [[ -z "${XDG_RUNTIME_DIR:-}" ]]; then
-        if [[ -d "/run/rpi-vj/renderer" ]] && [[ -w "/run/rpi-vj/renderer" ]]; then
-            XDG_RUNTIME_DIR="/run/rpi-vj/renderer"
-        elif [[ -d "/run/user/$(id -u 2>/dev/null || echo 1000)" ]] && [[ -w "/run/user/$(id -u 2>/dev/null || echo 1000)" ]]; then
+        if [[ -d "/run/user/$(id -u 2>/dev/null || echo 1000)" ]] && [[ -w "/run/user/$(id -u 2>/dev/null || echo 1000)" ]]; then
             XDG_RUNTIME_DIR="/run/user/$(id -u 2>/dev/null || echo 1000)"
+        elif [[ -d "/run/rpi-vj" ]] && [[ -w "/run/rpi-vj" ]]; then
+            XDG_RUNTIME_DIR="/run/rpi-vj/renderer"
         else
             XDG_RUNTIME_DIR="/tmp/rpi-vj-runtime-$(id -u 2>/dev/null || echo 1000)"
         fi
     fi
 
     if [[ ! -d "${XDG_RUNTIME_DIR}" ]]; then
-        mkdir -p "${XDG_RUNTIME_DIR}"
+        mkdir -p "${XDG_RUNTIME_DIR}" 2>/dev/null || XDG_RUNTIME_DIR="/tmp/rpi-vj-runtime-$(id -u 2>/dev/null || echo 1000)"
+        mkdir -p "${XDG_RUNTIME_DIR}" 2>/dev/null || true
         chmod 0700 "${XDG_RUNTIME_DIR}" 2>/dev/null || true
     else
         chmod 0700 "${XDG_RUNTIME_DIR}" 2>/dev/null || true
@@ -176,14 +188,20 @@ suppress_pointer_and_desktop() {
     unset GDMSESSION
     unset XDG_CURRENT_DESKTOP
 
-    # Ensure transparent cursor theme exists
-    local theme_dir="/opt/rpi-vj/theme/transparent"
-    if [[ ! -d "${theme_dir}/cursors" ]] && [[ -f "/opt/rpi-vj/scripts/appliance/generate-transparent-cursor.py" ]]; then
-        python3 /opt/rpi-vj/scripts/appliance/generate-transparent-cursor.py "${theme_dir}" 2>/dev/null || true
+    # (Re)generate the transparent cursor theme on every launch. This is a
+    # handful of ~70-byte files, so regenerating is cheap, and doing it
+    # unconditionally means a fixed generator script always takes effect on
+    # the next boot even if a prior (possibly malformed) theme dir already
+    # exists on disk from an earlier deployment.
+    local theme_dir="${RENDERER_THEME_DIR}"
+    if [[ -f "/opt/rpi-vj/scripts/appliance/generate-transparent-cursor.py" ]]; then
+        if ! python3 /opt/rpi-vj/scripts/appliance/generate-transparent-cursor.py "${theme_dir}"; then
+            echo "[renderer] WARNING: transparent cursor theme generation failed; a visible system cursor may appear." >&2
+        fi
     fi
 
     export XCURSOR_THEME="transparent"
-    export XCURSOR_PATH="/opt/rpi-vj/theme:/usr/share/icons:~/.icons"
+    export XCURSOR_PATH="$(dirname "${theme_dir}"):/usr/share/icons:~/.icons"
     export XCURSOR_SIZE=1
     export WLR_LIBINPUT_NO_DEVICES="${WLR_LIBINPUT_NO_DEVICES:-1}"
 }

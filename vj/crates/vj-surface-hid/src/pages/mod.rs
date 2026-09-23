@@ -1,27 +1,27 @@
 //! Stream Deck UI pages subsystem.
 //!
-//! Implements deterministic pages:
-//! - BOOTING: Boot animation, storage, renderer, media readiness
-//! - READY: Standby overview, show selection, quick controls
-//! - PERFORMANCE: 4x8 grid, 32 clips across banks, active clip highlight, bank selection (0..7), blackout toggle, BPM/master control
+//! Implements 3 deterministic pages (consolidated from an earlier 6-page
+//! design after an audit found BOOTING unreachable, READY's bank overview
+//! redundant with PERFORMANCE's own bank-select modal, DEGRADED's real
+//! actions overlapping SYSTEM's, and several telemetry fields permanently
+//! fake — see HANDOFF.md for the full record):
+//! - PERFORMANCE: boot page. 24 clip pads + bank select, stop, blackout,
+//!   BPM, and master opacity control. Single-tap, no navigation needed.
+//! - SYSTEM: real telemetry only (hostname, CPU temp), renderer restart,
+//!   state restore, guarded reboot/shutdown, ingest entry.
 //! - INGEST: USB/LAN ingest status, progress, warnings, accept/cancel, activation
-//! - DEGRADED: Fault diagnostic, error codes, recovery actions
-//! - SYSTEM: IP/hostname, free space, temp/throttle, renderer restart, guarded shutdown/reboot
 
-pub mod booting;
-pub mod degraded;
 pub mod ingest;
 pub mod performance;
-pub mod ready;
+pub mod show_manifest;
 pub mod system;
 
-pub use booting::BootingPage;
-pub use degraded::DegradedPage;
 pub use ingest::IngestPage;
 pub use performance::PerformancePage;
-pub use ready::ReadyPage;
+pub use show_manifest::{PadInfo, ShowManifest};
 pub use system::SystemPage;
 
+use std::sync::Arc;
 use std::time::Instant;
 use crate::broker_client::{AppState, BrokerClient};
 use crate::graphics::Canvas;
@@ -31,22 +31,16 @@ pub const KEY_COUNT: usize = 32;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum PageId {
-    Booting,
-    Ready,
     Performance,
     Ingest,
-    Degraded,
     System,
 }
 
 impl PageId {
     pub fn title(&self) -> &'static str {
         match self {
-            PageId::Booting => "BOOTING",
-            PageId::Ready => "READY",
             PageId::Performance => "PERF",
             PageId::Ingest => "INGEST",
-            PageId::Degraded => "DEGRADED",
             PageId::System => "SYSTEM",
         }
     }
@@ -140,50 +134,23 @@ impl Default for IngestStatus {
     }
 }
 
-/// Fault diagnostic info for DEGRADED page
-#[derive(Clone, Debug)]
-pub struct FaultInfo {
-    pub code: String,
-    pub message: String,
-    pub subsystem: String,
-    pub recovery_hint: String,
-    pub renderer_down: bool,
-}
-
-impl Default for FaultInfo {
-    fn default() -> Self {
-        Self {
-            code: "OK".to_string(),
-            message: "All subsystems operational".to_string(),
-            subsystem: "all".to_string(),
-            recovery_hint: "None".to_string(),
-            renderer_down: false,
-        }
-    }
-}
-
-/// System telemetry data for SYSTEM and general status
+/// System telemetry data for SYSTEM display. Only fields actually kept
+/// current by `UIEngine::refresh_telemetry()` belong here — a prior
+/// version also carried ip_address/free_space_bytes/total_space_bytes/
+/// throttled/uptime_secs, none of which were ever updated after their
+/// `Default`, so they permanently displayed fake values. Removed rather
+/// than left to silently lie on stage.
 #[derive(Clone, Debug)]
 pub struct SystemTelemetry {
     pub hostname: String,
-    pub ip_address: String,
-    pub free_space_bytes: u64,
-    pub total_space_bytes: u64,
     pub temperature_c: f32,
-    pub throttled: bool,
-    pub uptime_secs: u64,
 }
 
 impl Default for SystemTelemetry {
     fn default() -> Self {
         Self {
             hostname: "rpi-vj.local".to_string(),
-            ip_address: "192.168.1.100".to_string(),
-            free_space_bytes: 14_500_000_000,
-            total_space_bytes: 29_000_000_000,
             temperature_c: 46.5,
-            throttled: false,
-            uptime_secs: 120,
         }
     }
 }
@@ -193,14 +160,14 @@ pub struct PageContext {
     pub state: AppState,
     pub telemetry: SystemTelemetry,
     pub ingest: IngestStatus,
-    pub fault: FaultInfo,
-    pub boot_progress: f32,
-    pub boot_storage_ok: bool,
-    pub boot_renderer_ok: bool,
-    pub boot_media_ok: bool,
     pub active_page: PageId,
     pub active_bank: u32,
     pub now: Instant,
+    /// Real pad names/thumbnails from the deployed show.json, if it loaded
+    /// successfully at startup. `None` means "couldn't load it" (missing
+    /// file, bad JSON, etc.) -- pages fall back to numeric labels, not an
+    /// error condition.
+    pub show_manifest: Option<Arc<ShowManifest>>,
 }
 
 impl Default for PageContext {
@@ -209,14 +176,10 @@ impl Default for PageContext {
             state: AppState::default(),
             telemetry: SystemTelemetry::default(),
             ingest: IngestStatus::default(),
-            fault: FaultInfo::default(),
-            boot_progress: 1.0,
-            boot_storage_ok: true,
-            boot_renderer_ok: true,
-            boot_media_ok: true,
-            active_page: PageId::Ready,
+            active_page: PageId::Performance,
             active_bank: 0,
             now: Instant::now(),
+            show_manifest: None,
         }
     }
 }

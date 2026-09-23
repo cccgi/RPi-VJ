@@ -216,7 +216,12 @@ export class StreamDeckXL {
       // Remove any existing pending write for this specific key
       const existingIdx = this._writeQueue.findIndex((item) => item.index === index);
       if (existingIdx >= 0) {
-        this._writeQueue.splice(existingIdx, 1);
+        // A queued write owns a Promise. Dropping it without settling that
+        // Promise deadlocks its caller until an outer timeout and was the
+        // direct cause of partial/black page repaints when two refreshes
+        // overlapped. Supersession is success: the newer image is authoritative.
+        const superseded = this._writeQueue.splice(existingIdx, 1)[0];
+        try { superseded.resolve({ superseded: true }); } catch (_) {}
       }
 
       this._writeQueue.push({
@@ -246,6 +251,15 @@ export class StreamDeckXL {
   /** Mark cached key images dirty without clearing the hardware first. */
   invalidateIcons() {
     this._iconHashes.fill(0);
+  }
+
+  /** Resolve and discard writes that have not started; used before a new page. */
+  supersedePendingWrites() {
+    const pending = this._writeQueue.splice(0);
+    for (const item of pending) {
+      try { item.resolve({ superseded: true }); } catch (_) {}
+    }
+    return pending.length;
   }
 
   /**

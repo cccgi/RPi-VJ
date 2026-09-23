@@ -10,6 +10,8 @@ deck_js = (ROOT / "src" / "deck.js").read_text(encoding="utf-8")
 mixer_js = (ROOT / "src" / "mixer.js").read_text(encoding="utf-8")
 unit = (ROOT / "deploy" / "vj-kiosk.service").read_text(encoding="utf-8")
 sync_ps1 = (ROOT / "tools" / "sync.ps1").read_text(encoding="utf-8")
+mpv_player = (ROOT / "tools" / "mpv_player.py").read_text(encoding="utf-8")
+collector = (ROOT / "tools" / "collect_server.py").read_text(encoding="utf-8")
 show = json.loads((ROOT / "show.json").read_text(encoding="utf-8"))
 
 assert show["streamDeckThumbnails"] is False
@@ -36,6 +38,17 @@ assert "{}, // page 6 — 28 quad-mirror clips" in index
 assert [bank["name"] for bank in show["banks"][5:9]] == [
     "QUAD MIRROR", "50TH", "720p", "NEON"
 ]
+fiftieth = show["banks"][6]
+assert len(fiftieth["pads"]) == 5
+assert all(pad["src"].startswith("media/50/") and "/loops/" not in pad["src"]
+           for pad in fiftieth["pads"])
+assert all(pad["key"] == i for i, pad in enumerate(fiftieth["pads"]))
+
+music = next(bank for bank in show["banks"] if bank.get("type") == "music")
+assert len(music["pads"]) <= 24
+assert all(pad["type"] == "audio" and pad["key"] == i
+           for i, pad in enumerate(music["pads"]))
+assert not ({24, 25, 26, 27, 28, 29, 30, 31} & {pad["key"] for pad in music["pads"]})
 assert "KillMode=control-group" in unit and "TimeoutStopSec=5" in unit
 assert '"-4"' in sync_ps1 and '"BatchMode=yes"' in sync_ps1
 assert '"ConnectTimeout=10"' in sync_ps1 and "scp -q" not in sync_ps1
@@ -43,4 +56,38 @@ assert "ssh @SshOptions" in sync_ps1 and "scp @SshOptions" in sync_ps1
 assert "$Target -replace '\\\\@', '@'" in sync_ps1
 assert "restart --no-block vj-server vj-kiosk" in sync_ps1
 assert "restart readiness timed out" in sync_ps1
+assert "os.path.commonpath" in mpv_player and '"loadfile", path, "replace"' in mpv_player
+assert "/api/music/play" in collector and "/api/music/toggle-pause" in collector
+assert "/api/music/toggle-mute" in collector
+assert "/api/music/seek" in collector and '"relative+exact"' in mpv_player
+assert "const browserMusic = new Audio()" in index
+assert "playBrowserMusic(binding)" in index
+assert "let keyPressTail = Promise.resolve()" in index
+assert "if (__pressBusy) return" not in index
+assert "selectBank(index)" in show_js
+assert "26: { label: 'JUMP', bigText: '1'" in index
+assert "27: { label: 'JUMP', bigText: '10'" in index
+assert "for (let target = 0; target < 8" in index
+assert "showManager.keyBindings[13]" in index and "act: 'musicvoldown'" in index
+assert "showManager.keyBindings[14]" in index and "act: 'musicvolup'" in index
+assert "showManager.keyBindings[15]" in index and "act: 'restartkiosk'" in index
+assert "/api/music/volume" in collector and "change_volume" in mpv_player
+assert "binding?.type === 'audio'" in show_js
+assert 'self.send_response(206)' in collector
+assert 'self.send_header("Content-Range"' in collector
+assert 'self._range_remaining' in collector
+assert "browserMusic.fastSeek" in index
+assert "bank.type === 'music'" in index
+assert "case 'musicpause':" in index and "case 'musicmute':" in index
+assert all("musicseek%d" % seconds in index for seconds in (30, 60, 120, 180))
+assert "26: { label: 'SKIP', bigText: '+30s'" in index
+assert "27: { label: 'SKIP', bigText: '+60s'" in index
+assert "28: { label: 'SKIP', bigText: '+120s'" in index
+assert "29: { label: 'SKIP', bigText: '+180s'" in index
+assert "30: { label: musicState.paused ? 'RESUME' : 'PLAY/PAUSE'" in index
+assert "31: { label: musicState.muted ? 'UNMUTE' : 'MUTE'" in index
+assert "Exactly one awaited full-deck transfer" in index
+assert "Do not repaint here. Bank navigation owns exactly one awaited repaint" in index
+assert "superseded.resolve" in (ROOT / "src" / "streamdeck.js").read_text(encoding="utf-8")
+assert "serializeDeckUpload" in index and "deckUploadTail" in index
 print("PASS: kiosk reliability policy and bounded, visible IPv4 deployment transport")

@@ -3,8 +3,8 @@
 //! Replaces Chromium/WebHID with native Linux hidraw access.
 //! Emits edge-triggered button events, handles asynchronous JPEG icon writes,
 //! caches current show page, recovers across hotplugs, drives deterministic
-//! state pages (BOOTING, READY, PERFORMANCE, INGEST, DEGRADED, SYSTEM),
-//! connects to broker IPC socket, and handles state replay across renderer restarts.
+//! state pages (PERFORMANCE, INGEST, SYSTEM), connects to broker IPC
+//! socket, and handles state replay across renderer restarts.
 
 use std::env;
 use std::path::PathBuf;
@@ -16,6 +16,7 @@ use std::time::{Duration, Instant};
 use vj_surface_hid::{
     broker_client::{BrokerClient, BrokerTransport, MockBrokerTransport},
     controller::{ControllerConfig, StreamDeckController},
+    pages::show_manifest::{default_show_json_path, default_web_root, ShowManifest},
     transport::{HidrawTransport, MockTransport, Transport},
     ui_engine::UIEngine,
     ControlEvent, PageId, SurfaceId,
@@ -86,8 +87,30 @@ fn main() {
     let broker = Arc::new(BrokerClient::new(broker_transport));
 
     // 3. Initialize UI Engine with deterministic pages
+    // Boots straight into PERFORMANCE (skipping READY) so clip triggering
+    // needs zero navigation, matching the pre-V3 flat-32-key layout's
+    // instant-play feel. READY (bank overview, health, ingest, system) is
+    // still one tap away via key 31 ("EXIT / DISARM / READY >").
     let mut ui = UIEngine::new(controller.clone(), broker.clone());
-    ui.set_page(PageId::Ready);
+
+    // Real pad names/thumbnails from the deployed show.json, best-effort.
+    // Missing/malformed file or a slow/corrupt thumbnail never blocks
+    // startup -- ShowManifest::load() is a soft-fail path by design.
+    let manifest_load_start = Instant::now();
+    match ShowManifest::load(&default_show_json_path(), &default_web_root()) {
+        Some(manifest) => {
+            eprintln!(
+                "[rpi-vj-controller] Loaded show.json pad names/thumbnails in {:?}",
+                manifest_load_start.elapsed()
+            );
+            ui.context_mut().show_manifest = Some(Arc::new(manifest));
+        }
+        None => {
+            eprintln!("[rpi-vj-controller] No show.json pad data available; using numeric labels");
+        }
+    }
+
+    ui.set_page(PageId::Performance);
 
     let term_signal = Arc::new(AtomicBool::new(false));
     let term_clone = term_signal.clone();
@@ -116,8 +139,18 @@ fn main() {
                 }
                 ControlEvent::Connected { surface } => {
                     eprintln!("[STREAMDECK CONNECTED] surface={}", surface);
-                    // Replay active page icons upon reconnect
+                    // Replay active page icons upon reconnect. Timed
+                    // (always, not just under --diag) since this is exactly
+                    // the number needed to judge whether clip thumbnails
+                    // are worth their render cost -- a full 32-key page
+                    // render is the single most expensive thing this
+                    // process does.
+                    let render_start = Instant::now();
                     ui.render_full_page();
+                    eprintln!(
+                        "[rpi-vj-controller] Full page render (32 keys): {:?}",
+                        render_start.elapsed()
+                    );
                     // Replay active bank and clip state to broker
                     broker.replay_state();
                 }

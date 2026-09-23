@@ -512,6 +512,85 @@ font:14px/1.4 ui-monospace,monospace;white-space:pre-wrap;max-width:100%"></pre>
     let __lastClipSrc = null;
     let _lastPlayedClipBinding = null;
     let _lastPlayedShaderBinding = null;
+    let musicState = { playing: false, paused: false, muted: false, title: '', path: '' };
+    // mpv remains the preferred appliance backend, but a missing/broken mpv
+    // package must not make the show unusable. Chromium is already connected
+    // to PipeWire (and therefore the selected Creative USB output), so keep a
+    // single lightweight HTMLAudioElement as a fail-operational backend.
+    const browserMusic = new Audio();
+    browserMusic.preload = 'metadata';
+    let musicBackend = 'mpv';
+
+    async function playBrowserMusic(binding) {
+      browserMusic.pause();
+      browserMusic.src = new URL(binding.src, location.href).href;
+      browserMusic.currentTime = 0;
+      browserMusic.muted = false;
+      await browserMusic.play();
+      musicBackend = 'browser';
+      musicState = {
+        playing: true, paused: false, muted: false,
+        title: binding.label || (binding.src || '').split('/').pop() || 'Music',
+        path: binding.src
+      };
+      if (window.VJ_DIAG) VJ_DIAG('music browser fallback PLAY: ' + binding.src);
+      return musicState;
+    }
+
+    function browserMusicTogglePause() {
+      if (!browserMusic.src) throw new Error('No song selected');
+      if (browserMusic.paused) browserMusic.play().catch((e) => {
+        if (window.VJ_DIAG) VJ_DIAG('browser music resume FAILED: ' + e.message);
+      });
+      else browserMusic.pause();
+      musicState.paused = !browserMusic.paused;
+      musicState.playing = !browserMusic.paused;
+      return musicState;
+    }
+
+    function browserMusicToggleMute() {
+      browserMusic.muted = !browserMusic.muted;
+      musicState.muted = browserMusic.muted;
+      return musicState;
+    }
+
+    function browserMusicSeek(seconds) {
+      if (!browserMusic.src) throw new Error('No song selected');
+      if (!Number.isFinite(browserMusic.duration) || browserMusic.duration <= 0) {
+        throw new Error('Song metadata is not ready');
+      }
+      const target = Math.max(0, Math.min(browserMusic.duration, browserMusic.currentTime + seconds));
+      if (typeof browserMusic.fastSeek === 'function') browserMusic.fastSeek(target);
+      else browserMusic.currentTime = target;
+      musicState.time = target;
+      return musicState;
+    }
+
+    function browserMusicChangeVolume(delta) {
+      browserMusic.volume = Math.max(0, Math.min(1, browserMusic.volume + delta / 100));
+      return Math.round(browserMusic.volume * 100);
+    }
+
+    async function musicCommand(endpoint, body) {
+      const options = { method: 'POST', headers: { 'Content-Type': 'application/json' } };
+      if (body !== undefined) options.body = JSON.stringify(body);
+      const response = await fetch(endpoint, options);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || ('HTTP ' + response.status));
+      musicState = Object.assign({}, musicState, data);
+      return musicState;
+    }
+
+    async function refreshMusicState() {
+      try {
+        const response = await fetch('/api/music/status');
+        if (!response.ok) return musicState;
+        musicState = Object.assign({}, musicState, await response.json());
+        return musicState;
+      } catch (_) {
+        return musicState;
+      }
+    }
 
     const showManager = new ShowManager({
       getLastFrameAt: () => (typeof window !== 'undefined' && window.lastFrameAt !== undefined ? window.lastFrameAt : 0),
@@ -557,6 +636,33 @@ font:14px/1.4 ui-monospace,monospace;white-space:pre-wrap;max-width:100%"></pre>
           } catch (err) {
             if (window.VJ_DIAG) VJ_DIAG('clip load FAILED: ' + err.message);
           }
+        } else if (binding.type === 'audio') {
+          // Song pads are instant selectors, not stop toggles. Pressing the
+          // lit song restarts it from the beginning; selecting another song
+          // atomically replaces it inside the single audio-only mpv process.
+          showManager.activeKeys.add(binding.key);
+          try {
+            musicState = await musicCommand('/api/music/play', { src: binding.src });
+            musicBackend = 'mpv';
+            if (window.__vjToast) window.__vjToast('MUSIC: ' + (binding.label || musicState.title || 'PLAY'));
+            if (window.VJ_DIAG) VJ_DIAG('music PLAY: ' + binding.src);
+          } catch (err) {
+            try {
+              musicState = await playBrowserMusic(binding);
+              if (window.__vjToast) window.__vjToast('MUSIC: ' + (binding.label || musicState.title || 'PLAY'));
+              if (window.VJ_DIAG) VJ_DIAG('mpv unavailable (' + err.message + '); browser audio active');
+            } catch (fallbackErr) {
+              showManager.activeKeys.delete(binding.key);
+              if (window.__vjToast) window.__vjToast('MUSIC FAILED: ' + fallbackErr.message, true);
+              if (window.VJ_DIAG) VJ_DIAG('music FAILED: mpv=' + err.message + ' browser=' + fallbackErr.message);
+            }
+          }
+          // The press handler already updates the selected key. Do not launch
+          // a second full repaint after the async mpv request completes.
+          if (showManager.keyBindings[binding.key] === binding) {
+            uploadIcons([binding.key]).catch(() => {});
+          }
+          return;
         } else if (binding.type === 'videofx') {
           // Video effects act on the CLIP layer only. Second press clears.
           if (!active) {
@@ -679,9 +785,9 @@ font:14px/1.4 ui-monospace,monospace;white-space:pre-wrap;max-width:100%"></pre>
     // change silently reverts keys 24-31 to whatever the show file says.
     showManager.onRebuild = () => {
       try { applySystemRow(); } catch (e) {}
-      // A show/bank rebuild changes all logical bindings. Repaint hardware;
-      // otherwise an early empty startup upload remains blank indefinitely.
-      setTimeout(() => uploadAllIcons(true).catch(() => {}), 0);
+      // Do not repaint here. Bank navigation owns exactly one awaited repaint;
+      // startup/reconnect have their own explicit paths. A repaint here raced
+      // navigation and could strand the latter half of the panel black.
     };
 
     // Bind Keyboard for pad triggers / Space blackout
@@ -714,7 +820,14 @@ font:14px/1.4 ui-monospace,monospace;white-space:pre-wrap;max-width:100%"></pre>
     // Only refresh the keys whose state actually changed. Re-rendering and
     // re-uploading all 32 on every press cost ~1s of blocking work per key,
     // which is what made triggering feel dead.
-    async function uploadIcons(indices) {
+    let deckUploadTail = Promise.resolve();
+    function serializeDeckUpload(work) {
+      const run = deckUploadTail.catch(() => {}).then(work);
+      deckUploadTail = run.catch(() => {});
+      return run;
+    }
+
+    async function uploadIconsNow(indices) {
       const live = streamDeck && (streamDeck.opened || streamDeck.connected);
       if (!live) return 0;
       let n = 0;
@@ -730,6 +843,9 @@ font:14px/1.4 ui-monospace,monospace;white-space:pre-wrap;max-width:100%"></pre>
       }
       return n;
     }
+    function uploadIcons(indices) {
+      return serializeDeckUpload(() => uploadIconsNow(indices));
+    }
 
     // One clip and one shader at a time. On a 2GB Pi, two decoding video
     // decks plus a shader plus the post chain will not hold 60fps, and the
@@ -738,7 +854,7 @@ font:14px/1.4 ui-monospace,monospace;white-space:pre-wrap;max-width:100%"></pre>
       const b = showManager.keyBindings[keyIdx];
       if (!b || !showManager.activeKeys.has(keyIdx)) return;
       const t = b.type;
-      if (t !== 'clip' && t !== 'shader' && t !== 'videofx' && t !== 'shaderfx') return;
+      if (t !== 'clip' && t !== 'shader' && t !== 'audio' && t !== 'videofx' && t !== 'shaderfx') return;
       for (const k of [...showManager.activeKeys]) {
         if (k === keyIdx) continue;
         const ob = showManager.keyBindings[k];
@@ -760,7 +876,7 @@ font:14px/1.4 ui-monospace,monospace;white-space:pre-wrap;max-width:100%"></pre>
     // Index-aligned to showData.banks -- page 3 (SYS) has no name the user
     // specified, kept as 'System'; ask Frank to confirm if he wants
     // something else there.
-    const PAGE_NAMES = ['1080p', 'Blend modes', 'System', 'Video FX', 'Effect FX', 'Quad Mirror', '50th', '720p', 'Neon'];
+    const PAGE_NAMES = ['1080p', 'Blend modes', 'System', 'Video FX', 'Effect FX', 'Quad Mirror', '50th', '720p', 'Neon', 'Music'];
     const SYS_PAGES = [
       { // page 1 — clips + effects; speed trim and the two clears live with the clips
         26: { label: 'SPEED', bigText: '\u2212', color: '#166534', act: 'slower' },
@@ -793,10 +909,10 @@ font:14px/1.4 ui-monospace,monospace;white-space:pre-wrap;max-width:100%"></pre>
         29: { label: 'FX AMT', bigText: '100', color: '#7c3aed', act: 'sfx100' }
       },
       {}, // page 6 — 28 quad-mirror clips; keys 26-29 intentionally available
-      // Page 7 (50th), page 8 (720p), and subsequent clip banks are deliberately EMPTY.
-      // An empty def here means applySystemRow() only writes nav (24/25) and
-      // SYS_COMMON (30/31), leaving keys 26-29 free for show.json's own clips (28 clips per page).
-      {}
+      { // page 7 — fast escape from the two frequently used media pages
+        26: { label: 'JUMP', bigText: '1',  color: '#0f766e', act: 'jump', target: 0 },
+        27: { label: 'JUMP', bigText: '10', color: '#0f766e', act: 'jump', target: 9 }
+      }
     ];
 
     let hudVisible = false;
@@ -813,6 +929,9 @@ font:14px/1.4 ui-monospace,monospace;white-space:pre-wrap;max-width:100%"></pre>
       const n = (showManager.showData && showManager.showData.banks)
         ? showManager.showData.banks.length : 1;
       const cur = showManager.currentBankIndex;
+      const bank = showManager.showData && showManager.showData.banks
+        ? showManager.showData.banks[cur] : null;
+      const isMusicPage = !!(bank && bank.type === 'music');
 
       // 2026-08-27: left key now shows the CURRENT page (big) with the
       // destination in the corner; right key now shows the CURRENT page's
@@ -831,7 +950,36 @@ font:14px/1.4 ui-monospace,monospace;white-space:pre-wrap;max-width:100%"></pre>
                                       corner: nextNum, cornerPos: 'tr',
                                       color: C.nav, act: 'next' };
 
-      for (const [k, def] of Object.entries(Object.assign({}, page, SYS_COMMON))) {
+      // Music's otherwise empty third row is a direct page selector. Physical
+      // keys 17-24 map to zero-based indices 16-23 and pages 1-8.
+      if (isMusicPage) {
+        showManager.keyBindings[13] = { key: 13, type: 'system', label: 'VOLUME', bigText: '−', color: '#1d4ed8', act: 'musicvoldown' };
+        showManager.keyBindings[14] = { key: 14, type: 'system', label: 'VOLUME', bigText: '+', color: '#1d4ed8', act: 'musicvolup' };
+        showManager.keyBindings[15] = { key: 15, type: 'system', label: 'RESTART', sublabel: 'KIOSK', color: '#b91c1c', act: 'restartkiosk' };
+        for (let target = 0; target < 8 && target < n; target++) {
+          const key = 16 + target;
+          showManager.keyBindings[key] = {
+            key, type: 'system', label: 'PAGE', bigText: String(target + 1),
+            color: '#0f766e', act: 'jump', target
+          };
+        }
+      }
+
+      const common = isMusicPage ? {
+        26: { label: 'SKIP', bigText: '+30s', color: '#0369a1', act: 'musicseek30' },
+        27: { label: 'SKIP', bigText: '+60s', color: '#0369a1', act: 'musicseek60' },
+        28: { label: 'SKIP', bigText: '+120s', color: '#075985', act: 'musicseek120' },
+        29: { label: 'SKIP', bigText: '+180s', color: '#075985', act: 'musicseek180' },
+        30: { label: musicState.paused ? 'RESUME' : 'PLAY/PAUSE', color: '#16a34a', act: 'musicpause' },
+        31: { label: musicState.muted ? 'UNMUTE' : 'MUTE', color: '#dc2626', act: 'musicmute' }
+      } : SYS_COMMON;
+      // Control highlights are derived from mpv state only on the music page;
+      // never leak MUTE/PAUSE illumination into RESET/BLACK on VJ pages.
+      showManager.activeKeys.delete(30);
+      showManager.activeKeys.delete(31);
+      if (isMusicPage && musicState.paused) showManager.activeKeys.add(30);
+      if (isMusicPage && musicState.muted) showManager.activeKeys.add(31);
+      for (const [k, def] of Object.entries(Object.assign({}, page, common))) {
         const i = Number(k);
         showManager.keyBindings[i] = Object.assign({ key: i, type: 'system' }, def,
           { name: def.label });
@@ -969,13 +1117,84 @@ font:14px/1.4 ui-monospace,monospace;white-space:pre-wrap;max-width:100%"></pre>
         case 'next': {
           if (act === 'prev') showManager.prevBank(); else showManager.nextBank();
           applySystemRow();
-          // Upload all keys for the newly selected bank
-          uploadIcons([...Array(32).keys()]).catch(() => {});
           return true;
         }
+        case 'jump':
+          showManager.selectBank(b.target);
+          applySystemRow();
+          return true;
         case 'blend': try { cycleBlend(1); } catch (e) {} return true;
         case 'tap':   showManager.handleTapTempo(); return true;
         case 'hud':   setHud(!hudVisible); return true;
+        case 'musicpause':
+          if (musicBackend === 'browser') {
+            try {
+              const state = browserMusicTogglePause();
+              if (state.paused) showManager.activeKeys.add(30); else showManager.activeKeys.delete(30);
+              applySystemRow(); uploadIcons([30]).catch(() => {});
+              if (window.__vjToast) window.__vjToast(state.paused ? 'MUSIC PAUSED' : 'MUSIC PLAYING');
+            } catch (err) { if (window.__vjToast) window.__vjToast('MUSIC FAILED: ' + err.message, true); }
+            return true;
+          }
+          musicCommand('/api/music/toggle-pause').then((state) => {
+            if (state.paused) showManager.activeKeys.add(30); else showManager.activeKeys.delete(30);
+            applySystemRow();
+            uploadIcons([30]).catch(() => {});
+            if (window.__vjToast) window.__vjToast(state.paused ? 'MUSIC PAUSED' : 'MUSIC PLAYING');
+          }).catch((err) => { if (window.__vjToast) window.__vjToast('MUSIC FAILED: ' + err.message, true); });
+          return true;
+        case 'musicmute':
+          if (musicBackend === 'browser') {
+            const state = browserMusicToggleMute();
+            if (state.muted) showManager.activeKeys.add(31); else showManager.activeKeys.delete(31);
+            applySystemRow(); uploadIcons([31]).catch(() => {});
+            if (window.__vjToast) window.__vjToast(state.muted ? 'MUSIC MUTED' : 'MUSIC UNMUTED');
+            return true;
+          }
+          musicCommand('/api/music/toggle-mute').then((state) => {
+            if (state.muted) showManager.activeKeys.add(31); else showManager.activeKeys.delete(31);
+            applySystemRow();
+            uploadIcons([31]).catch(() => {});
+            if (window.__vjToast) window.__vjToast(state.muted ? 'MUSIC MUTED' : 'MUSIC UNMUTED');
+          }).catch((err) => { if (window.__vjToast) window.__vjToast('MUSIC FAILED: ' + err.message, true); });
+          return true;
+        case 'musicseek30':
+        case 'musicseek60':
+        case 'musicseek120':
+        case 'musicseek180': {
+          const seconds = Number(act.slice('musicseek'.length));
+          if (musicBackend === 'browser') {
+            try {
+              browserMusicSeek(seconds);
+              if (window.__vjToast) window.__vjToast('MUSIC +' + seconds + 's');
+              if (window.VJ_DIAG) VJ_DIAG('browser music SEEK +' + seconds + 's');
+            } catch (err) { if (window.__vjToast) window.__vjToast('SEEK FAILED: ' + err.message, true); }
+            return true;
+          }
+          musicCommand('/api/music/seek', { seconds }).then(() => {
+            if (window.__vjToast) window.__vjToast('MUSIC +' + seconds + 's');
+            if (window.VJ_DIAG) VJ_DIAG('music SEEK +' + seconds + 's');
+          }).catch((err) => { if (window.__vjToast) window.__vjToast('SEEK FAILED: ' + err.message, true); });
+          return true;
+        }
+        case 'musicvoldown':
+        case 'musicvolup': {
+          const delta = act === 'musicvolup' ? 5 : -5;
+          if (musicBackend === 'browser') {
+            const volume = browserMusicChangeVolume(delta);
+            if (window.__vjToast) window.__vjToast('MUSIC VOLUME ' + volume + '%');
+            return true;
+          }
+          musicCommand('/api/music/volume', { delta }).then((state) => {
+            if (window.__vjToast) window.__vjToast('MUSIC VOLUME ' + state.volume + '%');
+          }).catch((err) => { if (window.__vjToast) window.__vjToast('VOLUME FAILED: ' + err.message, true); });
+          return true;
+        }
+        case 'restartkiosk':
+          if (window.__vjToast) window.__vjToast('RESTARTING KIOSK…');
+          if (window.VJ_DIAG) VJ_DIAG('KIOSK RESTART requested from Music key 16');
+          fetch('/system/restart-kiosk', { method: 'POST' }).catch(() => {});
+          return true;
         case 'bpmdown':
           try { if (mixer.choreo && mixer.choreo.nudgeBpm) mixer.choreo.nudgeBpm(-1);
                 else if (showManager.nudgeBpm) showManager.nudgeBpm(-1); } catch (e) {}
@@ -1016,13 +1235,11 @@ font:14px/1.4 ui-monospace,monospace;white-space:pre-wrap;max-width:100%"></pre>
           }
           if (window.__vjToast) window.__vjToast('CLIPS CLEARED');
           if (window.VJ_DIAG) VJ_DIAG('CLEAR CLIPS');
-          uploadIcons([...Array(32).keys()]);
           return true;
         }
         case 'togglethumbs': {
             showManager.disableThumbs = !showManager.disableThumbs;
             if (window.__vjToast) window.__vjToast(showManager.disableThumbs ? 'THUMBS OFF' : 'THUMBS ON');
-            uploadIcons([...Array(32).keys()]);
             return true;
           }
         case 'clearfx': {
@@ -1034,12 +1251,10 @@ font:14px/1.4 ui-monospace,monospace;white-space:pre-wrap;max-width:100%"></pre>
           }
           if (window.__vjToast) window.__vjToast('EFFECTS CLEARED');
           if (window.VJ_DIAG) VJ_DIAG('CLEAR FX');
-          uploadIcons([...Array(32).keys()]);
           return true;
         }
         case 'reset':
           resetAll();
-          uploadIcons([...Array(32).keys()]);
           return true;
         case 'black':
           if (shutdownArmed) {
@@ -1116,20 +1331,48 @@ font:14px/1.4 ui-monospace,monospace;white-space:pre-wrap;max-width:100%"></pre>
     }
 
     // Wrap a key press: toggle, enforce exclusivity, refresh only changed keys.
-    let __pressBusy = false;
-    async function handleKeyPress(keyIdx) {
-      if (__pressBusy) return;            // ignore re-entry while a press resolves
-      __pressBusy = true;
-      try {
+    // Serialize presses instead of dropping them while a slow full-deck icon
+    // upload is in progress. Dropping the first media press after navigation
+    // made pages look alive while none of their pads actually triggered.
+    let keyPressTail = Promise.resolve();
+    const FULL_REPAINT_ACTIONS = new Set(['clearclips', 'togglethumbs', 'clearfx', 'reset']);
+    async function processKeyPress(keyIdx) {
         if (keyIdx >= 24) {
+          const requestedAct = showManager.keyBindings[keyIdx] && showManager.keyBindings[keyIdx].act;
           const consumed = handleSystemKey(keyIdx);
-          if (consumed) { await uploadIcons([keyIdx]); return; }
+          if (consumed) {
+            if (requestedAct === 'prev' || requestedAct === 'next' || requestedAct === 'jump') {
+              if (streamDeck && streamDeck.supersedePendingWrites) streamDeck.supersedePendingWrites();
+              const current = showManager.showData && showManager.showData.banks
+                ? showManager.showData.banks[showManager.currentBankIndex] : null;
+              if (current && current.type === 'music') {
+                await refreshMusicState();
+                applySystemRow();
+              }
+              // Exactly one awaited full-deck transfer. Overlapping this with
+              // a second nav-key upload could leave the latter keys black.
+              await uploadIcons([...Array(32).keys()]);
+            } else if (FULL_REPAINT_ACTIONS.has(requestedAct)) {
+              await uploadIcons([...Array(32).keys()]);
+            } else {
+              await uploadIcons([keyIdx]);
+            }
+            return;
+          }
         }
         // System-type pads anywhere in the layout (not just system row ≥ 24)
         const _b_sys = showManager.keyBindings[keyIdx];
         if (_b_sys && _b_sys.type === 'system') {
           const consumed = handleSystemKey(keyIdx);
-          if (consumed) { await uploadIcons([keyIdx]); return; }
+          if (consumed) {
+            if (_b_sys.act === 'jump') {
+              if (streamDeck && streamDeck.supersedePendingWrites) streamDeck.supersedePendingWrites();
+              await uploadIcons([...Array(32).keys()]);
+            } else {
+              await uploadIcons([keyIdx]);
+            }
+            return;
+          }
         }
         const b0 = showManager.keyBindings[keyIdx];
         if (window.VJ_DIAG) VJ_DIAG('PRESS key=' + keyIdx + ' binding=' +
@@ -1145,11 +1388,19 @@ font:14px/1.4 ui-monospace,monospace;white-space:pre-wrap;max-width:100%"></pre>
         before.forEach(k => { if (!after.has(k)) changed.add(k); });
         after.forEach(k => { if (!before.has(k)) changed.add(k); });
         await uploadIcons([...changed]);
-      } finally { __pressBusy = false; }
+    }
+    function handleKeyPress(keyIdx) {
+      const run = keyPressTail.catch(() => {}).then(() => processKeyPress(keyIdx));
+      // Keep the queue usable after an individual handler failure while still
+      // returning that failure to the caller that submitted this press.
+      keyPressTail = run.catch((err) => {
+        if (window.VJ_DIAG) VJ_DIAG('key press FAILED: ' + (err && err.message));
+      });
+      return run;
     }
     window.__vjPress = handleKeyPress;
 
-    async function uploadAllIcons(force) {
+    async function uploadAllIconsNow(force) {
       // NOTE: streamdeck.js exposes `opened`, not `connected`. Checking the
       // wrong property silently skipped every upload.
       const live = streamDeck && (streamDeck.opened || streamDeck.connected);
@@ -1189,6 +1440,9 @@ font:14px/1.4 ui-monospace,monospace;white-space:pre-wrap;max-width:100%"></pre>
       if (n < 32) scheduleDeckRepaint('upload incomplete');
       else deckRepaintAttempts = 0;
       return n;
+    }
+    function uploadAllIcons(force) {
+      return serializeDeckUpload(() => uploadAllIconsNow(force));
     }
     window.__vjUploadIcons = uploadAllIcons;
 
@@ -1301,7 +1555,74 @@ font:14px/1.4 ui-monospace,monospace;white-space:pre-wrap;max-width:100%"></pre>
     (async function bootstrapShowAndDeck() {
       await loadInitialShow();
       await initStreamDeck();
+      startNativeControllerBridge();
     })();
+
+    // ---- Native controller bridge ---------------------------------------
+    // The physical Stream Deck XL is read by the native rpi-vj-controller
+    // service (Rust, hidraw) in this deployment, not by this page's own
+    // WebHID code above -- that path needs navigator.hid.requestDevice(),
+    // which requires a user gesture that can never happen in a kiosk with
+    // no pointer/keyboard input. The native controller forwards every raw
+    // key press (0-31) to vj-broker via `key.press`, tagged with a
+    // monotonic `key_press_seq` (see docs/original/STREAMDECK.md for the
+    // full per-page button spec). This bridge does NOT try to interpret
+    // what a key means -- it just calls window.__vjPress(key) for the
+    // exact key that was pressed, and lets this page's own
+    // handleKeyPress()/handleSystemKey()/SYS_PAGES dispatch (already the
+    // single source of truth for real presses) decide what to do, exactly
+    // as if the deck were paired directly. An earlier version of this
+    // bridge re-derived bank-nav/RESET/BLACK/clip-trigger from the
+    // separate active_bank/active_clip/blackout state fields -- that
+    // reimplementation was missing RESET's full behavior (only stopped
+    // clips, never cleared the shader or exited blackout) and had no way
+    // to represent the SPEED/BPM/OPACITY/FX-AMOUNT preset keys that live
+    // at 26-29 on pages 1-5, so those silently did nothing. Forwarding the
+    // raw key removes both problems at once.
+    function startNativeControllerBridge() {
+      let lastSeq = null;       // key_press_seq baseline; null until first poll
+      let bridgeBusy = false;
+      const POLL_MS = 100;
+
+      async function applyRemoteState(s) {
+        // Establish a baseline on the very first poll without firing --
+        // otherwise a fresh page load would immediately replay whatever
+        // press happened to be the last one recorded before this reload
+        // (e.g. a stale BLACK toggle from before a kiosk restart).
+        if (lastSeq === null) {
+          lastSeq = s.key_press_seq;
+          return;
+        }
+
+        if (s.key_press_seq !== lastSeq) {
+          lastSeq = s.key_press_seq;
+          const key = s.last_key_press;
+          if (typeof key === 'number' && key >= 0 && key < 32) {
+            if (window.VJ_DIAG) VJ_DIAG('bridge: key -> ' + key);
+            await window.__vjPress(key);
+          }
+        }
+      }
+
+      async function poll() {
+        if (!bridgeBusy) {
+          bridgeBusy = true;
+          try {
+            const res = await fetch('/api/v1/state');
+            if (res.ok) {
+              await applyRemoteState(await res.json());
+            }
+          } catch (e) {
+            if (window.VJ_DIAG) VJ_DIAG('bridge poll failed: ' + (e && e.message));
+          } finally {
+            bridgeBusy = false;
+          }
+        }
+        setTimeout(poll, POLL_MS);
+      }
+
+      setTimeout(poll, POLL_MS);
+    }
 
     // User gesture handler (starts audio & unlocks autoplay)
     let __activated = false;

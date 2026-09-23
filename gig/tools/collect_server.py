@@ -2,11 +2,14 @@
 """Static file server for the show + a POST /collect endpoint that writes
 probe results to ~/vj-results/<name>.log. Drop-in replacement for
 `python3 -m http.server 8080`."""
-import http.server, os, socketserver, urllib.parse, datetime, subprocess, threading, time, json
+import http.server, os, socketserver, urllib.parse, datetime, subprocess, threading, time, json, re
+from mpv_player import MpvPlayer, MpvError
 
 ROOT = os.getcwd()
 OUT = os.path.expanduser("~/vj-results")
 STATE_FILE = os.path.expanduser("~/vj-state.json")
+MUSIC_ROOT = os.path.realpath(os.path.join(ROOT, "gig", "media", "music"))
+MUSIC = MpvPlayer(MUSIC_ROOT)
 os.makedirs(OUT, exist_ok=True)
 _write_lock = threading.Lock()
 _heartbeat_lock = threading.Lock()
@@ -109,6 +112,77 @@ def watchdog_loop(timeout=WATCHDOG_TIMEOUT_SEC, check_interval=1.0):
                 _last_heartbeat[0] = time.time()
 
 class H(http.server.SimpleHTTPRequestHandler):
+    def send_head(self):
+        """Serve a single HTTP byte range for seekable local media.
+
+        Chromium requires a 206 response and Content-Range to seek without
+        downloading a multi-hundred-megabyte MP3 from byte zero. Python's
+        SimpleHTTPRequestHandler returns 200 for Range requests, so provide
+        the bounded response here while retaining its normal path handling.
+        """
+        range_header = self.headers.get("Range")
+        if not range_header:
+            return super().send_head()
+
+        path = self.translate_path(urllib.parse.urlparse(self.path).path)
+        if not os.path.isfile(path):
+            return super().send_head()
+        try:
+            size = os.path.getsize(path)
+            match = re.fullmatch(r"bytes=(\d*)-(\d*)", range_header.strip())
+            if not match or (not match.group(1) and not match.group(2)):
+                raise ValueError("unsupported byte range")
+            if match.group(1):
+                start = int(match.group(1))
+                end = int(match.group(2)) if match.group(2) else size - 1
+            else:
+                suffix = int(match.group(2))
+                if suffix <= 0:
+                    raise ValueError("invalid suffix range")
+                start = max(0, size - suffix)
+                end = size - 1
+            if start >= size or start < 0 or end < start:
+                self.send_response(416)
+                self.send_header("Content-Range", "bytes */%d" % size)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return None
+            end = min(end, size - 1)
+            source = open(path, "rb")
+            source.seek(start)
+            self._range_remaining = end - start + 1
+            self.send_response(206)
+            self.send_header("Content-Type", self.guess_type(path))
+            self.send_header("Accept-Ranges", "bytes")
+            self.send_header("Content-Range", "bytes %d-%d/%d" % (start, end, size))
+            self.send_header("Content-Length", str(self._range_remaining))
+            self.send_header("Last-Modified", self.date_time_string(os.path.getmtime(path)))
+            self.end_headers()
+            return source
+        except ValueError:
+            self.send_response(416)
+            self.send_header("Content-Range", "bytes */%d" % os.path.getsize(path))
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return None
+        except OSError:
+            self.send_error(404, "File not found")
+            return None
+
+    def copyfile(self, source, outputfile):
+        remaining = getattr(self, "_range_remaining", None)
+        if remaining is None:
+            return super().copyfile(source, outputfile)
+        try:
+            while remaining > 0:
+                chunk = source.read(min(128 * 1024, remaining))
+                if not chunk:
+                    break
+                outputfile.write(chunk)
+                remaining -= len(chunk)
+        finally:
+            self._range_remaining = None
+
     def end_headers(self):
         # NO CACHING, EVER.
         #
@@ -121,6 +195,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
         self.send_header("Pragma", "no-cache")
         self.send_header("Expires", "0")
+        self.send_header("Accept-Ranges", "bytes")
         super().end_headers()
 
     def do_GET(self):
@@ -133,6 +208,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             return self._watchdog_status()
         if parsed.path == "/system/telemetry":
             return self._telemetry()
+        if parsed.path == "/api/music/status":
+            return self._music_status()
         return super().do_GET()
 
     def do_POST(self):
@@ -149,6 +226,16 @@ class H(http.server.SimpleHTTPRequestHandler):
             return self._heartbeat()
         if parsed.path == "/state":
             return self._save_state()
+        if parsed.path == "/api/music/play":
+            return self._music_play()
+        if parsed.path == "/api/music/toggle-pause":
+            return self._music_control("pause")
+        if parsed.path == "/api/music/toggle-mute":
+            return self._music_control("mute")
+        if parsed.path == "/api/music/seek":
+            return self._music_seek()
+        if parsed.path == "/api/music/volume":
+            return self._music_volume()
         if parsed.path != "/collect":
             self.send_error(404); return
         qs = urllib.parse.parse_qs(parsed.query)
@@ -162,6 +249,56 @@ class H(http.server.SimpleHTTPRequestHandler):
                 f.write("# collected %s\n%s\n" % (datetime.datetime.now().isoformat(timespec="seconds"), body))
         self.send_response(204); self.end_headers()
         print("== wrote %s (%d bytes)" % (path, len(body)), flush=True)
+
+    def _json_response(self, status, data):
+        body = json.dumps(data).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _read_json(self, limit=8192):
+        n = int(self.headers.get("Content-Length", 0) or 0)
+        if n <= 0 or n > limit:
+            raise ValueError("invalid request size")
+        return json.loads(self.rfile.read(n).decode("utf-8", "replace"))
+
+    def _music_status(self):
+        try:
+            return self._json_response(200, MUSIC.status())
+        except Exception as exc:
+            return self._json_response(503, {"error": str(exc)})
+
+    def _music_play(self):
+        try:
+            data = self._read_json()
+            return self._json_response(200, MUSIC.play(data.get("src")))
+        except (ValueError, json.JSONDecodeError, MpvError) as exc:
+            return self._json_response(400, {"error": str(exc)})
+        except Exception as exc:
+            return self._json_response(503, {"error": str(exc)})
+
+    def _music_control(self, action):
+        try:
+            state = MUSIC.toggle_pause() if action == "pause" else MUSIC.toggle_mute()
+            return self._json_response(200, state)
+        except MpvError as exc:
+            return self._json_response(503, {"error": str(exc)})
+
+    def _music_seek(self):
+        try:
+            data = self._read_json()
+            return self._json_response(200, MUSIC.seek_forward(data.get("seconds")))
+        except (ValueError, TypeError, json.JSONDecodeError, MpvError) as exc:
+            return self._json_response(400, {"error": str(exc)})
+
+    def _music_volume(self):
+        try:
+            data = self._read_json()
+            return self._json_response(200, MUSIC.change_volume(data.get("delta")))
+        except (ValueError, TypeError, json.JSONDecodeError, MpvError) as exc:
+            return self._json_response(400, {"error": str(exc)})
 
     def _heartbeat(self):
         global _last_heartbeat

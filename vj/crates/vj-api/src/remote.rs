@@ -70,7 +70,7 @@ pub fn parse_remote_command(json_str: &str) -> Result<EngineCommand, serde_json:
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vj_types::{Quantize, RequestId, TransitionSpec};
+    use vj_types::Quantize;
 
     #[test]
     fn telemetry_snapshot_serializes_cleanly() {

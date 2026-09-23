@@ -77,7 +77,7 @@ pub fn ingest_clip(
     if meta.is_pi5_compliant()
         && opts.quadrant_crop.is_none()
         && opts.crossfade_repair.is_none()
-        && in_path.extension().map_or(false, |ext| ext == "mp4")
+        && in_path.extension().is_some_and(|ext| ext == "mp4")
     {
         // Already compliant and no crop/repair requested, copy directly
         fs::copy(in_path, &target_hevc)?;
@@ -230,8 +230,7 @@ pub fn sync_to_pi(
                 println!("\n? Network Sync Complete via scp!");
                 Ok(())
             } else {
-                Err(IngestError::Io(std::io::Error::new(
-                    std::io::ErrorKind::Other,
+                Err(IngestError::Io(std::io::Error::other(
                     "Failed to transfer files over network",
                 )))
             }

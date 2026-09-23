@@ -1,11 +1,11 @@
 //! End-to-end integration test for Task A3-07: Stream Deck State UI & Command Integration.
 //!
-//! Verifies observable:
-//! - Complete boot-status inspection (BOOTING page)
-//! - Switch banks (Banks 0..7)
+//! Verifies observable (post page-consolidation: PERFORMANCE/SYSTEM/INGEST only):
+//! - Boots directly onto PERFORMANCE (no separate BOOTING/READY landing pages)
+//! - Switch banks via the bank-select modal (Banks 0..7)
 //! - Select / trigger a clip (with active clip highlight)
 //! - Restart renderer simulation and confirm restored state replay
-//! - View current IP, hostname, free space, and temperature (SYSTEM page)
+//! - View real telemetry (hostname, temperature) on SYSTEM page
 //! - Perform guarded clean shutdown using Stream Deck controls
 
 use std::sync::Arc;
@@ -37,32 +37,19 @@ fn test_observable_a3_07_complete_streamdeck_operator_flow() {
 
     let mut ui = UIEngine::new(controller.clone(), broker_arc.clone());
 
-    // 1. BOOTING: Boot status inspection
-    ui.set_page(PageId::Booting);
-    assert_eq!(ui.active_page_id(), PageId::Booting);
+    // 1. PERFORMANCE: boots directly here -- no BOOTING/READY landing pages
+    assert_eq!(ui.active_page_id(), PageId::Performance);
 
-    // Verify boot page keys are populated
-    let boot_canvas = ui.context().boot_storage_ok && ui.context().boot_renderer_ok;
-    assert!(boot_canvas);
-
-    // Press Ready entry key (key 31) on Booting page
-    ui.on_key_press(31);
-    ui.on_key_release(31);
-    assert_eq!(ui.active_page_id(), PageId::Ready);
-
-    // 2. READY: Switch banks (e.g. Bank 3)
-    ui.on_key_press(3);
-    ui.on_key_release(3);
+    // Step forward to Bank 3 with instant BANK NEXT (key 25), 3 presses from bank 0
+    for _ in 0..3 {
+        ui.on_key_press(25);
+        ui.on_key_release(25);
+    }
     assert_eq!(ui.context().state.active_bank, 3);
 
     thread::sleep(Duration::from_millis(50));
     let lines = mock_broker.drain_outgoing();
     assert!(lines.iter().any(|l| l.contains("\"bank.select\"") && l.contains("\"index\":3")));
-
-    // 3. PERFORMANCE: Arm performance mode (Key 16)
-    ui.on_key_press(16);
-    ui.on_key_release(16);
-    assert_eq!(ui.active_page_id(), PageId::Performance);
 
     // Select Clip 9
     ui.on_key_press(9);
@@ -73,9 +60,9 @@ fn test_observable_a3_07_complete_streamdeck_operator_flow() {
     let lines = mock_broker.drain_outgoing();
     assert!(lines.iter().any(|l| l.contains("\"clip.trigger\"") && l.contains("\"key\":9")));
 
-    // Toggle blackout (Key 28)
-    ui.on_key_press(28);
-    ui.on_key_release(28);
+    // Toggle blackout (Key 31, the fixed panic key)
+    ui.on_key_press(31);
+    ui.on_key_release(31);
     assert!(ui.context().state.blackout);
 
     // 4. RENDERER RESTART & STATE REPLAY:
@@ -89,16 +76,15 @@ fn test_observable_a3_07_complete_streamdeck_operator_flow() {
     assert!(replay_lines.iter().any(|l| l.contains("\"clip.trigger\"") && l.contains("\"key\":9")));
     assert!(replay_lines.iter().any(|l| l.contains("\"blackout.set\"") && l.contains("\"value\":true")));
 
-    // 5. SYSTEM PAGE: View IP / Hostname / Free Space / Temp
+    // 5. SYSTEM PAGE: View real telemetry (hostname, CPU temp)
     ui.set_page(PageId::System);
     assert_eq!(ui.active_page_id(), PageId::System);
     assert_eq!(ui.context().telemetry.hostname, "rpi-vj.local");
-    assert!(!ui.context().telemetry.ip_address.is_empty());
-    assert!(ui.context().telemetry.free_space_bytes > 0);
+    assert!(ui.context().telemetry.temperature_c > 0.0);
 
     // 6. GUARDED SHUTDOWN:
-    // Press shutdown key (Key 26) -> arms 2-key confirmation mode
-    ui.on_key_press(26);
+    // Press shutdown key (Key 27, post-remap position) -> arms 2-key confirmation mode
+    ui.on_key_press(27);
     assert!(ui.guarded.is_active());
 
     // Confirm shutdown by pressing confirm key (Key 0)
@@ -148,8 +134,6 @@ fn test_observable_a3_11_streamdeck_usb_ingest_complete_workflow() {
         ctx.ingest.step = "Analyzing".to_string();
         ctx.ingest.progress = 0.50; // 50% through pipeline
         ctx.ingest.recommendation = vj_surface_hid::pages::MediaRecommendation::QuadMirrorDetected;
-        ctx.telemetry.free_space_bytes = 35_000_000_000;
-        ctx.telemetry.total_space_bytes = 100_000_000_000;
     }
 
     ui.render_full_page();
@@ -201,9 +185,9 @@ fn test_observable_a3_11_streamdeck_usb_ingest_complete_workflow() {
 
     // 4. Performance Mode / Priority Testing:
     // Switch to PERFORMANCE Page -> Transcode jobs must automatically pause
-    ui.on_key_press(31); // Exit to Ready
+    ui.on_key_press(31); // Exit to System (post-consolidation exit target)
     ui.on_key_release(31);
-    assert_eq!(ui.active_page_id(), PageId::Ready);
+    assert_eq!(ui.active_page_id(), PageId::System);
 
     mock_broker.drain_outgoing();
     ui.set_page(PageId::Performance);

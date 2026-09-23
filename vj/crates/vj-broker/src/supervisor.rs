@@ -21,6 +21,7 @@ pub enum EscalationLevel {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct SupervisorPersistentState {
     pub last_boot_reboot_attempted: bool,
     pub last_reboot_epoch_secs: u64,
@@ -28,16 +29,6 @@ pub struct SupervisorPersistentState {
     pub incident_count: u64,
 }
 
-impl Default for SupervisorPersistentState {
-    fn default() -> Self {
-        Self {
-            last_boot_reboot_attempted: false,
-            last_reboot_epoch_secs: 0,
-            durable_degraded: false,
-            incident_count: 0,
-        }
-    }
-}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum SupervisorAction {
@@ -173,14 +164,13 @@ impl Supervisor {
                     count_in_window: self.restart_instants.len(),
                 };
             }
-        } else if elapsed_since_hb >= HEARTBEAT_WARN_DURATION {
-            if self.level == EscalationLevel::Normal {
+        } else if elapsed_since_hb >= HEARTBEAT_WARN_DURATION
+            && self.level == EscalationLevel::Normal {
                 self.level = EscalationLevel::DegradedWarning;
                 return SupervisorAction::LogWarning {
                     reason: format!("Heartbeat delayed: {:.1}s", elapsed_since_hb.as_secs_f32()),
                 };
             }
-        }
 
         SupervisorAction::None
     }

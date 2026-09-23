@@ -246,6 +246,29 @@ fn handle_http_connection(
                 html_content.as_bytes(),
             );
         }
+        ("POST", "/collect") => {
+            // gig/index.html's VJ_DIAG posts crash/status text here so it can
+            // be inspected without a monitor at the gig. Best-effort, capped
+            // log file; never let a diagnostics sink become its own outage.
+            if let Ok(text) = std::str::from_utf8(&body) {
+                let name = query_params.get("name").map(|s| s.as_str()).unwrap_or("unknown");
+                let log_path = Path::new("/var/lib/rpi-vj/gig-diag.log");
+                const MAX_LOG_BYTES: u64 = 2 * 1024 * 1024;
+                if let Ok(meta) = fs::metadata(log_path) {
+                    if meta.len() > MAX_LOG_BYTES {
+                        let _ = fs::write(log_path, b"");
+                    }
+                }
+                if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(log_path) {
+                    let now = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map(|d| d.as_secs())
+                        .unwrap_or(0);
+                    let _ = writeln!(f, "--- {} @ epoch {} ---\n{}", name, now, text);
+                }
+            }
+            send_response(stream, 204, "No Content", "text/plain", &[]);
+        }
         ("GET", "/health") | ("GET", "/api/v1/health") => {
             let health = serde_json::json!({
                 "status": "ok",
@@ -951,9 +974,149 @@ fn handle_http_connection(
             );
         }
 
+        ("GET", p) if p.starts_with("/gig/") && web_root.is_some() => {
+            serve_static_asset(stream, web_root.unwrap(), &p["/gig/".len()..], &headers);
+        }
+
         _ => {
             send_json(stream, 404, &serde_json::json!({"error": "Not Found"}));
         }
+    }
+}
+
+/// Content-Type by extension. `.js` MUST resolve to a JavaScript MIME type
+/// or Chromium refuses to execute it as an ES module (`import` in gig's
+/// index.html fails outright on a mismatched type, not just a warning).
+fn content_type_for(path: &Path) -> &'static str {
+    match path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase().as_str() {
+        "html" => "text/html; charset=utf-8",
+        "js" | "mjs" => "text/javascript; charset=utf-8",
+        "css" => "text/css; charset=utf-8",
+        "json" => "application/json",
+        "mp4" => "video/mp4",
+        "webm" => "video/webm",
+        "mov" => "video/quicktime",
+        "jpg" | "jpeg" => "image/jpeg",
+        "png" => "image/png",
+        "gif" => "image/gif",
+        "svg" => "image/svg+xml",
+        // GLSL fragment shaders: fetched as plain text by the show engine,
+        // not a real registered MIME type.
+        "fs" | "vs" | "glsl" => "text/plain; charset=utf-8",
+        "wasm" => "application/wasm",
+        _ => "application/octet-stream",
+    }
+}
+
+/// Serve a file under `web_root` at the request path `rel_path` (already
+/// stripped of its route prefix). Supports HTTP Range requests (required
+/// for smooth <video> seeking/buffering) and guards against path traversal
+/// by canonicalizing both the resolved path and web_root and requiring the
+/// former to stay under the latter.
+fn serve_static_asset(mut stream: TcpStream, web_root: &Path, rel_path: &str, headers: &HashMap<String, String>) {
+    // Reject any raw ".." component before touching the filesystem; the
+    // canonicalize() check below is the authoritative guard, this is a
+    // fast, cheap first line of defense.
+    if rel_path.split('/').any(|seg| seg == "..") {
+        send_json(stream, 400, &serde_json::json!({"error": "Invalid path"}));
+        return;
+    }
+
+    let candidate = web_root.join(rel_path);
+
+    let root_canon = match fs::canonicalize(web_root) {
+        Ok(p) => p,
+        Err(_) => {
+            send_json(stream, 404, &serde_json::json!({"error": "Not Found"}));
+            return;
+        }
+    };
+    let file_canon = match fs::canonicalize(&candidate) {
+        Ok(p) => p,
+        Err(_) => {
+            send_json(stream, 404, &serde_json::json!({"error": "Not Found"}));
+            return;
+        }
+    };
+    if !file_canon.starts_with(&root_canon) || !file_canon.is_file() {
+        send_json(stream, 404, &serde_json::json!({"error": "Not Found"}));
+        return;
+    }
+
+    let metadata = match fs::metadata(&file_canon) {
+        Ok(m) => m,
+        Err(_) => {
+            send_json(stream, 500, &serde_json::json!({"error": "Stat failed"}));
+            return;
+        }
+    };
+    let file_len = metadata.len();
+    let content_type = content_type_for(&file_canon);
+
+    let range_header = headers.get("range");
+    let mut range: Option<(u64, u64)> = None;
+    if let Some(rh) = range_header {
+        if let Some(spec) = rh.strip_prefix("bytes=") {
+            if let Some((start_s, end_s)) = spec.split_once('-') {
+                let start = start_s.parse::<u64>().unwrap_or(0);
+                let end = if end_s.is_empty() {
+                    file_len.saturating_sub(1)
+                } else {
+                    end_s.parse::<u64>().unwrap_or(file_len.saturating_sub(1)).min(file_len.saturating_sub(1))
+                };
+                if start <= end && start < file_len {
+                    range = Some((start, end));
+                }
+            }
+        }
+    }
+
+    let mut file = match fs::File::open(&file_canon) {
+        Ok(f) => f,
+        Err(_) => {
+            send_json(stream, 500, &serde_json::json!({"error": "Open failed"}));
+            return;
+        }
+    };
+
+    if let Some((start, end)) = range {
+        use std::io::{Seek, SeekFrom};
+        let chunk_len = end - start + 1;
+        if file.seek(SeekFrom::Start(start)).is_err() {
+            send_json(stream, 500, &serde_json::json!({"error": "Seek failed"}));
+            return;
+        }
+        let mut buf = vec![0u8; chunk_len as usize];
+        if file.read_exact(&mut buf).is_err() {
+            send_json(stream, 500, &serde_json::json!({"error": "Read failed"}));
+            return;
+        }
+        let headers_str = format!(
+            "HTTP/1.1 206 Partial Content\r\nContent-Type: {}\r\nContent-Length: {}\r\nContent-Range: bytes {}-{}/{}\r\nAccept-Ranges: bytes\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n",
+            content_type, chunk_len, start, end, file_len
+        );
+        let _ = stream.write_all(headers_str.as_bytes());
+        let _ = stream.write_all(&buf);
+        let _ = stream.flush();
+    } else {
+        let headers_str = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: {}\r\nContent-Length: {}\r\nAccept-Ranges: bytes\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n",
+            content_type, file_len
+        );
+        let _ = stream.write_all(headers_str.as_bytes());
+        let mut buf = [0u8; 64 * 1024];
+        loop {
+            match file.read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => {
+                    if stream.write_all(&buf[..n]).is_err() {
+                        break;
+                    }
+                }
+                Err(_) => break,
+            }
+        }
+        let _ = stream.flush();
     }
 }
 

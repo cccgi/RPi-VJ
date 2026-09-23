@@ -1,10 +1,10 @@
 use std::fs::{self, File};
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Command;
 use vj_ingest::analyzer::{analyze_media, ProposedAction, QuadrantCrop};
 use vj_ingest::thumb::extract_thumbnail;
-use vj_ingest::transcode::{transcode_file, TranscodeOptions, VideoCodec};
+use vj_ingest::transcode::{transcode_file, TranscodeOptions};
 
 struct SyntheticCorpus {
     dir: PathBuf,

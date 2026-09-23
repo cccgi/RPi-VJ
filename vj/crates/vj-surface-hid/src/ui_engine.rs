@@ -10,8 +10,7 @@ use crate::broker_client::BrokerClient;
 use crate::controller::StreamDeckController;
 use crate::guarded::{GuardedAction, GuardedEngine};
 use crate::pages::{
-    BootingPage, DegradedPage, IngestPage, Page, PageAction, PageContext, PageId, PerformancePage,
-    ReadyPage, SystemPage, KEY_COUNT,
+    IngestPage, Page, PageAction, PageContext, PageId, PerformancePage, SystemPage, KEY_COUNT,
 };
 
 pub struct UIEngine {
@@ -20,11 +19,8 @@ pub struct UIEngine {
     pub guarded: GuardedEngine,
     context: PageContext,
 
-    booting_page: BootingPage,
-    ready_page: ReadyPage,
     performance_page: PerformancePage,
     ingest_page: IngestPage,
-    degraded_page: DegradedPage,
     system_page: SystemPage,
 
     last_rendered_page: Option<PageId>,
@@ -35,11 +31,8 @@ impl UIEngine {
         let guarded = GuardedEngine::default();
         let context = PageContext::default();
 
-        let booting_page = BootingPage::new();
-        let ready_page = ReadyPage::new();
         let performance_page = PerformancePage::new();
         let ingest_page = IngestPage::new();
-        let degraded_page = DegradedPage::new();
         let system_page = SystemPage::new();
 
         Self {
@@ -47,11 +40,8 @@ impl UIEngine {
             broker,
             guarded,
             context,
-            booting_page,
-            ready_page,
             performance_page,
             ingest_page,
-            degraded_page,
             system_page,
             last_rendered_page: None,
         }
@@ -84,11 +74,8 @@ impl UIEngine {
 
     fn get_active_page_ref(&self) -> &dyn Page {
         match self.context.active_page {
-            PageId::Booting => &self.booting_page,
-            PageId::Ready => &self.ready_page,
             PageId::Performance => &self.performance_page,
             PageId::Ingest => &self.ingest_page,
-            PageId::Degraded => &self.degraded_page,
             PageId::System => &self.system_page,
         }
     }
@@ -130,11 +117,8 @@ impl UIEngine {
         self.context.state = self.broker.state();
 
         let action = match self.context.active_page {
-            PageId::Booting => self.booting_page.handle_key_press(key, &mut self.context, &self.broker, &mut self.guarded),
-            PageId::Ready => self.ready_page.handle_key_press(key, &mut self.context, &self.broker, &mut self.guarded),
             PageId::Performance => self.performance_page.handle_key_press(key, &mut self.context, &self.broker, &mut self.guarded),
             PageId::Ingest => self.ingest_page.handle_key_press(key, &mut self.context, &self.broker, &mut self.guarded),
-            PageId::Degraded => self.degraded_page.handle_key_press(key, &mut self.context, &self.broker, &mut self.guarded),
             PageId::System => self.system_page.handle_key_press(key, &mut self.context, &self.broker, &mut self.guarded),
         };
 
@@ -153,11 +137,8 @@ impl UIEngine {
         self.context.state = self.broker.state();
 
         let action = match self.context.active_page {
-            PageId::Booting => self.booting_page.handle_key_release(key, &mut self.context, &self.broker, &mut self.guarded),
-            PageId::Ready => self.ready_page.handle_key_release(key, &mut self.context, &self.broker, &mut self.guarded),
             PageId::Performance => self.performance_page.handle_key_release(key, &mut self.context, &self.broker, &mut self.guarded),
             PageId::Ingest => self.ingest_page.handle_key_release(key, &mut self.context, &self.broker, &mut self.guarded),
-            PageId::Degraded => self.degraded_page.handle_key_release(key, &mut self.context, &self.broker, &mut self.guarded),
             PageId::System => self.system_page.handle_key_release(key, &mut self.context, &self.broker, &mut self.guarded),
         };
 
@@ -265,13 +246,7 @@ mod tests {
 
         let mut ui = UIEngine::new(controller.clone(), broker_arc.clone());
 
-        // Start on Ready page
-        ui.set_page(PageId::Ready);
-        assert_eq!(ui.active_page_id(), PageId::Ready);
-
-        // Switch to Performance page by pressing key 31
-        ui.on_key_press(31);
-        ui.on_key_release(31);
+        // Boots directly onto Performance (no more separate Ready landing page)
         assert_eq!(ui.active_page_id(), PageId::Performance);
 
         // Trigger Clip 5 on Performance page
@@ -281,12 +256,14 @@ mod tests {
         let lines = mock_broker.drain_outgoing();
         assert!(lines.iter().any(|l| l.contains("\"clip.trigger\"") && l.contains("\"key\":5")));
 
-        // Switch to System page
-        ui.set_page(PageId::System);
+        // Switch to System page by holding key 30 (STOP/SYSTEM) 3+ seconds
+        let hold_start = Instant::now();
+        ui.on_key_press_at(30, hold_start);
+        ui.on_key_release_at(30, hold_start + std::time::Duration::from_millis(3100));
         assert_eq!(ui.active_page_id(), PageId::System);
 
-        // Arm shutdown on System page (key 26)
-        ui.on_key_press(26);
+        // Arm shutdown on System page (keys 27-29)
+        ui.on_key_press(27);
         assert!(ui.guarded.is_active());
 
         // Confirm shutdown with key 0

@@ -21,7 +21,7 @@ NEEDS_REBOOT=0
 # 1. Install dependencies
 echo "--> Checking/Installing runtime packages..."
 apt-get update -qq || true
-apt-get install -y -qq chromium-browser python3 unclutter x11-xserver-utils curl iw libinput-tools 2>/dev/null || true
+apt-get install -y -qq chromium-browser python3 mpv unclutter x11-xserver-utils curl iw libinput-tools 2>/dev/null || true
 
 # 2. Configure user groups (plugdev for WebHID / hidraw access)
 echo "--> Adding ${TARGET_USER} to plugdev and video groups..."

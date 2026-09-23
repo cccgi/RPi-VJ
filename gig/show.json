@@ -1099,79 +1099,42 @@
     {
      "key": 0,
      "type": "clip",
-     "src": "media/50/loops/50th-master-slideshow.mp4",
-     "bigText": "ALL",
-     "label": "50TH SHOW"
+     "src": "media/50/Birthday Balloons VJ VFX Motion Background   vj motion background   VJ Loops.mp4",
+     "bigText": "1",
+     "label": "BDAY VIDEO 1",
+     "_sizeMB": 5
     },
     {
      "key": 1,
      "type": "clip",
-     "src": "media/50/loops/50th-01.mp4",
-     "bigText": "1",
-     "label": "CHOCO CAKE"
+     "src": "media/50/Birthday VJ background.mp4",
+     "bigText": "2",
+     "label": "BDAY VIDEO 2",
+     "_sizeMB": 3
     },
     {
      "key": 2,
      "type": "clip",
-     "src": "media/50/loops/50th-02.mp4",
-     "bigText": "2",
-     "label": "GOLD PARTY"
+     "src": "media/50/Birthday VJ VFX Motion Background   Vj Loop 2021_Free USE   vj motion background   VJ Loops.mp4",
+     "bigText": "3",
+     "label": "BDAY VIDEO 3",
+     "_sizeMB": 6
     },
     {
      "key": 3,
      "type": "clip",
-     "src": "media/50/loops/50th-03.mp4",
-     "bigText": "3",
-     "label": "BLACK GOLD"
+     "src": "media/50/happy birthday balloons VJ VFX Motion Background   vj motion background   VJ Loops.mp4",
+     "bigText": "4",
+     "label": "BDAY VIDEO 4",
+     "_sizeMB": 6
     },
     {
      "key": 4,
      "type": "clip",
-     "src": "media/50/loops/50th-04.mp4",
-     "bigText": "4",
-     "label": "CANDLE CAKE"
-    },
-    {
-     "key": 5,
-     "type": "clip",
-     "src": "media/50/loops/50th-05.mp4",
+     "src": "media/50/It's My Birthday \ud83c\udf82  Birthday Status   Birthday Wishes \ud83e\udd70 1 November \ud83d\udda4.mp4",
      "bigText": "5",
-     "label": "CELEBRATE"
-    },
-    {
-     "key": 6,
-     "type": "clip",
-     "src": "media/50/loops/50th-06.mp4",
-     "bigText": "6",
-     "label": "GOLD 50"
-    },
-    {
-     "key": 7,
-     "type": "clip",
-     "src": "media/50/loops/50th-07.mp4",
-     "bigText": "7",
-     "label": "GOLD GLOW"
-    },
-    {
-     "key": 8,
-     "type": "clip",
-     "src": "media/50/loops/50th-08.mp4",
-     "bigText": "8",
-     "label": "BDAY CAKE"
-    },
-    {
-     "key": 9,
-     "type": "clip",
-     "src": "media/50/loops/50th-09.mp4",
-     "bigText": "9",
-     "label": "COLOR PARTY"
-    },
-    {
-     "key": 10,
-     "type": "clip",
-     "src": "media/50/loops/50th-10.mp4",
-     "bigText": "10",
-     "label": "GOLD GREET"
+     "label": "BDAY VIDEO 5",
+     "_sizeMB": 3
     }
    ]
   },
@@ -1622,6 +1585,103 @@
      "bigText": "27",
      "label": "NEON27",
      "_sizeMB": 9
+    }
+   ]
+  },
+  {
+   "name": "MUSIC",
+   "type": "music",
+   "pads": [
+    {
+     "key": 0,
+     "type": "audio",
+     "src": "media/music/1. 2022 HPBD (KEEBIN MIX) KeeZon.mp3",
+     "label": "1. 2022 HPBD (KEEBIN MIX) KeeZon",
+     "_sizeMB": 11
+    },
+    {
+     "key": 1,
+     "type": "audio",
+     "src": "media/music/2. LinhKu HPBD Subindev.mp3",
+     "label": "2. LinhKu HPBD Subindev",
+     "_sizeMB": 10
+    },
+    {
+     "key": 2,
+     "type": "audio",
+     "src": "media/music/3. PDT Happy Birthday.mp3",
+     "label": "3. PDT Happy Birthday",
+     "_sizeMB": 17
+    },
+    {
+     "key": 3,
+     "type": "audio",
+     "src": "media/music/4. VAVH birthday.mp3",
+     "label": "4. VAVH birthday",
+     "_sizeMB": 16
+    },
+    {
+     "key": 4,
+     "type": "audio",
+     "src": "media/music/5. HPBD -15-30s.mp3",
+     "label": "5. HPBD -15-30s",
+     "_sizeMB": 276
+    },
+    {
+     "key": 5,
+     "type": "audio",
+     "src": "media/music/2026 VIP VI\u1ec6T - HOA V9 M\u1edaI NH\u1ea4T - MTv Muzik.mp3",
+     "label": "2026 VIP VI\u1ec6T - HOA V9 M\u1edaI NH\u1ea4T - MTv Muzik",
+     "_sizeMB": 445
+    },
+    {
+     "key": 6,
+     "type": "audio",
+     "src": "media/music/2996 - Nonstop_Vip_2026_H\u00e0ng_Hi\u1ec7u_D\u00e2n_Ch\u01a1i_Du_H\u00e0nh_Dj_kenbjn_remix.mp3",
+     "label": "2996 - Nonstop Vip 2026 H\u00e0ng Hi\u1ec7u D\u00e2n Ch\u01a1i Du H\u00e0nh Dj kenbjn remix",
+     "_sizeMB": 603
+    },
+    {
+     "key": 7,
+     "type": "audio",
+     "src": "media/music/3000 - Nonstop - Tuoi Sang 2026 ( Final ) - PoKaBaBy Mix.mp3",
+     "label": "3000 - Nonstop - Tuoi Sang 2026 ( Final ) - PoKaBaBy Mix",
+     "_sizeMB": 145
+    },
+    {
+     "key": 8,
+     "type": "audio",
+     "src": "media/music/KE SAY TINH 2 - DJ PRODUCER LUSH.mp3",
+     "label": "KE SAY TINH 2 - DJ PRODUCER LUSH",
+     "_sizeMB": 279
+    },
+    {
+     "key": 9,
+     "type": "audio",
+     "src": "media/music/Ke Say Tinh x Tim Em.mp3",
+     "label": "Ke Say Tinh x Tim Em",
+     "_sizeMB": 152
+    },
+    {
+     "key": 10,
+     "type": "audio",
+     "src": "media/music/NST 2026 C\u0103ng Xung vui t\u01b0\u01a1i Dj_kenbjn.mp3",
+     "label": "NST 2026 C\u0103ng Xung vui t\u01b0\u01a1i Dj kenbjn",
+     "_sizeMB": 278
+    },
+    {
+     "key": 11,
+     "type": "audio",
+     "src": "media/music/NST HPBD Ngh\u1eb9o C\u0103ng Bay T\u01b0ng B\u1eebng Ngh\u1eb9o.mp3",
+     "label": "NST HPBD Ngh\u1eb9o C\u0103ng Bay T\u01b0ng B\u1eebng Ngh\u1eb9o",
+     "_sizeMB": 420
+    },
+    {
+     "key": 12,
+     "type": "audio",
+     "src": "media/music/TINO - \u0110\u1eeaNG \u0110\u1ec2 NH\u1ea0C CH\u01a0I  2026 - VATA.mp3",
+     "label": "TINO - \u0110\u1eeaNG \u0110\u1ec2 NH\u1ea0C CH\u01a0I 2026 - VATA",
+     "_sizeMB": 280
     }
    ]
   }

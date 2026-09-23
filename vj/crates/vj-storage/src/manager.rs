@@ -292,12 +292,11 @@ impl ShowStorageManager {
 
         if gens.len() > keep_threshold {
             for old_gen in &gens[keep_threshold..] {
-                if !old_gen.is_active {
-                    if old_gen.path.exists() {
+                if !old_gen.is_active
+                    && old_gen.path.exists() {
                         fs::remove_dir_all(&old_gen.path)?;
                         pruned.push(old_gen.name.clone());
                     }
-                }
             }
         }
         Ok(pruned)

@@ -5,7 +5,6 @@
 //! zero-allocation, zero-lock discipline.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
 
 use crate::{AudioCapture, AudioError, CaptureInfo, CaptureSink};
 
@@ -207,6 +206,7 @@ impl AudioCapture for SimulatedAudioCapture {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
 
     #[test]
     fn test_capture_trait_ring_handoff() {

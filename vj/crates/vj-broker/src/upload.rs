@@ -208,7 +208,7 @@ impl UploadManager {
             )));
         }
 
-        let calculated_chunks = ((total_size + chunk_size - 1) / chunk_size) as usize;
+        let calculated_chunks = total_size.div_ceil(chunk_size) as usize;
         if total_chunks != calculated_chunks {
             return Err(UploadError::InvalidChunkSize(format!(
                 "Declared total_chunks {} does not match calculated {}",

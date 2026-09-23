@@ -12,7 +12,7 @@
 //! - Automatic reconnection with cached page replay restoring all 32 icons within 5 seconds
 //! - Bounded raw-report diagnostics, off by default
 //! - Controller state and lifecycle event publishing to broker state file and persistent boot ledger
-//! - Deterministic pages: BOOTING, READY, PERFORMANCE, INGEST, DEGRADED, SYSTEM
+//! - Deterministic pages: PERFORMANCE, INGEST, SYSTEM
 //! - Guarded actions with 3-second long hold and 2-key confirmation
 //! - Direct non-blocking broker IPC client (/run/rpi-vj/broker.sock) with automatic state replay
 
@@ -41,9 +41,8 @@ pub use device::{
 pub use graphics::{Canvas, Rgb, ICON_HEIGHT, ICON_PIXELS, ICON_WIDTH};
 pub use guarded::{GuardedAction, GuardedEngine, GuardedEngineState};
 pub use pages::{
-    BootingPage, DegradedPage, FaultInfo, IngestPage, IngestStatus, MediaRecommendation, Page,
-    PageAction, PageContext, PageId, PerformancePage, ReadyPage, SystemPage, SystemTelemetry,
-    UsbDriveStatus, KEY_COUNT,
+    IngestPage, IngestStatus, MediaRecommendation, Page, PageAction, PageContext, PageId,
+    PerformancePage, SystemPage, SystemTelemetry, UsbDriveStatus, KEY_COUNT,
 };
 pub use publisher::{BootLedgerEntry, ControllerState, StatePublisher};
 pub use queue::{BoundedInputQueue, CoalescingOutputQueue};

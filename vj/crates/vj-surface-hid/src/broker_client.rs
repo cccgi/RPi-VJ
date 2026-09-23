@@ -431,6 +431,18 @@ impl BrokerClient {
         self.send_command("blackout.set", serde_json::json!({ "value": value }))
     }
 
+    /// Forward the raw key index (0-31) of a physical press, regardless of
+    /// what it means on the current page. This does not touch local
+    /// optimistic state -- it's a parallel signal purely for the gig web
+    /// engine's bridge to detect and dispatch every press (including
+    /// repeats of the same key) through its own authoritative per-page
+    /// `handleKeyPress`/`handleSystemKey` logic, which already implements
+    /// the full documented button mapping (see docs/original/STREAMDECK.md)
+    /// -- the broker/native side deliberately does not duplicate it.
+    pub fn notify_key_press(&self, key: u32) -> String {
+        self.send_command("key.press", serde_json::json!({ "key": key }))
+    }
+
     pub fn set_tempo_bpm(&self, bpm: f32) -> String {
         {
             let mut st = self.state.lock().unwrap();
@@ -539,7 +551,7 @@ mod tests {
         assert_eq!(curr.show_name, "festival-2026");
         assert_eq!(curr.active_bank, 3);
         assert_eq!(curr.active_clip, Some(12));
-        assert_eq!(curr.blackout, true);
+        assert!(curr.blackout);
         assert_eq!(curr.tempo_bpm, 135.0);
 
         client.stop();

@@ -1,6 +1,6 @@
 //! Parser for Interactive Shader Format (ISF) 2.0 fragment shaders.
 
-use crate::{InputType, IsfInput, IsfPass, ShaderError, ShaderMetadata};
+use crate::{ShaderError, ShaderMetadata};
 
 /// Extract JSON frontmatter block `/*{ ... }*/` from `.fs` shader files and parse it.
 pub fn parse_isf_metadata(source: &str) -> Result<ShaderMetadata, ShaderError> {
@@ -54,6 +54,7 @@ pub fn inject_audio_uniforms(source: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{InputType, IsfPass};
     use crate::{validate, EmbeddedProfile};
     use vj_types::Tier;
 

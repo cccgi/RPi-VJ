@@ -38,4 +38,15 @@ assert.equal(deck._iconHashes[0], 0, 'failed image must not be cached');
 await deck.setIcon(0, jpeg);
 assert.ok(reports > 0, 'same image must retry after a failed write');
 assert.notEqual(deck._iconHashes[0], 0, 'successful image should be cached');
-console.log('PASS: HID writes do not use rAF; failed images remain retryable');
+
+// Replacing/cancelling pending writes must settle every Promise. An unresolved
+// superseded Promise used to stall a page repaint at an arbitrary key.
+deck._isFlushingQueue = true;
+const oldWrite = deck.setIcon(1, new Uint8Array([1]));
+const newWrite = deck.setIcon(1, new Uint8Array([2]));
+assert.deepEqual(await oldWrite, { superseded: true });
+assert.equal(deck.supersedePendingWrites(), 1);
+assert.deepEqual(await newWrite, { superseded: true });
+deck._isFlushingQueue = false;
+
+console.log('PASS: HID writes remain retryable and every superseded write settles');

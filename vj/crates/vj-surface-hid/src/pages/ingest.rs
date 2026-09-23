@@ -4,7 +4,6 @@
 //! - Drive status indicator (USB plugged / scanned / ready / ejected)
 //! - File count & current item display with truncated filename
 //! - Real-time progress bar / percentage
-//! - Free space gauge & remaining headroom (15% reserve check)
 //! - Media analysis recommendation display (QUAD_MIRROR, SEAM_GAP, OK, BAD)
 //! - Interactive decision actions:
 //!   * Accept Recommendation (key 16)
@@ -15,7 +14,7 @@
 //!   * Cancel Job (guarded 3s hold, key 25)
 //!   * Activate Show Generation (guarded 3s hold, key 27)
 //!   * Safe Eject USB Drive (guarded 3s hold, key 28)
-//!   * Exit to Ready (key 31)
+//!   * Exit to System (key 31)
 
 use crate::broker_client::BrokerClient;
 use crate::graphics::{Canvas, Rgb};
@@ -213,16 +212,10 @@ impl Page for IngestPage {
                 c.draw_text_centered_bold(rec.label(), 0, 38, 96, 1, Rgb::WHITE);
                 c.draw_text_centered_bold("DETECTED", 0, 65, 96, 1, Rgb::YELLOW);
             }
-            14 | 15 => {
-                // Free Space Gauge & Remaining Headroom (15% reserve check)
-                c.fill_rect(0, 0, 96, 96, Rgb::new(25, 30, 35));
-                c.draw_rect_border(2, 2, 92, 92, 1, Rgb::GREEN);
-                c.draw_text_centered_bold("HEADROOM", 0, 14, 96, 1, Rgb::LIGHT_GRAY);
-                let free_gb = (ctx.telemetry.free_space_bytes as f32) / 1_000_000_000.0;
-                c.draw_text_centered_bold(&format!("{free_gb:.1}G FREE"), 0, 38, 96, 1, Rgb::WHITE);
-                let reserve_gb = (ctx.telemetry.total_space_bytes as f32 * 0.15) / 1_000_000_000.0;
-                c.draw_text_centered_bold(&format!("> {reserve_gb:.1}G RSV"), 0, 65, 96, 1, Rgb::GREEN);
-            }
+            // 14|15 (Free Space/Headroom) intentionally left blank: it read
+            // telemetry.free_space_bytes/total_space_bytes, which were never
+            // updated by refresh_telemetry() -- permanently fake numbers.
+            // Removed with the fields themselves rather than left to lie.
 
             // Row 2 (16..23): Interactive Decision Actions
             16 => {
@@ -267,14 +260,8 @@ impl Page for IngestPage {
                 c.draw_text_centered_bold("SKIP", 0, 18, 96, 2, Rgb::WHITE);
                 c.draw_text_centered_bold("FILE", 0, 48, 96, 1, Rgb::YELLOW);
             }
-            21..=23 => {
-                // Output Target Info
-                c.fill_rect(0, 0, 96, 96, Rgb::new(20, 25, 40));
-                c.draw_rect_border(2, 2, 92, 92, 1, Rgb::MID_GRAY);
-                c.draw_text_centered_bold("TARGET", 0, 16, 96, 1, Rgb::LIGHT_GRAY);
-                c.draw_text_centered_bold("96x96 ICONS", 0, 40, 96, 1, Rgb::CYAN);
-                c.draw_text_centered_bold("+ 1080P H264", 0, 65, 96, 1, Rgb::WHITE);
-            }
+            // 21..=23 (Output Target Info) intentionally left blank: was
+            // static hardcoded text with no dynamic binding at all.
 
             // Row 3 (24..31): Guarded Actions & Navigation
             24 => {
@@ -336,18 +323,14 @@ impl Page for IngestPage {
                     c.draw_text_centered_bold("HOLD 3S", 0, 65, 96, 1, Rgb::LIGHT_GRAY);
                 }
             }
-            29..=30 => {
-                c.fill_rect(0, 0, 96, 96, Rgb::new(28, 28, 36));
-                c.draw_rect_border(2, 2, 92, 92, 1, Rgb::MID_GRAY);
-                c.draw_text_centered_bold("STATUS", 0, 22, 96, 1, Rgb::LIGHT_GRAY);
-                c.draw_text_centered_bold("FSYNC OK", 0, 50, 96, 1, Rgb::GREEN);
-            }
+            // 29|30 (Status/FSYNC OK) intentionally left blank: was static
+            // hardcoded text with no dynamic binding at all.
             31 => {
-                // Return to Ready
+                // Return to System (where Ingest is entered from)
                 c.fill_rect(0, 0, 96, 96, Rgb::new(40, 40, 55));
                 c.draw_rect_border(2, 2, 92, 92, 2, Rgb::LIGHT_GRAY);
                 c.draw_text_centered_bold("EXIT", 0, 16, 96, 2, Rgb::WHITE);
-                c.draw_text_centered_bold("READY >", 0, 55, 96, 1, Rgb::CYAN);
+                c.draw_text_centered_bold("SYSTEM >", 0, 55, 96, 1, Rgb::CYAN);
             }
 
             _ => {}
@@ -429,7 +412,7 @@ impl Page for IngestPage {
                 PageAction::None
             }
             31 => {
-                PageAction::SwitchPage(PageId::Ready)
+                PageAction::SwitchPage(PageId::System)
             }
             _ => PageAction::None,
         }

@@ -335,6 +335,19 @@ export class ShowManager {
     }
   }
 
+  /** Switches directly to a zero-based bank index. */
+  selectBank(index) {
+    if (!this.showData?.banks?.length) return;
+    const target = Number(index);
+    if (!Number.isInteger(target) || target < 0 || target >= this.showData.banks.length) return;
+    this.currentBankIndex = target;
+    this.rebuildKeyBindings();
+    this.persistState();
+    if (this.options.onBankChange) {
+      this.options.onBankChange(this.currentBankIndex, this.showData.banks[this.currentBankIndex]);
+    }
+  }
+
   /**
    * Returns current active state snapshot.
    */
@@ -551,6 +564,9 @@ export class ShowManager {
         const m = String(label).match(/(\d+)\s*$/);
         if (m) label = String(parseInt(m[1], 10));
         sublabel = '';
+      } else if (binding.type === 'audio') {
+        baseColor = '#2563eb';
+        sublabel = 'MUSIC';
       } else if (binding.type === 'shader') {
         baseColor = KEY_COLORS.shader;
         sublabel = 'FX';
@@ -688,6 +704,29 @@ export class ShowManager {
         }
       }
 
+      // Music filenames carry the useful identity. Fit them over as many as
+      // four centered lines instead of replacing them with giant pad numbers.
+      if (binding?.type === 'audio') {
+        ctx.font = 'bold 12px sans-serif';
+        const words = String(label).split(/\s+/).filter(Boolean);
+        const lines = [];
+        for (const word of words) {
+          const candidate = lines.length ? lines[lines.length - 1] + ' ' + word : word;
+          if (!lines.length || ctx.measureText(candidate).width <= width - 12) {
+            if (!lines.length) lines.push(word); else lines[lines.length - 1] = candidate;
+          } else if (lines.length < 4) {
+            lines.push(word);
+          } else {
+            let tail = lines[3];
+            while (tail.length > 1 && ctx.measureText(tail + '…').width > width - 12) tail = tail.slice(0, -1);
+            lines[3] = tail + '…';
+            break;
+          }
+        }
+        const lineHeight = 15;
+        const startY = height / 2 - ((lines.length - 1) * lineHeight) / 2 - 4;
+        lines.forEach((line, i) => ctx.fillText(line, width / 2, startY + i * lineHeight));
+      } else {
       ctx.font = 'bold 17px sans-serif';
       // Word wrap if label contains space
       const parts = label.split(' ');
@@ -697,6 +736,7 @@ export class ShowManager {
         ctx.fillText(parts.slice(1).join(' '), width / 2, height / 2 + 11);
       } else {
         ctx.fillText(label, width / 2, height / 2 - 2);
+      }
       }
     } else {
       ctx.font = 'bold 15px monospace';

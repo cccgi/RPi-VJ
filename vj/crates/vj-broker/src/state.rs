@@ -13,6 +13,25 @@ pub struct ShowState {
     pub blackout: bool,
     pub master_opacity: f32,
     pub tempo_bpm: f32,
+    /// Raw key index (0-31) of the most recent physical press, regardless
+    /// of what that key means on the currently active page. The gig web
+    /// engine's own `handleKeyPress`/`handleSystemKey`/`SYS_PAGES` tables
+    /// are the single source of truth for what each key does per page
+    /// (RESET, BLACK, nav, SPEED/BPM/OPACITY/FX-AMOUNT presets on pages
+    /// 1-5, plain clip/shader/effect pads elsewhere) -- the broker/native
+    /// side does not attempt to duplicate that per-page logic, it only
+    /// forwards which key was pressed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_key_press: Option<u32>,
+    /// Increments ONLY on a `key.press` command, never on any other
+    /// command (tempo.bpm, master.opacity, property.set, ...). Deliberately
+    /// separate from `version` (which bumps on every state-changing
+    /// command) so a poller can detect every individual press -- including
+    /// repeats of the same key -- without being confused by an unrelated
+    /// command bumping `version` and causing a stale `last_key_press` to be
+    /// re-forwarded.
+    #[serde(default)]
+    pub key_press_seq: u64,
     #[serde(default)]
     pub properties: serde_json::Value,
 }
@@ -27,6 +46,8 @@ impl Default for ShowState {
             blackout: false,
             master_opacity: 1.0,
             tempo_bpm: 120.0,
+            last_key_press: None,
+            key_press_seq: 0,
             properties: serde_json::json!({}),
         }
     }
@@ -67,6 +88,15 @@ impl StateStore {
         let mut changed = false;
 
         match name {
+            "key.press" => {
+                if let Some(key) = args.get("key").and_then(|v| v.as_u64()) {
+                    self.state.last_key_press = Some(key as u32);
+                    self.state.key_press_seq += 1;
+                    changed = true;
+                } else {
+                    return (false, Some("Missing or invalid 'key' argument".to_string()));
+                }
+            }
             "clip.trigger" => {
                 if let Some(key) = args.get("key").and_then(|v| v.as_u64()) {
                     let key_u32 = key as u32;
@@ -188,7 +218,37 @@ mod tests {
 
         let (ok, _) = store.apply_command("blackout.toggle", &serde_json::json!({}));
         assert!(ok);
-        assert_eq!(store.get_state().blackout, true);
+        assert!(store.get_state().blackout);
         assert_eq!(store.get_state().version, 3);
+    }
+
+    #[test]
+    fn test_key_press_records_raw_key_and_always_bumps_seq_on_repeat() {
+        let mut store = StateStore::new(None);
+        assert_eq!(store.get_state().last_key_press, None);
+        assert_eq!(store.get_state().key_press_seq, 0);
+
+        let (ok, _) = store.apply_command("key.press", &serde_json::json!({"key": 26}));
+        assert!(ok);
+        assert_eq!(store.get_state().last_key_press, Some(26));
+        assert_eq!(store.get_state().key_press_seq, 1);
+
+        // Pressing the SAME key again must still bump key_press_seq -- the
+        // bridge relies on this to detect repeat presses, not just value
+        // changes.
+        let (ok, _) = store.apply_command("key.press", &serde_json::json!({"key": 26}));
+        assert!(ok);
+        assert_eq!(store.get_state().last_key_press, Some(26));
+        assert_eq!(store.get_state().key_press_seq, 2);
+
+        // An unrelated command must NOT bump key_press_seq (that would make
+        // the bridge re-forward a stale last_key_press).
+        let (ok, _) = store.apply_command("blackout.toggle", &serde_json::json!({}));
+        assert!(ok);
+        assert_eq!(store.get_state().key_press_seq, 2);
+
+        let (ok, err) = store.apply_command("key.press", &serde_json::json!({}));
+        assert!(!ok);
+        assert!(err.is_some());
     }
 }

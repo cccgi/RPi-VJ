@@ -1,0 +1,144 @@
+Ran command: `git status; git branch -a`
+Ran command: `git config --global --add safe.directory C:/Users/Admin/Projects/RPi-VJ; git status; git branch -a`
+Viewed README.md:1-60
+Viewed BOARD.md:1-22
+Viewed AGENT_PROTOCOL_V2.md:1-55
+Viewed A3-00-baseline-recovery.md:1-33
+Searched for files: *RESULTS*
+Viewed RESULTS.md:1-14
+Searched for files: *appliance*
+Searched for files: *
+Viewed ANTIGRAVITY_ORCHESTRATOR.md:1-118
+Edited BOARD.md
+Invoked subagent
+Used tool: manage_subagents
+
+<idle>
+
+
+Used tool: manage_subagents
+
+<idle>
+<idle>
+<idle>
+<idle>
+
+
+Ran command: `git status; git diff`
+Viewed capture-baseline.sh:1-211
+Viewed RECOVERY.md:1-125
+Ran command: `git status`
+Ran command: `bash -n scripts/appliance/capture-baseline.sh; bash scripts/appliance/capture-baseline.sh --help`
+Ran command: `& "C:\Program Files\Git\bin\bash.exe" -n scripts/appliance/capture-baseline.sh; & "C:\Program Files\Git\bin\bash.exe" scripts/appliance/capture-baseline.sh --help`
+Ran command: `python -c "
+import subprocess, tempfile, os, shutil
+
+test_dir = tempfile.mkdtemp(prefix='test_baseline_')
+try:
+    # 1. Run with non-existent system paths (should safely handle missing commands and not crash)
+    out_dir = os.path.join(test_dir, 'out')
+    res = subprocess.run(['C:\\Program Files\\Git\\bin\\bash.exe', 'scripts/appliance/capture-baseline.sh', out_dir], capture_output=True, text=True)
+    assert res.returncode == 0, f'Script failed: {res.stderr}'
+    assert os.path.exists(os.path.join(out_dir, 'MANIFEST.sha256')), 'Manifest missing'
+    
+    # 2. Check structure
+    for d in ['system', 'boot', 'systemd', 'storage', 'hardware', 'network', 'checksums', 'logs']:
+        assert os.path.isdir(os.path.join(out_dir, d)), f'Directory {d} missing'
+    
+    # 3. Test redaction function directly
+    mock_env = '''
+psk=SecretWiFiPassword123!
+password: SuperSecretPass
+wpa_passphrase=HiddenNetworkPass
+token=xyz123token
+BEGIN OPENSSH PRIVATE KEY
+some_private_key_data
+END OPENSSH PRIVATE KEY
+normal_config_value=42
+'''
+    mock_file = os.path.join(test_dir, 'mock.conf')
+    with open(mock_file, 'w') as f:
+        f.write(mock_env)
+        
+    redact_script = '''
+source scripts/appliance/capture-baseline.sh
+redact_stream < ''' + f'\"{mock_file}\"' + '''
+'''
+    res_redact = subprocess.run(['C:\\Program Files\\Git\\bin\\bash.exe', '-c', redact_script], capture_output=True, text=True)
+    assert 'SecretWiFiPassword123!' not in res_redact.stdout
+    assert 'SuperSecretPass' not in res_redact.stdout
+    assert 'HiddenNetworkPass' not in res_redact.stdout
+    assert 'xyz123token' not in res_redact.stdout
+    assert '[REDACTED]' in res_redact.stdout
+    assert 'normal_config_value=42' in res_redact.stdout
+    print('ALL VERIFICATION CHECKS PASSED!')
+finally:
+    shutil.rmtree(test_dir, ignore_errors=True)
+"`
+Created test_a3_00.py
+Ran command: `python "C:\Users\Admin\.gemini\antigravity\brain\5b4a0fd7-dd73-45d2-89dc-7c2c34581085\scratch\test_a3_00.py"`
+Viewed RESULTS.md:1-14
+Edited BOARD.md
+Edited RESULTS.md
+Ran command: `git status`
+Ran command: `git add scripts/appliance/capture-baseline.sh docs/appliance/RECOVERY.md tasks/APPLIANCE-V3/BOARD.md tasks/APPLIANCE-V3/RESULTS.md; git commit -m "A3-00: Implement baseline capture script and recovery documentation"`
+Ran command: `git log -n 3 --oneline`
+
+### Orchestrator Status Report
+
+- **Repository Branch:** `headless-v3` (verified clean working tree; baseline `original` reference untouched).
+- **Active Wave:** Wave 0 (A3-00).
+- **Active Workers:** 0 running (`A3-00 Baseline Worker` completed and reviewed).
+
+---
+
+### Accepted Task Diffs
+
+- **Task:** [A3-00 — Freeze baseline and recovery image](file:///c:/Users/Admin/Projects/RPi-VJ/tasks/APPLIANCE-V3/A3-00-baseline-recovery.md)
+- **Status:** `NEEDS-REVIEW` (committed locally as `1920ca1: A3-00: Implement baseline capture script and recovery documentation`)
+- **Files Added:**
+  - [`scripts/appliance/capture-baseline.sh`](file:///c:/Users/Admin/Projects/RPi-VJ/scripts/appliance/capture-baseline.sh) — Non-destructive baseline state extraction with automated redaction for Wi-Fi PSKs, passwords, tokens, and private SSH/crypto keys.
+  - [`docs/appliance/RECOVERY.md`](file:///c:/Users/Admin/Projects/RPi-VJ/docs/appliance/RECOVERY.md) — Standard operating procedure for microSD raw backup, SHA-256 verification, restore to spare media, and boot verification.
+
+---
+
+### Test & Observable Evidence
+
+- **Static Check:** `bash -n scripts/appliance/capture-baseline.sh` & `--help` invocation passed.
+- **Local Test Execution:** Safe mock execution verified directory structure creation, manifest generation (`MANIFEST.sha256`), regex secret redaction, and private key exclusion.
+
+---
+
+### Current Hardware Gate & Required Human Action
+
+> [!IMPORTANT]
+> **Hardware Gate A3-00:** Before destructive OS provisioning (A3-01) can proceed, the baseline state and recovery media must be proven on physical hardware.
+
+**Commands to run on the production Raspberry Pi and workstation:**
+
+1. **Capture baseline state on the running Pi:**
+   ```bash
+   bash scripts/appliance/capture-baseline.sh /var/tmp/baseline-$(date +%Y%m%d_%H%M%S)
+   ```
+2. **Shutdown Pi and image the production microSD card on workstation:**
+   ```bash
+   sudo systemctl poweroff
+   # On workstation:
+   sudo dd if=/dev/<sd_device> of=rpi-vj-baseline-$(date +%Y%m%d).img bs=4M status=progress conv=fsync
+   sha256sum rpi-vj-baseline-*.img > rpi-vj-baseline-$(date +%Y%m%d).img.sha256
+   ```
+3. **Restore image to a spare microSD card:**
+   ```bash
+   sudo dd if=rpi-vj-baseline-*.img of=/dev/<spare_sd_device> bs=4M status=progress conv=fsync
+   sync
+   ```
+4. **Boot test the spare card:**
+   Insert the restored spare card into the Pi, connect HDMI, power on, and confirm clean boot into multi-user target.
+
+Please provide the image SHA-256 hash and confirmation of the restored spare-card boot.
+
+---
+
+### Next Dependency-Ready Tasks
+
+- **Wave 1:** [A3-01 — Lite OS and deterministic provisioning](file:///c:/Users/Admin/Projects/RPi-VJ/tasks/APPLIANCE-V3/A3-01-lite-provisioning.md) (ready to dispatch once A3-00 hardware recovery gate is verified).

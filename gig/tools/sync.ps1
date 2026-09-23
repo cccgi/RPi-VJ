@@ -85,7 +85,7 @@ if ($MediaDir -ne "") {
     if ($LASTEXITCODE -ne 0) { Write-Host "   !! failed, re-run to resume" -ForegroundColor Red }
   }
 
-  $remote = ssh @SshOptions $Target "ls ~/RPi-VJ/gig/media/$MediaDir/*.mp4 2>/dev/null | wc -l"
+  $remote = ssh @SshOptions $Target "find ~/RPi-VJ/gig/media/$MediaDir -maxdepth 1 -type f 2>/dev/null | wc -l"
   Write-Host "== on the Pi: $($remote.Trim()) files (expected $localCount)" -ForegroundColor Green
   Write-Host "== restarting kiosk" -ForegroundColor Cyan
   ssh @SshOptions $Target "systemctl --user restart vj-kiosk"

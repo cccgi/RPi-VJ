@@ -85,6 +85,13 @@ impl Canvas {
         self.pixels.fill(color);
     }
 
+    /// Replace the whole canvas with a pre-decoded 96x96 image (a cached
+    /// clip thumbnail). Callers draw borders/labels/status text on top of
+    /// this afterward, same as any other background fill.
+    pub fn blit(&mut self, pixels: &[Rgb; ICON_PIXELS]) {
+        self.pixels.copy_from_slice(pixels);
+    }
+
     pub fn fill_rect(&mut self, x: usize, y: usize, w: usize, h: usize, color: Rgb) {
         let x_end = (x + w).min(ICON_WIDTH);
         let y_end = (y + h).min(ICON_HEIGHT);
@@ -237,9 +244,17 @@ impl Canvas {
         self.draw_text_bold(text, start_x, y, scale, color);
     }
 
-    /// Encode canvas into standard baseline JPEG format.
+    /// Encode canvas into standard baseline JPEG format with 180-degree hardware rotation for Stream Deck XL.
     pub fn encode_jpeg(&self) -> Vec<u8> {
-        encode_baseline_jpeg(&self.pixels, ICON_WIDTH, ICON_HEIGHT)
+        let mut rotated = [Rgb::BLACK; ICON_PIXELS];
+        for y in 0..ICON_HEIGHT {
+            for x in 0..ICON_WIDTH {
+                let src_idx = y * ICON_WIDTH + x;
+                let dst_idx = (ICON_HEIGHT - 1 - y) * ICON_WIDTH + (ICON_WIDTH - 1 - x);
+                rotated[dst_idx] = self.pixels[src_idx];
+            }
+        }
+        encode_baseline_jpeg(&rotated, ICON_WIDTH, ICON_HEIGHT)
     }
 }
 
@@ -475,17 +490,22 @@ fn dct_8x8(block: &[f32; 64], out: &mut [f32; 64]) {
             }
             let cu = if u == 0 { 1.0 / std::f32::consts::SQRT_2 } else { 1.0 };
             let cv = if v == 0 { 1.0 / std::f32::consts::SQRT_2 } else { 1.0 };
-            out[u * 8 + v] = 0.25 * cu * cv * sum;
+            // Natural-order storage is row-major by vertical frequency v, then
+            // horizontal frequency u (index = 8*v + u), matching the convention
+            // ZIGZAG and the quantization tables below assume.
+            out[v * 8 + u] = 0.25 * cu * cv * sum;
         }
     }
 }
 
 fn quantize_and_zigzag(dct: &[f32; 64], q_table: &[u8; 64], out: &mut [i16; 64]) {
-    for i in 0..64 {
-        let q = q_table[i] as f32;
-        let val = (dct[i] / q).round() as i16;
-        let zz = ZIGZAG[i];
-        out[zz] = val;
+    // ZIGZAG[scan_pos] = natural_pos. Walk scan order and pull each
+    // coefficient from its natural-order position so `out` ends up holding
+    // coefficients in zigzag scan order, as `encode_block` expects.
+    for scan_pos in 0..64 {
+        let natural = ZIGZAG[scan_pos];
+        let q = q_table[natural] as f32;
+        out[scan_pos] = (dct[natural] / q).round() as i16;
     }
 }
 
@@ -535,10 +555,15 @@ fn int_to_category_and_bits(v: i16) -> (u8, u16) {
     let abs_v = v.unsigned_abs();
     let cat = 16 - abs_v.leading_zeros() as u8;
     let bits = if v < 0 {
-        (abs_v - 1) ^ ((1 << cat) - 1)
+        // JPEG "extra bits" for a negative coefficient of category `cat` is
+        // its magnitude bitwise-complemented within `cat` bits, i.e.
+        // mask - abs_v (since abs_v <= mask, complement == mask - abs_v).
+        // There is no "-1" here: that would compute mask - abs_v + 1,
+        // silently corrupting every negative coefficient by one.
+        abs_v ^ ((1 << cat) - 1)
     } else {
         abs_v
-    } as u16;
+    };
     (cat, bits)
 }
 
@@ -622,8 +647,8 @@ pub fn encode_baseline_jpeg(pixels: &[Rgb], width: usize, height: usize) -> Vec<
     let mut prev_dc_cb = 0i16;
     let mut prev_dc_cr = 0i16;
 
-    let mcu_x = (width + 7) / 8;
-    let mcu_y = (height + 7) / 8;
+    let mcu_x = width.div_ceil(8);
+    let mcu_y = height.div_ceil(8);
 
     let mut block_y = [0.0f32; 64];
     let mut block_cb = [0.0f32; 64];
@@ -717,5 +742,64 @@ mod tests {
         canvas.draw_hold_ring(48, 48, 30, 0.75, Rgb::YELLOW);
         let jpeg = canvas.encode_jpeg();
         assert!(!jpeg.is_empty());
+    }
+
+    /// Round-trips a non-trivial pattern (text + shapes, not a flat color)
+    /// through `encode_baseline_jpeg` and a real JPEG decoder to catch
+    /// encoder bugs (zigzag/natural-order mixups, transposed DCT output)
+    /// that a structural-only test can't see: those scramble AC
+    /// coefficients rather than corrupting the container, so the file
+    /// stays "valid" JPEG while the decoded image is garbage.
+    #[test]
+    fn test_jpeg_encoder_roundtrip_matches_source() {
+        let mut canvas = Canvas::new(Rgb::DARK_BLUE);
+        canvas.fill_rect(10, 10, 30, 20, Rgb::RED);
+        canvas.fill_rect(50, 40, 25, 35, Rgb::GREEN);
+        canvas.draw_text_bold("HI", 20, 70, 2, Rgb::WHITE);
+        canvas.draw_hold_ring(48, 48, 20, 0.6, Rgb::AMBER);
+
+        // Encode without the 180-degree rotation so decoded pixels line up
+        // 1:1 with `canvas.pixels` for comparison.
+        let jpeg = encode_baseline_jpeg(&canvas.pixels, ICON_WIDTH, ICON_HEIGHT);
+
+        let decoded = image::load_from_memory_with_format(&jpeg, image::ImageFormat::Jpeg)
+            .expect("encoder must produce a JPEG a standard decoder can read")
+            .to_rgb8();
+        assert_eq!(decoded.width() as usize, ICON_WIDTH);
+        assert_eq!(decoded.height() as usize, ICON_HEIGHT);
+
+        let mut sum_abs_err: i64 = 0;
+        let mut max_abs_err: i64 = 0;
+        for y in 0..ICON_HEIGHT {
+            for x in 0..ICON_WIDTH {
+                let expected = canvas.get_pixel(x, y);
+                let got = decoded.get_pixel(x as u32, y as u32);
+                for (e, g) in [
+                    (expected.r, got[0]),
+                    (expected.g, got[1]),
+                    (expected.b, got[2]),
+                ] {
+                    let err = (e as i64 - g as i64).abs();
+                    sum_abs_err += err;
+                    max_abs_err = max_abs_err.max(err);
+                }
+            }
+        }
+        let mean_abs_err = sum_abs_err as f64 / (ICON_PIXELS * 3) as f64;
+
+        // A correct (lossy) baseline JPEG encoder at these quant tables
+        // stays close to the source; a scan/natural-order bug or a
+        // transposed DCT output produces mean error in the tens and max
+        // error saturating near 255.
+        assert!(
+            mean_abs_err < 15.0,
+            "mean abs channel error too high: {mean_abs_err} (max {max_abs_err}) \
+             — indicates AC coefficients are being written to the wrong position"
+        );
+        assert!(
+            max_abs_err < 120,
+            "max abs channel error too high: {max_abs_err} \
+             — indicates AC coefficients are being written to the wrong position"
+        );
     }
 }
