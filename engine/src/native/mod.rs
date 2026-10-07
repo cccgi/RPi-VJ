@@ -3,6 +3,7 @@ mod capture;
 mod control_link;
 mod mpv;
 mod render;
+mod textures;
 
 use crate::{
     audio::{AudioFrame, StereoAnalyzer, SAMPLE_RATE},

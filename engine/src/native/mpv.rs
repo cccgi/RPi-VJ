@@ -265,10 +265,18 @@ impl Mpv {
                 format: 0x8058,
             };
             let mut block = 0_i32;
+            // MPV_RENDER_PARAM_FLIP_Y: without it mpv stores the picture's top row at the
+            // bottom of the target (t = 0). Flipped, the deck texture is the right way up
+            // in GL terms, which is what a shader sampling `u_video` expects.
+            let mut flip = 1_i32;
             let mut params = [
                 Param {
                     kind: 3,
                     data: (&mut fbo as *mut Fbo).cast(),
+                },
+                Param {
+                    kind: 4,
+                    data: (&mut flip as *mut i32).cast(),
                 },
                 Param {
                     kind: 12,

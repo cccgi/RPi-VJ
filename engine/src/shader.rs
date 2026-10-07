@@ -1,4 +1,7 @@
-//! Deliberately bounded single-pass ISF generator profile (no images or persistent passes).
+//! Deliberately bounded single-pass ISF generator profile (no ISF image inputs or
+//! persistent passes). Shadertoy-style `iChannel0..3` samplers are plain uniforms whose
+//! textures come from the manifest's channel bindings.
+use crate::texture::Kind;
 use anyhow::{bail, ensure, Context, Result};
 use serde_json::Value;
 use std::{collections::HashSet, io::Read, path::Path};
@@ -10,14 +13,44 @@ pub struct PreparedShader {
     pub defaults: Vec<(String, f32)>,
 }
 pub fn load(path: &Path) -> Result<PreparedShader> {
+    load_with(path, &[])
+}
+/// `channels` are the `(iChannel index, kind)` pairs bound by the manifest.
+pub fn load_with(path: &Path, channels: &[(u8, Kind)]) -> Result<PreparedShader> {
     let file = std::fs::File::open(path)?;
     ensure!(file.metadata()?.is_file(), "shader must be a regular file");
     let mut source = String::new();
     file.take((MAX_SOURCE_BYTES + 1) as u64)
         .read_to_string(&mut source)?;
-    prepare(&source)
+    prepare_with(&source, channels)
 }
 pub fn prepare(source: &str) -> Result<PreparedShader> {
+    prepare_with(source, &[])
+}
+/// A whole-line `uniform [precision] sampler* iChannelN;` declaration of a bound channel,
+/// rewritten to the sampler type its binding needs. The converted Shadertoy bank declares
+/// every channel `sampler2D` because the converter did not know the inputs; the manifest
+/// binding does, so it decides. Anything else is returned unchanged.
+fn channel_declaration(line: &str, channels: &[(u8, Kind)]) -> Option<String> {
+    let code = line.split("//").next().unwrap_or("");
+    let statement = code.trim().strip_suffix(';')?;
+    let mut words = statement.split_whitespace();
+    if words.next() != Some("uniform") {
+        return None;
+    }
+    let mut sampler = words.next()?;
+    if ["lowp", "mediump", "highp"].contains(&sampler) {
+        sampler = words.next()?;
+    }
+    let name = words.next()?;
+    if words.next().is_some() || !["sampler2D", "samplerCube", "sampler3D"].contains(&sampler) {
+        return None;
+    }
+    let index: u8 = name.strip_prefix("iChannel")?.parse().ok()?;
+    let (_, kind) = channels.iter().find(|(channel, _)| *channel == index)?;
+    (kind.sampler() != sampler).then(|| format!("uniform {} {name};", kind.sampler()))
+}
+pub fn prepare_with(source: &str, channels: &[(u8, Kind)]) -> Result<PreparedShader> {
     ensure!(source.len() <= MAX_SOURCE_BYTES, "shader exceeds 256 KiB");
     let mut body = source.trim_start_matches('\u{feff}').trim_start();
     let mut meta = Value::Null;
@@ -42,6 +75,7 @@ pub fn prepare(source: &str) -> Result<PreparedShader> {
     let body = body
         .lines()
         .filter(|line| !line.trim_start().starts_with("#version"))
+        .map(|line| channel_declaration(line, channels).unwrap_or_else(|| line.to_owned()))
         .collect::<Vec<_>>()
         .join("\n");
     let tokens: Vec<_> = body
@@ -54,7 +88,13 @@ pub fn prepare(source: &str) -> Result<PreparedShader> {
             declared.insert(triple[2].to_owned());
         }
     }
-    let mut header = String::from("#version 300 es\nprecision highp float;\nprecision highp int;\nout vec4 isf_out;\n#define gl_FragColor isf_out\n#define texture2D texture\n#define isf_FragNormCoord (gl_FragCoord.xy / u_resolution)\n#define vv_FragNormCoord isf_FragNormCoord\n");
+    let mut header = String::from("#version 300 es\nprecision highp float;\nprecision highp int;\n");
+    // GLSL ES 3.00 gives sampler3D no default precision; without this line a volume
+    // shader does not compile. Other shaders keep their exact previous source.
+    if tokens.contains(&"sampler3D") {
+        header.push_str("precision highp sampler3D;\n");
+    }
+    header.push_str("out vec4 isf_out;\n#define gl_FragColor isf_out\n#define texture2D texture\n#define isf_FragNormCoord (gl_FragCoord.xy / u_resolution)\n#define vv_FragNormCoord isf_FragNormCoord\n");
     let mut defaults = Vec::new();
     if let Some(inputs) = meta.get("INPUTS") {
         let inputs = inputs.as_array().context("INPUTS must be an array")?;
@@ -152,6 +192,63 @@ mod tests {
             assert!(prepare(source).is_err());
         }
         assert!(prepare(&" ".repeat(MAX_SOURCE_BYTES + 1)).is_err());
+    }
+    #[test]
+    fn bound_channels_get_their_sampler_type() {
+        let source = "/* {\"LABEL\":\"x\"} */\nprecision highp float;\nuniform sampler2D iChannel0;\nuniform sampler2D iChannel1;\nuniform highp sampler2D iChannel2; // noise\nuniform sampler2D iChannel3;\nvoid main(){gl_FragColor=texture(iChannel1,vec3(1.0));}";
+        let plain = prepare(source).unwrap();
+        assert_eq!(plain.source.matches("sampler2D iChannel").count(), 4);
+        assert!(!plain.source.contains("samplerCube") && !plain.source.contains("sampler3D"));
+        assert_eq!(prepare_with(source, &[]).unwrap().source, plain.source);
+        // A 2D binding changes nothing at all.
+        assert_eq!(
+            prepare_with(source, &[(0, Kind::Flat), (3, Kind::Flat)])
+                .unwrap()
+                .source,
+            plain.source
+        );
+        let bound = prepare_with(source, &[(1, Kind::Cube), (2, Kind::Volume)])
+            .unwrap()
+            .source;
+        assert!(bound.contains("uniform sampler2D iChannel0;"));
+        assert!(bound.contains("uniform samplerCube iChannel1;"));
+        assert!(bound.contains("uniform sampler3D iChannel2;"));
+        assert!(bound.contains("uniform sampler2D iChannel3;"));
+        assert!(bound.contains("precision highp sampler3D;"));
+        assert!(!prepare_with(source, &[(1, Kind::Cube)])
+            .unwrap()
+            .source
+            .contains("sampler3D"));
+        // Line numbers in driver logs still point at the file.
+        assert_eq!(bound.lines().count(), plain.source.lines().count() + 1);
+        // A shader that declares its own type still follows the binding.
+        let cube = "uniform samplerCube iChannel0;\nvoid main(){}";
+        assert!(prepare_with(cube, &[(0, Kind::Cube)])
+            .unwrap()
+            .source
+            .contains("uniform samplerCube iChannel0;"));
+        assert!(prepare_with(cube, &[(0, Kind::Flat)])
+            .unwrap()
+            .source
+            .contains("uniform sampler2D iChannel0;"));
+        // A self-declared volume sampler gets its precision without any binding.
+        assert!(prepare("uniform sampler3D iChannel0;\nvoid main(){}")
+            .unwrap()
+            .source
+            .contains("precision highp sampler3D;"));
+        // Only whole-line channel declarations are touched.
+        for untouched in [
+            "uniform sampler2D iChannel0, iChannel1;",
+            "uniform sampler2D u_video;",
+            "uniform float iChannel0;",
+            "vec4 f(sampler2D iChannel0);",
+            "// uniform sampler2D iChannel0;",
+        ] {
+            assert!(
+                channel_declaration(untouched, &[(0, Kind::Cube), (1, Kind::Cube)]).is_none(),
+                "{untouched}"
+            );
+        }
     }
     #[test]
     fn defaults_and_declarations() {

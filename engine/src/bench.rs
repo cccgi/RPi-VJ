@@ -1,6 +1,9 @@
 //! Shader benchmark contracts: manifest, result lines, statistics and synthetic inputs.
 //! Nothing here touches the GPU; the measuring loop lives in `native::bench`.
-use crate::audio::{AudioFrame, BINS};
+use crate::{
+    audio::{AudioFrame, BINS},
+    texture::{self, Bindings},
+};
 use anyhow::{ensure, Context, Result};
 use serde::Deserialize;
 use serde_json::{json, Map, Value};
@@ -52,6 +55,11 @@ pub struct Entry {
     pub id: String,
     pub variant: String,
     pub path: PathBuf,
+    /// Input textures for `iChannel0..3`, as in the show manifest but with paths used
+    /// as written. Absent in manifests from before channel textures existed. A block that
+    /// does not parse or validate fails this entry with `prepare_error`, not the run.
+    #[serde(default)]
+    pub channels: Bindings,
 }
 impl Entry {
     pub fn key(&self) -> (String, String) {
@@ -318,6 +326,8 @@ pub struct Outcome {
     pub error: Option<String>,
     pub temp_c: Option<f64>,
     pub throttled: Option<String>,
+    /// `(channel, kind)` of every input texture that was bound while measuring.
+    pub channels: Vec<(u8, texture::Kind)>,
 }
 impl Outcome {
     /// A failure before any tier ran: every manifest tier is reported as skipped.
@@ -335,6 +345,7 @@ impl Outcome {
             error: Some(error.to_owned()),
             temp_c: None,
             throttled: None,
+            channels: Vec::new(),
         }
     }
 }
@@ -406,6 +417,16 @@ pub fn result_line(entry: &Entry, outcome: &Outcome) -> String {
         outcome.temp_c.map_or(Value::Null, |t| round(t, 1)),
     );
     line.insert("throttled".into(), json!(outcome.throttled));
+    // Extension to plan section 3.2: present only when input textures were bound, so the
+    // report can tell a texture shader measured as designed from one measured unbound.
+    if !outcome.channels.is_empty() {
+        let bound: Map<String, Value> = outcome
+            .channels
+            .iter()
+            .map(|(channel, kind)| (channel.to_string(), json!(kind.name())))
+            .collect();
+        line.insert("channels".into(), Value::Object(bound));
+    }
     Value::Object(line).to_string()
 }
 
@@ -452,11 +473,65 @@ mod tests {
         assert!(Manifest::parse(twice.as_bytes()).is_err());
     }
     #[test]
+    fn entries_carry_optional_channel_bindings() {
+        use crate::texture::{Filter, Kind, Wrap};
+        // The plan's manifest has no bindings and still loads.
+        assert!(manifest().entries[0].channels.is_empty());
+        let with = |channels: &str| {
+            MANIFEST.replace(
+                r#""path": "/srv/rpi-vj-bench/shaders/base/33cGDj.fs""#,
+                &format!(r#""path": "a.fs", "channels": {channels}"#),
+            )
+        };
+        let m = Manifest::parse(
+            with(
+                r#"[{"channel": 0, "path": "/srv/rpi-vj-bench/assets/n.png", "kind": "2d", "filter": "mipmap", "wrap": "repeat", "vflip": true},
+                    {"channel": 1, "path": "/srv/rpi-vj-bench/assets/c.jpg", "kind": "cube", "filter": "linear", "wrap": "clamp", "vflip": false}]"#,
+            )
+            .as_bytes(),
+        )
+        .unwrap();
+        assert!(m.entries[0].channels.error.is_none());
+        let channels = &m.entries[0].channels.list;
+        assert_eq!(channels.len(), 2);
+        assert_eq!(channels[0].path, PathBuf::from("/srv/rpi-vj-bench/assets/n.png"));
+        assert_eq!(
+            (channels[1].channel, channels[1].kind, channels[1].filter, channels[1].wrap, channels[1].vflip),
+            (1, Kind::Cube, Filter::Linear, Wrap::Clamp, false)
+        );
+        // A bad block is that entry's problem: the manifest loads, the entry carries the
+        // reason (reported as its `prepare_error`), and the other entries are untouched.
+        for bad in [
+            r#"[{"channel": 4, "path": "a.png"}]"#,
+            r#"[{"channel": 1, "path": "a.png"}, {"channel": 1, "path": "b.png"}]"#,
+            r#"[{"channel": 0, "path": "a.png", "kind": "buffer"}]"#,
+            r#"[{"channel": 0, "path": ""}]"#,
+            r#"[{"channel": 0, "path": "a.png", "extra": 1}]"#,
+            r#""a.png""#,
+        ] {
+            let json = with(bad).replace(
+                r#""entries": ["#,
+                r#""entries": [{"id": "good", "variant": "base", "path": "g.fs", "channels": [{"channel": 0, "path": "n.png"}]}, "#,
+            );
+            let m = Manifest::parse(json.as_bytes()).unwrap_or_else(|e| panic!("{bad}: {e:#}"));
+            assert_eq!(m.entries.len(), 2, "{bad}");
+            assert!(m.entries[0].channels.checked().is_ok());
+            let error = format!("{:#}", m.entries[1].channels.checked().unwrap_err());
+            assert!(error.starts_with("invalid channel bindings: "), "{error}");
+            let failed = Outcome::failed("prepare_error", &error, &m);
+            let line: Value = serde_json::from_str(&result_line(&m.entries[1], &failed)).unwrap();
+            assert_eq!(line["status"], "prepare_error");
+            assert!(line["error"].as_str().unwrap().contains("invalid channel bindings"));
+            assert!(line.get("channels").is_none());
+        }
+    }
+    #[test]
     fn thumb_names_cannot_escape_the_directory() {
         let entry = Entry {
             id: "../x y".into(),
             variant: "a/b".into(),
             path: "p".into(),
+            channels: Bindings::default(),
         };
         assert_eq!(entry.thumb_name(), "___x_y.a_b.ppm");
     }
@@ -631,6 +706,7 @@ mod tests {
             error: None,
             temp_c: Some(61.23),
             throttled: Some("0x0".into()),
+            channels: Vec::new(),
         };
         let line = result_line(entry, &ok);
         assert!(!line.contains('\n'));
@@ -666,6 +742,15 @@ mod tests {
         assert_eq!(v["throttled"], "0x0");
         assert!(v.get("error").is_none());
         assert_eq!(completed_keys(&line).len(), 1);
+        // Unbound entries keep the exact pre-texture line; bound ones name their channels.
+        assert!(v.get("channels").is_none());
+        let bound = Outcome {
+            channels: vec![(0, texture::Kind::Flat), (2, texture::Kind::Cube)],
+            ..ok.clone()
+        };
+        let b: Value = serde_json::from_str(&result_line(entry, &bound)).unwrap();
+        assert_eq!(b["channels"], json!({"0": "2d", "2": "cube"}));
+        assert_eq!(b["tiers"], v["tiers"]);
 
         let log = format!(
             "shader compile failed:\n0:12(3): error: {}",

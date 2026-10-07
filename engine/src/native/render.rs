@@ -1,8 +1,10 @@
+use super::textures::{self, Channels, VIDEO_UNIT};
 use crate::{
     audio::AudioFrame,
     control::{BlendMode, State},
     shader,
     show::Show,
+    texture::{Channel, MAX_CHANNELS},
 };
 use anyhow::{ensure, Result};
 use font8x8::UnicodeFonts;
@@ -16,7 +18,14 @@ pub struct Target {
 pub(super) struct Program {
     pub(super) id: glow::Program,
     uniforms: HashMap<String, glow::UniformLocation>,
+    /// Declared sampler type of each `iChannelN` the shader actually reads.
+    channel_types: [Option<u32>; MAX_CHANNELS],
+    /// Input textures from the manifest; see `bind_channels`.
+    channels: Channels,
+    /// The shader reads the deck video through `uniform sampler2D u_video`.
+    video: bool,
 }
+
 impl Program {
     pub(super) unsafe fn new(gl: &glow::Context, fragment: &str) -> Result<Self> {
         let id = gl.create_program().map_err(anyhow::Error::msg)?;
@@ -46,20 +55,91 @@ impl Program {
                 gl.get_program_info_log(id)
             );
             let mut uniforms = HashMap::new();
+            let mut channel_types = [None; MAX_CHANNELS];
+            let mut video = false;
             for index in 0..gl.get_active_uniforms(id) {
                 if let Some(u) = gl.get_active_uniform(id, index) {
                     let name = u.name.trim_end_matches("[0]");
                     if let Some(loc) = gl.get_uniform_location(id, name) {
                         uniforms.insert(name.to_owned(), loc);
                     }
+                    let channel = name
+                        .strip_prefix("iChannel")
+                        .and_then(|n| n.parse::<usize>().ok())
+                        .filter(|n| *n < MAX_CHANNELS);
+                    if let Some(channel) = channel {
+                        channel_types[channel] = textures::sampler_target(u.utype).map(|_| u.utype);
+                    }
+                    video |= name == "u_video" && u.utype == glow::SAMPLER_2D;
                 }
             }
-            Ok(Self { id, uniforms })
+            // Every sampler gets its own unit once. Left at the default they would all
+            // read unit 0, and two sampler types on one unit make the draw call fail.
+            gl.use_program(Some(id));
+            for (channel, declared) in channel_types.iter().enumerate() {
+                if declared.is_some() {
+                    gl.uniform_1_i32(
+                        uniforms.get(&format!("iChannel{channel}")),
+                        channel as i32,
+                    );
+                }
+            }
+            if video {
+                gl.uniform_1_i32(uniforms.get("u_video"), VIDEO_UNIT as i32);
+            }
+            gl.use_program(None);
+            Ok(Self {
+                id,
+                uniforms,
+                channel_types,
+                channels: [None; MAX_CHANNELS],
+                video,
+            })
         })();
         if result.is_err() {
             gl.delete_program(id);
         }
         result
+    }
+    /// Attach the manifest's input textures. A channel the shader declares with another
+    /// sampler type than its binding would silently read black, so that is an error.
+    /// Returns the channels the shader reads that have no binding (they sample opaque
+    /// black), for the caller to report once.
+    pub(super) unsafe fn bind_channels(
+        &mut self,
+        gl: &glow::Context,
+        channels: Channels,
+    ) -> Result<Vec<usize>> {
+        let mut resolution = [0.0f32; MAX_CHANNELS * 3];
+        for (index, bound) in channels.iter().enumerate() {
+            let Some(bound) = bound else { continue };
+            if let Some(declared) = self.channel_types[index] {
+                ensure!(
+                    declared == textures::sampler_type(bound.kind),
+                    "iChannel{index} is bound to a {} texture, which needs `uniform {} iChannel{index};` in the shader",
+                    bound.kind.name(),
+                    bound.kind.sampler()
+                );
+            }
+            resolution[index * 3..index * 3 + 3].copy_from_slice(&bound.size);
+        }
+        gl.use_program(Some(self.id));
+        gl.uniform_3_f32_slice(self.uniforms.get("iChannelResolution"), &resolution);
+        gl.use_program(None);
+        self.channels = channels;
+        Ok((0..MAX_CHANNELS)
+            .filter(|index| self.channel_types[*index].is_some() && channels[*index].is_none())
+            .collect())
+    }
+    /// Message for `bind_channels`' unbound list, or `None` when every read channel is bound.
+    pub(super) fn unbound_warning(unbound: &[usize]) -> Option<String> {
+        (!unbound.is_empty()).then(|| {
+            let names: Vec<String> = unbound.iter().map(|n| format!("iChannel{n}")).collect();
+            format!(
+                "reads {} without a channel binding: sampled as opaque black",
+                names.join(", ")
+            )
+        })
     }
     pub(super) unsafe fn float(&self, gl: &glow::Context, name: &str, v: f32) {
         gl.uniform_1_f32(self.uniforms.get(name), v);
@@ -71,6 +151,12 @@ impl Program {
         gl.uniform_2_f32(self.uniforms.get(name), w, h);
     }
 }
+/// The deck targets hold the video the right way up (mpv renders them with FLIP_Y), so
+/// `u_video` shaders see a normal bottom-left origin. The compositor flips them again for
+/// the output because that reproduces what it showed before `u_video` existed, when mpv
+/// rendered unflipped and this uniform was 0: an upright clip appears upside down on the
+/// output. Whether that is wanted is the owner's decision; `false` shows video upright.
+const DECK_OUTPUT_FLIP: bool = true;
 pub struct Renderer {
     gl: glow::Context,
     program: Program,
@@ -81,6 +167,9 @@ pub struct Renderer {
     shader_sizes: Vec<(u32, u32)>,
     shaders: Vec<Option<Program>>,
     shader_sources: Vec<Option<shader::PreparedShader>>,
+    /// Resolved input textures per show shader, attached when the shader is compiled.
+    shader_channels: Vec<Channels>,
+    bank: textures::Bank,
     errors: Vec<Option<String>>,
     previous_time: Option<f32>,
     flow: [f32; 4],
@@ -118,6 +207,12 @@ pub(super) struct ShaderFrame<'a> {
     pub audio: &'a AudioFrame,
     pub flow: &'a [f32; 4],
     pub spec_flow: &'a [f32; 32],
+    /// Texture a `u_video` shader samples; `None` reads opaque black.
+    pub video: Option<glow::Texture>,
+    /// The playing clip is a `quad_mirror` clip: `u_video` holds the stored quarter-frame
+    /// source, not the unfolded picture the compositor shows. Passed on as
+    /// `u_video_quad_mirror` so a shader can tell; the engine does not unfold for it.
+    pub video_quad_mirror: bool,
 }
 pub(super) fn spectrum_bands(audio: &AudioFrame) -> [f32; 32] {
     std::array::from_fn(|i| {
@@ -199,7 +294,48 @@ pub(super) unsafe fn shader_pass(
     gl.uniform_1_f32_slice(p.uniforms.get("iChannelTime"), &[time; 4]);
     gl.uniform_1_f32_slice(p.uniforms.get("u_spectrum"), &spectrum_bands(audio));
     gl.uniform_1_f32_slice(p.uniforms.get("u_spec_flow"), f.spec_flow);
+    // Input textures. Only samplers the shader really reads cost anything here, and each
+    // of those gets a defined texture: its binding, or nothing (opaque black) instead of
+    // whatever the compositor or a previous shader left on the unit.
+    let mut touched = false;
+    for (unit, declared) in p.channel_types.iter().enumerate() {
+        let Some(declared) = declared else { continue };
+        touched = true;
+        gl.active_texture(glow::TEXTURE0 + unit as u32);
+        match &p.channels[unit] {
+            Some(bound) => {
+                gl.bind_texture(textures::target(bound.kind), Some(bound.texture));
+                gl.bind_sampler(unit as u32, Some(bound.sampler));
+            }
+            None => {
+                if let Some(target) = textures::sampler_target(*declared) {
+                    gl.bind_texture(target, None);
+                }
+            }
+        }
+    }
+    if p.video {
+        touched = true;
+        gl.active_texture(glow::TEXTURE0 + VIDEO_UNIT);
+        gl.bind_texture(glow::TEXTURE_2D, f.video);
+        p.int(gl, "u_video_quad_mirror", i32::from(f.video_quad_mirror));
+    }
     gl.draw_arrays(glow::TRIANGLES, 0, 3);
+    if touched {
+        // Sampler objects override texture parameters for whoever uses the unit next.
+        for (unit, bound) in p.channels.iter().enumerate() {
+            if let (Some(bound), Some(_)) = (bound, p.channel_types[unit]) {
+                gl.active_texture(glow::TEXTURE0 + unit as u32);
+                gl.bind_texture(textures::target(bound.kind), None);
+                gl.bind_sampler(unit as u32, None);
+            }
+        }
+        if p.video {
+            gl.active_texture(glow::TEXTURE0 + VIDEO_UNIT);
+            gl.bind_texture(glow::TEXTURE_2D, None);
+        }
+        gl.active_texture(glow::TEXTURE0);
+    }
 }
 impl Renderer {
     /// Construct only on the current SDL GLES context thread. All compilation is startup-only.
@@ -258,20 +394,37 @@ impl Renderer {
             for parameter in [glow::TEXTURE_MIN_FILTER, glow::TEXTURE_MAG_FILTER] {
                 gl.tex_parameter_i32(glow::TEXTURE_2D, parameter, glow::NEAREST as i32);
             }
+            // Input textures are decoded and uploaded once, here, never on the show path.
+            let wanted: Vec<&Channel> =
+                show.shaders.iter().flat_map(|s| &s.channels.list).collect();
+            let bank = textures::Bank::load(&gl, &wanted);
             let mut shaders = Vec::new();
             let mut shader_sources = Vec::new();
+            let mut shader_channels = Vec::new();
             let mut errors = Vec::new();
             for shader in &show.shaders {
-                match shader::load(&shader.path) {
-                    Ok(source) => {
+                // An invalid channel block, or a missing or refused texture, disables this
+                // shader only: it must not render with a wrong or absent input.
+                let loaded = shader
+                    .channels
+                    .checked()
+                    .and_then(|list| bank.resolve(list))
+                    .and_then(|channels| {
+                        let source = shader::load_with(&shader.path, &shader.channels.kinds())?;
+                        Ok((source, channels))
+                    });
+                match loaded {
+                    Ok((source, channels)) => {
                         shaders.push(None);
                         shader_sources.push(Some(source));
+                        shader_channels.push(channels);
                         errors.push(None);
                     }
                     Err(e) => {
                         eprintln!("Shader disabled [{}]: {e:#}", shader.label);
                         shaders.push(None);
                         shader_sources.push(None);
+                        shader_channels.push([None; MAX_CHANNELS]);
                         errors.push(Some(format!("{e:#}")));
                     }
                 }
@@ -288,6 +441,8 @@ impl Renderer {
                 shader_sizes,
                 shaders,
                 shader_sources,
+                shader_channels,
+                bank,
                 errors,
                 previous_time: None,
                 flow: [0.0; 4],
@@ -308,7 +463,21 @@ impl Renderer {
         let Some(source) = self.shader_sources.get_mut(index).and_then(Option::take) else { return; };
         // SAFETY: the renderer owns the current GL context and this is called from draw.
         unsafe {
-            match Program::new(&self.gl, &source.source) {
+            let compiled = Program::new(&self.gl, &source.source).and_then(|mut program| {
+                match program.bind_channels(&self.gl, self.shader_channels[index]) {
+                    Ok(unbound) => {
+                        if let Some(warning) = Program::unbound_warning(&unbound) {
+                            eprintln!("Shader [{index}] {warning}");
+                        }
+                        Ok(program)
+                    }
+                    Err(error) => {
+                        self.gl.delete_program(program.id);
+                        Err(error)
+                    }
+                }
+            });
+            match compiled {
                 Ok(program) => {
                     self.gl.use_program(Some(program.id));
                     for (name, value) in source.defaults { program.float(&self.gl, &name, value); }
@@ -417,6 +586,15 @@ impl Renderer {
                         audio,
                         flow: &self.flow,
                         spec_flow: &self.spec_flow,
+                        // The deck target mpv just rendered; black while nothing plays.
+                        video: state
+                            .playing
+                            .map(|_| self.targets[active.min(1)].texture),
+                        video_quad_mirror: state
+                            .playing
+                            .and_then(|i| self.clip_layouts.get(i))
+                            .copied()
+                            .unwrap_or(false),
                     },
                 );
             }
@@ -463,7 +641,7 @@ impl Renderer {
                         .unwrap_or(false),
                 ),
             );
-            p.int(gl, "u_deck_flip_y", 0);
+            p.int(gl, "u_deck_flip_y", i32::from(DECK_OUTPUT_FLIP));
             p.int(
                 gl,
                 "u_blend_mode",
@@ -541,6 +719,7 @@ impl Drop for Renderer {
             for p in self.shaders.iter().flatten() {
                 self.gl.delete_program(p.id);
             }
+            self.bank.delete(&self.gl);
             self.gl.delete_vertex_array(self.vao);
             self.gl.delete_texture(self.hud_texture);
             self.gl.delete_program(self.program.id);

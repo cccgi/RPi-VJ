@@ -7,7 +7,8 @@ license = "MIT"
 [features]
 default = []
 native = ["renderer", "controller"]
-renderer = ["dep:sdl2", "dep:glow", "dep:libloading", "dep:font8x8"]
+# `image` decodes the shader input textures (PNG/JPEG) at renderer start-up.
+renderer = ["dep:sdl2", "dep:glow", "dep:libloading", "dep:font8x8", "dep:image"]
 controller = ["dep:hidapi", "dep:image", "dep:font8x8"]
 
 [dependencies]

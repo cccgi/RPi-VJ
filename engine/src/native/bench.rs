@@ -1,6 +1,9 @@
 //! `--bench`: one KMS/GLES session that measures every manifest shader offscreen.
 //! Contracts and statistics live in `crate::bench`; this file only drives the GPU.
-use super::render::{self, Program, ShaderFrame, Target};
+use super::{
+    render::{self, Program, ShaderFrame, Target},
+    textures,
+};
 use crate::{
     bench::{
         begin_line, completed_keys, downsample, frame_completed, frame_time, keep_sampling,
@@ -40,6 +43,10 @@ struct Session<'a> {
     vao: glow::VertexArray,
     tiers: Vec<((u32, u32), Target)>,
     warm: Target,
+    /// Input textures of every manifest entry, uploaded before the first measurement.
+    bank: textures::Bank,
+    /// Synthetic stand-in for the deck video, for shaders that declare `u_video`.
+    video: glow::Texture,
     sync: Sync,
     frame: i32,
     events: sdl2::EventPump,
@@ -133,6 +140,8 @@ impl Session<'_> {
                 audio: &audio,
                 flow: &flow,
                 spec_flow: &spec_flow,
+                video: Some(self.video),
+                video_quad_mirror: false,
             },
         );
         self.wait();
@@ -250,11 +259,26 @@ impl Session<'_> {
         label: &str,
     ) -> Option<Outcome> {
         self.frame = 0;
-        // The show path leaves texture unit 0 unbound, so a shader's undeclared channel
-        // samplers read opaque black. Match that instead of sampling a leftover target.
-        self.gl.active_texture(glow::TEXTURE0);
-        self.gl.bind_texture(glow::TEXTURE_2D, None);
-        let prepared = match shader::load(&entry.path) {
+        // `shader_pass` gives every sampler a shader reads a defined texture (its binding
+        // or none), so results do not depend on what the previous entry left bound.
+        let kinds = entry.channels.kinds();
+        // An invalid channel block, or a missing, undecodable or over-budget texture,
+        // fails the entry; it is never measured with a wrong or absent input.
+        let resolved = entry
+            .channels
+            .checked()
+            .and_then(|list| self.bank.resolve(list));
+        let channels = match resolved {
+            Ok(channels) => channels,
+            Err(error) => {
+                return Some(Outcome::failed(
+                    "prepare_error",
+                    &format!("{error:#}"),
+                    manifest,
+                ))
+            }
+        };
+        let prepared = match shader::load_with(&entry.path, &kinds) {
             Ok(prepared) => prepared,
             Err(error) => {
                 return Some(Outcome::failed(
@@ -267,10 +291,22 @@ impl Session<'_> {
         // Phase lines let the supervisor say where a hang happened.
         eprintln!("bench: {label} compile");
         let start = Instant::now();
-        let program = match Program::new(&self.gl, &prepared.source) {
+        let mut program = match Program::new(&self.gl, &prepared.source) {
             Ok(program) => program,
             Err(error) => {
                 self.gl_errors();
+                return Some(Outcome::failed(
+                    "compile_error",
+                    &format!("{error:#}"),
+                    manifest,
+                ));
+            }
+        };
+        // Reported after the timed sections, so the message costs no measured time.
+        let unbound = match program.bind_channels(&self.gl, channels) {
+            Ok(unbound) => Program::unbound_warning(&unbound),
+            Err(error) => {
+                self.gl.delete_program(program.id);
                 return Some(Outcome::failed(
                     "compile_error",
                     &format!("{error:#}"),
@@ -296,6 +332,7 @@ impl Session<'_> {
                 *tier = Tier::Skipped("gpu_reset".into());
             }
             outcome.compile_ms = Some(link_ms);
+            outcome.channels = kinds;
             self.gl_errors();
             self.gl.use_program(None);
             self.gl.delete_program(program.id);
@@ -316,6 +353,7 @@ impl Session<'_> {
                 manifest,
             );
             outcome.compile_ms = Some(compile_ms);
+            outcome.channels = kinds;
             self.gl_errors();
             self.gl.use_program(None);
             self.gl.delete_program(program.id);
@@ -331,6 +369,7 @@ impl Session<'_> {
             error: self.gl_errors(),
             temp_c: None,
             throttled: None,
+            channels: kinds,
         };
         if outcome.error.is_some() {
             outcome.status = "gl_error";
@@ -383,6 +422,9 @@ impl Session<'_> {
         }
         self.gl.use_program(None);
         self.gl.delete_program(program.id);
+        if let Some(warning) = unbound {
+            eprintln!("bench: {label} {warning}");
+        }
         let tiers: Vec<String> = outcome
             .tiers
             .iter()
@@ -532,6 +574,11 @@ pub fn run(path: &Path, resume: bool, windowed: bool) -> Result<()> {
             tiers.push((*size, render::target(&gl, *size)?));
         }
         let warm = render::target(&gl, WARM_SIZE)?;
+        // Only the entries still to measure decide what is uploaded.
+        let wanted: Vec<&crate::texture::Channel> =
+            todo.iter().flat_map(|entry| &entry.channels.list).collect();
+        let bank = textures::Bank::load(&gl, &wanted);
+        let video = textures::test_video(&gl)?;
         render::fullscreen_state(&gl, vao);
         let mut session = Session {
             gl,
@@ -539,6 +586,8 @@ pub fn run(path: &Path, resume: bool, windowed: bool) -> Result<()> {
             vao,
             tiers,
             warm,
+            bank,
+            video,
             sync,
             frame: 0,
             events,
@@ -619,6 +668,8 @@ pub fn run(path: &Path, resume: bool, windowed: bool) -> Result<()> {
             session.gl.delete_framebuffer(target.fbo);
             session.gl.delete_texture(target.texture);
         }
+        session.bank.delete(&session.gl);
+        session.gl.delete_texture(session.video);
         session.gl.delete_vertex_array(session.vao);
         session.gl.finish();
         if session.stop {

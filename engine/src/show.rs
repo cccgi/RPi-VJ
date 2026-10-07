@@ -23,6 +23,10 @@ pub struct Shader {
     /// Height of this shader's offscreen target; the compositor upscales to the output.
     #[serde(default = "default_render_height")]
     pub render_height: u32,
+    /// Input textures for `iChannel0..3`; paths are relative to the manifest. A block
+    /// that does not parse or validate disables this shader only, never the show.
+    #[serde(default, skip_serializing_if = "crate::texture::Bindings::is_empty")]
+    pub channels: crate::texture::Bindings,
 }
 /// Allowed shader render tiers. Width is always derived at 16:9.
 pub const RENDER_HEIGHTS: [u32; 4] = [1080, 720, 540, 360];
@@ -133,6 +137,25 @@ impl Show {
                 show.warnings
                     .push(format!("missing shader: {}", shader.path.display()));
             }
+            if let Some(error) = &shader.channels.error {
+                show.warnings.push(format!(
+                    "shader {} disabled: invalid channel bindings: {error}",
+                    shader.label
+                ));
+            }
+            for channel in &mut shader.channels.list {
+                channel.path = base.join(&channel.path);
+                // Not fatal: the renderer disables just this shader and reports why.
+                for file in crate::texture::files(channel) {
+                    if !file.is_file() {
+                        show.warnings.push(format!(
+                            "missing texture for shader {}: {}",
+                            shader.label,
+                            file.display()
+                        ));
+                    }
+                }
+            }
         }
         for page in &show.pages {
             ensure!(!page.name.trim().is_empty(), "page name is empty");
@@ -207,5 +230,78 @@ mod tests {
                 "{bad}"
             );
         }
+    }
+    #[test]
+    fn channel_bindings_are_optional_validated_and_rebased() {
+        use crate::texture::{Filter, Kind, Wrap};
+        let show = |channels: &str| {
+            format!(
+                r#"{{"version":2,"audio_device":null,"shaders":[{{"label":"a","path":"a.fs"{channels}}}]}}"#
+            )
+        };
+        // Manifests written before channel textures existed load unchanged.
+        let old = load_json("nochannels", &show("")).unwrap();
+        assert!(old.shaders[0].channels.is_empty() && old.shaders[0].channels.error.is_none());
+        assert!(!serde_json::to_string(&old).unwrap().contains("channels"));
+        let s = load_json(
+            "channels",
+            &show(
+                r#","channels":[{"channel":0,"path":"assets/noise.png"},
+                {"channel":1,"path":"assets/sky.jpg","kind":"cube","filter":"linear","wrap":"clamp","vflip":false},
+                {"channel":3,"path":"assets/vol.bin","kind":"volume","filter":"nearest"}]"#,
+            ),
+        )
+        .unwrap();
+        assert!(s.shaders[0].channels.error.is_none());
+        let channels = &s.shaders[0].channels.list;
+        assert_eq!(channels.len(), 3);
+        assert_eq!(
+            (channels[0].kind, channels[0].filter, channels[0].wrap, channels[0].vflip),
+            (Kind::Flat, Filter::Mipmap, Wrap::Repeat, true)
+        );
+        assert_eq!((channels[1].kind, channels[1].wrap), (Kind::Cube, Wrap::Clamp));
+        assert_eq!((channels[2].channel, channels[2].kind), (3, Kind::Volume));
+        assert_eq!(channels[0].path, std::env::temp_dir().join("assets/noise.png"));
+        // One warning per absent file: 1 + 6 cube faces + 1; a missing texture never
+        // stops the show from loading.
+        assert_eq!(s.warnings.iter().filter(|w| w.contains("missing texture")).count(), 8);
+        // The controller serialises and parses the same structure.
+        let text = serde_json::to_string(&s).unwrap();
+        let again: Show = serde_json::from_str(&text).unwrap();
+        assert_eq!(again.shaders[0].channels.list, *channels);
+        // A bad block never stops the show (renderer and controller both start): the
+        // shader carries the error, its neighbours and the rest of the manifest are intact.
+        for bad in [
+            r#","channels":[{"channel":4,"path":"a.png"}]"#,
+            r#","channels":[{"channel":0,"path":"a.png"},{"channel":0,"path":"b.png"}]"#,
+            r#","channels":[{"channel":0,"path":"a.png","kind":"video"}]"#,
+            r#","channels":[{"channel":0,"path":"a.png","srgb":true}]"#,
+            r#","channels":[{"channel":0}]"#,
+            r#","channels":{"0":"a.png"}"#,
+            r#","channels":[{"channel":0,"path":"a"},{"channel":1,"path":"a"},{"channel":2,"path":"a"},{"channel":3,"path":"a"},{"channel":3,"path":"a"}]"#,
+            r#","channels":[{"channel":0,"path":""}]"#,
+            r#","channels":[{"channel":0,"path":"a.png","filter":"fancy"}]"#,
+            r#","channels":"a.png""#,
+            r#","channels":null"#,
+        ] {
+            let json = show(bad).replace(
+                r#""shaders":["#,
+                r#""shaders":[{"label":"ok","path":"ok.fs","channels":[{"channel":0,"path":"n.png"}]},"#,
+            );
+            let s = load_json("badchannels", &json).unwrap_or_else(|e| panic!("{bad}: {e:#}"));
+            assert_eq!(s.shaders.len(), 2, "{bad}");
+            assert!(s.shaders[0].channels.error.is_none() && s.shaders[0].channels.list.len() == 1);
+            assert!(s.shaders[1].channels.error.is_some(), "{bad}");
+            assert!(s.shaders[1].channels.list.is_empty());
+            assert!(
+                s.warnings.iter().any(|w| w.starts_with("shader a disabled: invalid channel bindings")),
+                "{bad}"
+            );
+            // The controller's copy of the show survives a round trip with the error intact.
+            let again: Show = serde_json::from_str(&serde_json::to_string(&s).unwrap()).unwrap();
+            assert!(again.shaders[1].channels.error.is_some(), "{bad}");
+        }
+        // Everything else about a shader entry stays strict.
+        assert!(load_json("unknown", &show(r#","textures":[]"#)).is_err());
     }
 }

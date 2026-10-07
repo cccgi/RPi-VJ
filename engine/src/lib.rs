@@ -14,3 +14,4 @@ pub mod notify;
 pub mod shader;
 pub mod show;
 pub mod surface;
+pub mod texture;

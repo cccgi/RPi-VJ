@@ -173,6 +173,21 @@ def stop_process(process, grace):
         return True
 
 
+def missing_textures(manifest):
+    """Channel texture files the manifest names that are not on disk, sorted. The engine
+    fails just those entries with `prepare_error`; saying so up front saves a wasted run.
+    A cubemap binding names its first face; the others are `<stem>_1` .. `<stem>_5`."""
+    missing = set()
+    for entry in manifest.get("entries", []):
+        for channel in entry.get("channels") or []:
+            first = Path(channel["path"])
+            faces = [first]
+            if channel.get("kind") == "cube":
+                faces += [first.with_name(f"{first.stem}_{face}{first.suffix}") for face in range(1, 6)]
+            missing.update(str(path) for path in faces if not path.is_file())
+    return sorted(missing)
+
+
 class Supervisor:
     def __init__(self, args, manifest):
         self.args = args
@@ -326,6 +341,10 @@ def main():
     if running and not args.stop_services:
         raise SystemExit(f"refusing: {', '.join(running)} active (they own the display); "
                          "stop them or pass --stop-services")
+    absent = missing_textures(manifest)
+    if absent:
+        log(f"warning: {len(absent)} channel texture files are missing; entries that bind them will be "
+            f"prepare_error: {', '.join(absent[:5])}{' ...' if len(absent) > 5 else ''}")
     supervisor = Supervisor(args, manifest)
     supervisor.out.parent.mkdir(parents=True, exist_ok=True)
     lock = open(str(supervisor.out) + ".lock", "w")
