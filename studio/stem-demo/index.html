@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+      #root { position: relative; width: 1920px; height: 1080px; }
+      #three-layer { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; display: block; }
+      /* Stem 2 (MID) lives in the bottom-left quadrant as plain DOM driven by GSAP. */
+      #mid { position: absolute; left: 0; top: 540px; width: 960px; height: 540px; overflow: hidden;
+             background: #000; display: flex; align-items: center; justify-content: center;
+             font-family: Inter, system-ui, sans-serif; font-weight: 900; }
+      #word { display: flex; gap: 10px; }
+      #word span { display: inline-block; color: #fff; font-size: 150px; line-height: 1; }
+      .bar { position: absolute; left: 0; top: 0; width: 960px; height: 6px; background: #fff; }
+    </style>
+  </head>
+  <body>
+    <!-- Stem pack: one 1920x1080 frame = four 960x540 stems (TL base, TR bass, BL mid, BR high).
+         Seamless 8 s loop. The Pi composites the quadrants with live audio gains. -->
+    <div id="root" data-composition-id="main" data-start="0" data-duration="8" data-fps="60"
+         data-width="1920" data-height="1080">
+      <canvas id="three-layer" class="clip" data-start="0" data-duration="8" data-track-index="0"></canvas>
+      <div id="mid" class="clip" data-start="0" data-duration="8" data-track-index="1">
+        <div class="bar" id="bar0"></div>
+        <div class="bar" id="bar1"></div>
+        <div id="word"><span>R</span><span>P</span><span>I</span><span>&middot;</span><span>V</span><span>J</span></div>
+      </div>
+    </div>
+    <script>
+      const LOOP = 8;
+      const TAU = Math.PI * 2;
+      const letters = Array.from(document.querySelectorAll("#word span"));
+      const proxy = { p: 0 };
+      const tl = gsap.timeline({ paused: true });
+      // Every term is periodic in p, so frame 0 and frame LOOP match exactly.
+      tl.to(proxy, { p: 1, duration: LOOP, ease: "none", onUpdate: layoutMid }, 0);
+      function layoutMid() {
+        const p = proxy.p;
+        letters.forEach((el, i) => {
+          const w = Math.sin(TAU * (p * 4 - i / 6));
+          gsap.set(el, { y: w * 46, scaleY: 1 + 0.35 * Math.max(w, 0), rotation: w * 4, opacity: 0.55 + 0.45 * Math.abs(w) });
+        });
+        gsap.set("#bar0", { y: ((p * 2) % 1) * 540 });
+        gsap.set("#bar1", { y: 540 - ((p * 3) % 1) * 540 });
+      }
+      layoutMid();
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+    <script type="module">
+      import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.181.2/+esm";
+
+      const LOOP = 8, TAU = Math.PI * 2, W = 960, H = 540;
+      const canvas = document.getElementById("three-layer");
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+      renderer.setSize(1920, 1080, false);
+      renderer.setPixelRatio(1);
+      renderer.setScissorTest(true);
+      renderer.autoClear = false;
+
+      // Seeded generator: no Math.random in a render-critical path.
+      let seed = 1337;
+      const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+
+      // Stem 0 (BASE): wireframe tunnel fly-through.
+      const baseScene = new THREE.Scene();
+      const baseCam = new THREE.PerspectiveCamera(70, W / H, 0.1, 120);
+      const tunnel = new THREE.Group();
+      const SPACING = 2, RINGS = 48;
+      for (let i = 0; i < RINGS; i++) {
+        const ring = new THREE.LineLoop(
+          new THREE.BufferGeometry().setFromPoints(
+            Array.from({ length: 6 }, (_, k) => new THREE.Vector3(Math.cos((k / 6) * TAU) * 3, Math.sin((k / 6) * TAU) * 3, 0)),
+          ),
+          new THREE.LineBasicMaterial({ color: new THREE.Color().setHSL(0.55 + 0.25 * (i / RINGS), 1, 0.55) }),
+        );
+        ring.position.z = -i * SPACING;
+        tunnel.add(ring);
+      }
+      baseScene.add(tunnel);
+      baseScene.fog = new THREE.Fog(0x000000, 10, 90);
+
+      // Stem 1 (BASS): nested wireframe solids, white so the Pi can tint them.
+      const bassScene = new THREE.Scene();
+      const bassCam = new THREE.PerspectiveCamera(40, W / H, 0.1, 50);
+      bassCam.position.z = 6;
+      const white = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+      const outer = new THREE.Mesh(new THREE.IcosahedronGeometry(1.9, 1), white);
+      const inner = new THREE.Mesh(new THREE.OctahedronGeometry(0.9, 0), white);
+      bassScene.add(outer, inner);
+
+      // Stem 3 (HIGH): particle field streaming toward the camera.
+      const highScene = new THREE.Scene();
+      const highCam = new THREE.PerspectiveCamera(60, W / H, 0.1, 60);
+      const COUNT = 700, DEPTH = 40;
+      const home = new Float32Array(COUNT * 3);
+      for (let i = 0; i < COUNT; i++) {
+        home[i * 3] = (rnd() - 0.5) * 26;
+        home[i * 3 + 1] = (rnd() - 0.5) * 15;
+        home[i * 3 + 2] = rnd() * DEPTH;
+      }
+      const pos = new Float32Array(COUNT * 3);
+      const pointsGeo = new THREE.BufferGeometry();
+      pointsGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+      highScene.add(new THREE.Points(pointsGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.12 })));
+
+      function view(x, y) {
+        renderer.setViewport(x, y, W, H);
+        renderer.setScissor(x, y, W, H);
+      }
+
+      function renderAt(time) {
+        const p = (((time % LOOP) + LOOP) % LOOP) / LOOP;
+        renderer.setViewport(0, 0, 1920, 1080);
+        renderer.setScissor(0, 0, 1920, 1080);
+        renderer.setClearColor(0x000000, 1);
+        renderer.clear();
+
+        // Travel a whole number of ring spacings; identical rings make the wrap invisible.
+        tunnel.position.z = (p * 8 * SPACING) % SPACING;
+        tunnel.rotation.z = p * TAU;
+        view(0, H);
+        renderer.render(baseScene, baseCam);
+
+        outer.rotation.set(p * TAU, p * TAU * 2, 0);
+        inner.rotation.set(-p * TAU * 2, p * TAU, p * TAU);
+        view(W, H);
+        renderer.render(bassScene, bassCam);
+
+        for (let i = 0; i < COUNT; i++) {
+          pos[i * 3] = home[i * 3];
+          pos[i * 3 + 1] = home[i * 3 + 1];
+          pos[i * 3 + 2] = -DEPTH + ((home[i * 3 + 2] + p * DEPTH) % DEPTH);
+        }
+        pointsGeo.attributes.position.needsUpdate = true;
+        view(W, 0);
+        renderer.render(highScene, highCam);
+      }
+
+      window.addEventListener("hf-seek", (event) => renderAt(event.detail.time));
+      renderAt(window.__hfThreeTime || 0);
+    </script>
+  </body>
+</html>

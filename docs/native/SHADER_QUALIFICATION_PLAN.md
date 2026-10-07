@@ -48,6 +48,21 @@ R5. **No compile on the show path.** The gig bank is precompiled at startup
 (bounded bank size); compile time is recorded per shader by the benchmark so
 the startup budget can be planned. Implemented after qualification.
 
+R6. **Output mode switch (owner request, 2026-10-07).** The appliance gets two
+output modes: true 1080p and true 720p, where the HDMI mode itself is
+1280x720@60 and nothing is upscaled by the compositor. A shader's
+`render_height` is then capped by the output height. The 720p and 1080p
+benchmark tiers map directly onto the two modes. Open design points: whether
+the switch is a Stream Deck SYS key that restarts the renderer or a boot-time
+setting, and how 1080p clips are presented in 720p mode (decoder downscale).
+Scheduled after WP-A is reviewed.
+
+R7. **Channel textures are in scope now**, not Phase 3: the owner asked for the
+missing Shadertoy textures to be fetched (WP-G) so texture shaders render as
+designed. The engine binding work (WP-H) follows WP-A.
+
+R8. **Third content pipeline: stems.** See `THIRD_PIPELINE_STEMS.md`.
+
 ## 3. Data contracts
 
 ### 3.1 Bench manifest (input, JSON)
@@ -165,8 +180,24 @@ exists; apply WP-C rules to the near misses. Re-bench only changed entries.
 and a tiered show manifest; deploy it with `render_height` set; run the in-situ
 vsync acceptance with a clip playing; update `pi5-qualified-shaders.md`.
 
+### Added 2026-10-07
+
+**WP-G Texture acquisition** (running). Establish how assets were fetched,
+fetch every missing channel asset into `target/shader-bank/assets/` with a
+manifest, document in `SHADER_ASSETS.md`.
+
+**WP-H Engine channel textures** (after WP-A). Bind 2D textures, cubemaps and
+volumes per the WP-G manifest with their sampler settings; bind the deck
+texture as `u_video` for stem shaders; then re-bench `needs_texture`.
+
+**WP-I Output mode switch** (after WP-A). Per R6.
+
+WP-B result: catalog holds 1,191 shaders — 812 `selfcontained`, 214
+`needs_texture`, 147 `multipass`, 18 originals. Only 23 have a `lite` variant,
+so the render tier and a rules-based `pi` variant are the real levers.
+
 ### Phase 3 (follow-up, not started by this plan)
 
-Channel textures for `needs_texture`; startup precompile (R5); buffer graph
+Startup precompile (R5); buffer graph
 for `multipass`; versioned deploy scripts; acquisition repair (handoff items
 1-2, 4, 6).
