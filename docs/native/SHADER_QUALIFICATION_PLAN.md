@@ -196,6 +196,27 @@ WP-B result: catalog holds 1,191 shaders — 812 `selfcontained`, 214
 `needs_texture`, 147 `multipass`, 18 originals. Only 23 have a `lite` variant,
 so the render tier and a rules-based `pi` variant are the real levers.
 
+**WP-J Audio-reactive geometry** (scheduled after WP-H is committed; owner
+approved 2026-10-07). Every shader is a performance instrument whose geometry
+reacts to music in real time, so cost and look are judged with audio driving it.
+1. Engine: feed the five bands the originals were written for (`u_sub`,
+   `u_low_mid`, `u_high_mid` distinct from bass/mid) and a real `u_locked`
+   (F9).
+2. Wrapper: redesign the generic wrapper in `make_native_shadertoy.py` to the
+   originals' conventions from `SHADER_ADAPTATION_RULES.md` section 5 — flow
+   clocks instead of level-scaled time, per-band hits, onset flash, low
+   brightness floor at silence, geometric response (zoom, rotation, warp) that
+   is smooth rather than set directly from a level — at no more per-pixel cost
+   than today (F10). Emit as a variant; do not regenerate the owner's library.
+3. Bench: add a worst-case audio pass (all bands pinned at maximum, sustained)
+   beside the 128 BPM pattern; a shader qualifies only if it fits the budget in
+   both.
+4. Re-bench the whole bank once with the new wrapper, textures bound, both
+   audio passes; regenerate results and the 720p-floor bank.
+Acceptance: the 18 originals still qualify as before or better; no qualified
+shader exceeds the budget under worst-case audio; the owner reviews the look of
+the new wrapper on the Pi before it replaces the current bank.
+
 ### Phase 3 (follow-up, not started by this plan)
 
 Startup precompile (R5); buffer graph
