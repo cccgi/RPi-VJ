@@ -1,0 +1,34 @@
+[Unit]
+Description=VJ Stream Deck USB controller and persistent show state
+After=local-fs.target systemd-udev-trigger.service
+StartLimitIntervalSec=120
+StartLimitBurst=10
+
+[Service]
+Type=notify
+NotifyAccess=main
+User=vj
+Group=vj
+SupplementaryGroups=input
+WorkingDirectory=/opt/rpi-vj-native
+ExecStart=/opt/rpi-vj-native/rpi-vj-controller /srv/rpi-vj-native/show.json /run/rpi-vj-control/control.sock
+Environment=RPIVJ_STATE_PATH=/var/lib/rpi-vj-controller/state.json
+RuntimeDirectory=rpi-vj-control
+RuntimeDirectoryMode=0700
+StateDirectory=rpi-vj-controller
+Restart=always
+RestartSec=1
+TimeoutStartSec=0
+TimeoutStopSec=5
+WatchdogSec=10
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadOnlyPaths=/srv/rpi-vj-native
+UMask=0077
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

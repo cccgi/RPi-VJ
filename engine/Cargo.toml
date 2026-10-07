@@ -1,0 +1,34 @@
+[package]
+name = "rpi-vj-native"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[features]
+default = []
+native = ["renderer", "controller"]
+renderer = ["dep:sdl2", "dep:glow", "dep:libloading", "dep:font8x8"]
+controller = ["dep:hidapi", "dep:image", "dep:font8x8"]
+
+[dependencies]
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rustfft = "6"
+crossbeam-channel = "0.5"
+sdl2 = { version = "0.38", optional = true }
+glow = { version = "0.16", optional = true }
+libloading = { version = "0.8", optional = true }
+hidapi = { version = "2.6", optional = true, default-features = false, features = ["linux-native"] }
+image = { version = "0.25", optional = true, default-features = false, features = ["jpeg", "png"] }
+font8x8 = { version = "0.3", optional = true }
+
+[[bin]]
+name = "rpi-vj-native"
+path = "src/main.rs"
+required-features = ["renderer"]
+
+[[bin]]
+name = "rpi-vj-controller"
+path = "src/bin/controller.rs"
+required-features = ["controller"]

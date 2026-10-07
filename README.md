@@ -1,39 +1,22 @@
-# RPi-VJ
+# RPi-VJ: native Rust / libmpv rewrite
 
-RPi-VJ is an experimental Raspberry Pi 5 visual-performance system controlled primarily by an Elgato Stream Deck XL. It combines looping video, audio-reactive GLSL visuals, compositing, effects, beat controls, and a full-screen HDMI program output.
+This branch, `codex/native-mpv-core`, replaces the performance runtime with a fresh Rust engine. The root Cargo workspace builds only `engine/`. Chrome/Chromium, browser profiles, WebHID, Web Audio and HTTP servers are not dependencies or fallbacks.
 
-> **Branch status — `original`: historical baseline.** This branch preserves the system used and developed for the 29 August 2026 show. Its functional gig implementation uses Raspberry Pi OS Desktop, Chromium, WebGL2, Web Audio, and WebHID. It is feature-rich but is **not appliance-grade**: kiosk startup and browser/device permission recovery have known field failures. The planned desktop-free replacement is specified in [`tasks/APPLIANCE-V3/`](tasks/APPLIANCE-V3/README.md), but is not implemented on this branch.
+**Development baseline, not an appliance-qualified release.** Native rendering and device adapters are implemented, but Pi hardware testing and measured release gates remain essential. No existing Pi deployment has been changed.
 
-## Start here
+- [Build, controls and native deployment scaffold](engine/README.md)
+- [Research, architecture, DSP, module map and API contracts](docs/native/ARCHITECTURE.md)
+- [Hardware qualification and outstanding work](docs/native/QUALIFICATION.md)
+- [Offline HEVC preparation tool](engine/tools/prepare_media.py)
 
-- [Features and project status](docs/original/FEATURES.md)
-- [Hardware, software, installation, and first run](docs/original/INSTALLATION.md)
-- [Stream Deck pages and every button](docs/original/STREAMDECK.md)
-- [Media preparation and show configuration](docs/original/MEDIA.md)
-- [Architecture and repository map](docs/original/ARCHITECTURE.md)
-- [Operations and troubleshooting](gig/RUNBOOK.md)
-- [Known appliance reliability problems](gig/APPLIANCE_RELIABILITY.md)
-
-## What is usable today?
-
-| Path | Purpose | Status |
-|---|---|---|
-| [`gig/`](gig/README.md) | Complete browser-based show engine and deployment scripts | Original working implementation; feature-complete enough for a show, but startup/device reliability is not production-grade |
-| [`src/`](src) | Small Rust/mpv/Stream Deck proof of concept | Prototype; not the gig application |
-| [`vj/`](vj/README.md) | Modular native Rust architecture (`vj-app`, surfaces, video, render, ingest) | Partially built scaffold; substantial backends are absent |
-| [`tasks/APPLIANCE-V3/`](tasks/APPLIANCE-V3/README.md) | Desktop-free native appliance implementation plan | Design/tasks only on this branch |
-
-## Fast local preview
-
-The browser engine can be viewed on any machine with Python 3 and a WebGL2-capable Chromium-family browser:
+The runtime embeds two libmpv decoders, hosts GLES shaders and blending in Rust, and uses an independently supervised native USB controller plus audio/DSP workers. HEVC is the prepared-media format. Hardware-decoder confirmation gates clip promotion by default.
 
 ```sh
-cd gig
-python3 -m http.server 8080
+cargo test --locked --lib
+cargo check --locked --features native
+cargo build --release --locked --features native
 ```
 
-Open `http://localhost:8080`. The UI and shaders work without a Pi, but Stream Deck WebHID access, audio capture permissions, Pi deployment services, and hardware performance must be tested on the target device. Historical media is deliberately omitted from Git.
+The native build needs SDL2, libmpv and platform HID libraries; see `engine/README.md`. The engine loads candidates on demand and warms one next clip and preserves the active output while loading. It does not yet guarantee instant switching or appliance-grade boot reliability.
 
-## License
-
-Source code is provided under the [MIT License](LICENSE). Third-party media is not included or licensed by this repository.
+Historical `src/`, `native/`, `vj/`, `gig/`, `scripts/`, `config/`, `tasks/` and older docs remain as migration/reference material. They are outside the new root runtime/build path. Do not run their deployment scripts for this branch. The current service templates are `engine/deploy/rpi-vj-native.service` and `engine/deploy/rpi-vj-controller.service`.

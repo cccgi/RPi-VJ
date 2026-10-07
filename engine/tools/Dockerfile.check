@@ -1,0 +1,8 @@
+FROM rust:1.95-bookworm
+RUN apt-get update && apt-get install -y --no-install-recommends libsdl2-dev libmpv-dev libudev-dev glslang-tools xvfb xauth ffmpeg mesa-utils python3 && rm -rf /var/lib/apt/lists/*
+WORKDIR /work
+RUN rustup component add clippy
+COPY Cargo.toml Cargo.lock ./
+COPY engine ./engine
+RUN cargo test --locked --features controller --lib && cargo build --locked --features native && cargo clippy --locked --all-targets --features native -- -D warnings
+RUN cargo run --locked --example export_shaders && glslangValidator -l engine/shaders/fullscreen.vert engine/shaders/program.frag && for f in target/prepared-shaders/*.frag; do glslangValidator -l engine/shaders/fullscreen.vert "$f" || exit 1; done

@@ -1,0 +1,43 @@
+[Unit]
+Description=Native Rust VJ engine (libmpv/GLES)
+After=local-fs.target systemd-udev-trigger.service
+Conflicts=getty@tty1.service
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+Type=notify
+NotifyAccess=main
+User=vj
+Group=vj
+SupplementaryGroups=video render audio input
+WorkingDirectory=/opt/rpi-vj-native
+Environment=SDL_VIDEODRIVER=kmsdrm
+Environment=SDL_AUDIODRIVER=alsa
+Environment=HOME=/var/lib/rpi-vj-native
+Environment=XDG_RUNTIME_DIR=/run/rpi-vj-native
+ExecStart=/opt/rpi-vj-native/rpi-vj-native /srv/rpi-vj-native/show.json --control-socket /run/rpi-vj-control/control.sock
+Restart=on-failure
+RestartSec=2
+TimeoutStartSec=300
+TimeoutStopSec=10
+WatchdogSec=10
+RuntimeDirectory=rpi-vj-native
+RuntimeDirectoryMode=0700
+StateDirectory=rpi-vj-native
+TTYPath=/dev/tty1
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadOnlyPaths=/srv/rpi-vj-native
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

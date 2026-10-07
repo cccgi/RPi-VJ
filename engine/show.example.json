@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "audio_device": null,
+  "clips": [
+    { "label": "LOOP 01", "path": "media/loop01.mp4", "thumbnail": "media/loop01.jpg" },
+    { "label": "LOOP 02", "path": "media/loop02.mp4", "thumbnail": "media/loop02.jpg" }
+  ]
+}

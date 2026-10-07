@@ -1,6 +1,8 @@
 # Rust and native build output
 /target/
+/target-relocated/
 /vj/target/
+/prepared/
 
 # User-owned media is intentionally not distributed through Git.
 /gig/media/*
