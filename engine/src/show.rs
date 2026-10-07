@@ -20,6 +20,25 @@ pub struct Shader {
     pub blend: crate::control::BlendMode,
     #[serde(default = "default_opacity")]
     pub opacity: f32,
+    /// Height of this shader's offscreen target; the compositor upscales to the output.
+    #[serde(default = "default_render_height")]
+    pub render_height: u32,
+}
+/// Allowed shader render tiers. Width is always derived at 16:9.
+pub const RENDER_HEIGHTS: [u32; 4] = [1080, 720, 540, 360];
+pub fn tier_size(height: u32) -> Option<(u32, u32)> {
+    RENDER_HEIGHTS
+        .contains(&height)
+        .then_some((height * 16 / 9, height))
+}
+impl Shader {
+    /// Validated by `Show::load`; an unchecked value falls back to full resolution.
+    pub fn render_size(&self) -> (u32, u32) {
+        tier_size(self.render_height).unwrap_or((1920, 1080))
+    }
+}
+fn default_render_height() -> u32 {
+    1080
 }
 fn default_blend() -> crate::control::BlendMode {
     crate::control::BlendMode::Additive
@@ -103,6 +122,12 @@ impl Show {
                 "invalid shader opacity"
             );
             ensure!(!shader.label.trim().is_empty(), "shader label is empty");
+            ensure!(
+                tier_size(shader.render_height).is_some(),
+                "invalid render_height {} for shader {}: expected 1080, 720, 540 or 360",
+                shader.render_height,
+                shader.label
+            );
             shader.path = base.join(&shader.path);
             if !shader.path.is_file() {
                 show.warnings
@@ -146,5 +171,41 @@ mod tests {
         let state = State::from_show(&s);
         assert!(state.key_in_show(&s, 24).is_some());
         assert!(state.key_in_show(&s, 31).is_some());
+        // Manifests written before render tiers existed stay at full resolution.
+        assert!(s.shaders.iter().all(|x| x.render_size() == (1920, 1080)));
+    }
+    fn load_json(name: &str, json: &str) -> Result<Show> {
+        let path = std::env::temp_dir().join(format!("rpi-vj-{}-{name}.json", std::process::id()));
+        std::fs::write(&path, json).unwrap();
+        let show = Show::load(&path);
+        let _ = std::fs::remove_file(&path);
+        show
+    }
+    #[test]
+    fn render_height_is_optional_and_validated() {
+        let show = |extra: &str| {
+            format!(
+                r#"{{"version":2,"audio_device":null,"shaders":[{{"label":"a","path":"a.fs"{extra}}}]}}"#
+            )
+        };
+        assert_eq!(
+            load_json("default", &show("")).unwrap().shaders[0].render_height,
+            1080
+        );
+        for (height, size) in [
+            (1080, (1920, 1080)),
+            (720, (1280, 720)),
+            (540, (960, 540)),
+            (360, (640, 360)),
+        ] {
+            let s = load_json("tier", &show(&format!(r#","render_height":{height}"#))).unwrap();
+            assert_eq!(s.shaders[0].render_size(), size);
+        }
+        for bad in ["0", "480", "719", "2160", "-720", "\"720\"", "720.5"] {
+            assert!(
+                load_json("bad", &show(&format!(r#","render_height":{bad}"#))).is_err(),
+                "{bad}"
+            );
+        }
     }
 }

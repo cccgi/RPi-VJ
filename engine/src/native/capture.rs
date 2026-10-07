@@ -16,7 +16,7 @@ pub struct Capture {
 impl AudioCallback for Capture {
     type Channel = f32;
     fn callback(&mut self, samples: &mut [f32]) {
-        for pair in samples.chunks_exact(2) {
+        for pair in samples.as_chunks::<2>().0 {
             self.samples[self.used..self.used + 2].copy_from_slice(pair);
             self.used += 2;
             if self.used == HOP * 2 {

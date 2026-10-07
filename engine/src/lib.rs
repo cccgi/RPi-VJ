@@ -1,5 +1,6 @@
 //! Browser-free performance contracts. Hardware adapters are feature-gated.
 pub mod audio;
+pub mod bench;
 pub mod checkpoint;
 pub mod control;
 #[cfg(feature = "controller")]

@@ -13,12 +13,12 @@ pub struct Target {
     pub fbo: glow::Framebuffer,
     pub texture: glow::Texture,
 }
-struct Program {
-    id: glow::Program,
+pub(super) struct Program {
+    pub(super) id: glow::Program,
     uniforms: HashMap<String, glow::UniformLocation>,
 }
 impl Program {
-    unsafe fn new(gl: &glow::Context, fragment: &str) -> Result<Self> {
+    pub(super) unsafe fn new(gl: &glow::Context, fragment: &str) -> Result<Self> {
         let id = gl.create_program().map_err(anyhow::Error::msg)?;
         let result = (|| {
             for (kind, source) in [
@@ -61,7 +61,7 @@ impl Program {
         }
         result
     }
-    unsafe fn float(&self, gl: &glow::Context, name: &str, v: f32) {
+    pub(super) unsafe fn float(&self, gl: &glow::Context, name: &str, v: f32) {
         gl.uniform_1_f32(self.uniforms.get(name), v);
     }
     unsafe fn int(&self, gl: &glow::Context, name: &str, v: i32) {
@@ -76,7 +76,9 @@ pub struct Renderer {
     program: Program,
     vao: glow::VertexArray,
     pub targets: [Target; 2],
-    shader_target: Target,
+    /// One offscreen target per distinct shader render size in the show.
+    shader_targets: Vec<((u32, u32), Target)>,
+    shader_sizes: Vec<(u32, u32)>,
     shaders: Vec<Option<Program>>,
     shader_sources: Vec<Option<shader::PreparedShader>>,
     errors: Vec<Option<String>>,
@@ -88,12 +90,116 @@ pub struct Renderer {
     hud_texture: glow::Texture,
     hud_pixels: Vec<u8>,
     hud_stamp: f32,
-    render_size: (u32, u32),
+}
+/// Diagnostic override: when either variable is set, every shader renders at this size
+/// regardless of its manifest `render_height`.
+pub fn render_override() -> Option<(u32, u32)> {
+    let read = |name: &str| std::env::var(name).ok().and_then(|v| v.parse().ok());
+    let (width, height) = (read("RPI_VJ_RENDER_WIDTH"), read("RPI_VJ_RENDER_HEIGHT"));
+    if width.is_none() && height.is_none() {
+        return None;
+    }
+    let (width, height) = (width.unwrap_or(1920), height.unwrap_or(1080));
+    if (320..=3840).contains(&width) && (240..=2160).contains(&height) {
+        Some((width, height))
+    } else {
+        Some((1920, 1080))
+    }
 }
 pub fn render_size() -> (u32, u32) {
-    let width = std::env::var("RPI_VJ_RENDER_WIDTH").ok().and_then(|v| v.parse().ok()).unwrap_or(1920);
-    let height = std::env::var("RPI_VJ_RENDER_HEIGHT").ok().and_then(|v| v.parse().ok()).unwrap_or(1080);
-    if (320..=3840).contains(&width) && (240..=2160).contains(&height) { (width, height) } else { (1920, 1080) }
+    render_override().unwrap_or((1920, 1080))
+}
+/// Everything a shader pass reads besides its own ISF defaults.
+pub(super) struct ShaderFrame<'a> {
+    pub time: f32,
+    pub dt: f32,
+    pub frame: i32,
+    pub bpm: f32,
+    pub audio: &'a AudioFrame,
+    pub flow: &'a [f32; 4],
+    pub spec_flow: &'a [f32; 32],
+}
+pub(super) fn spectrum_bands(audio: &AudioFrame) -> [f32; 32] {
+    std::array::from_fn(|i| {
+        audio.spectrum[i * 4..i * 4 + 4]
+            .iter()
+            .copied()
+            .fold(0.0, f32::max)
+    })
+}
+/// Fixed-function state shared by every fullscreen pass.
+pub(super) unsafe fn fullscreen_state(gl: &glow::Context, vao: glow::VertexArray) {
+    gl.disable(glow::DEPTH_TEST);
+    gl.disable(glow::SCISSOR_TEST);
+    gl.disable(glow::BLEND);
+    gl.disable(glow::CULL_FACE);
+    gl.color_mask(true, true, true, true);
+    gl.bind_vertex_array(Some(vao));
+}
+/// Render one shader frame into `fbo` at `size`. The live compositor and the benchmark
+/// share this so the benchmark measures exactly the pass the show runs.
+pub(super) unsafe fn shader_pass(
+    gl: &glow::Context,
+    p: &Program,
+    fbo: glow::Framebuffer,
+    size: (u32, u32),
+    f: &ShaderFrame,
+) {
+    gl.bind_framebuffer(glow::FRAMEBUFFER, Some(fbo));
+    gl.viewport(0, 0, size.0 as i32, size.1 as i32);
+    gl.use_program(Some(p.id));
+    gl.clear_color(0.0, 0.0, 0.0, 1.0);
+    gl.clear(glow::COLOR_BUFFER_BIT);
+    p.size(gl, "u_resolution", size.0 as f32, size.1 as f32);
+    p.size(gl, "RENDERSIZE", size.0 as f32, size.1 as f32);
+    p.int(gl, "FRAMEINDEX", f.frame);
+    gl.uniform_4_f32(p.uniforms.get("DATE"), 0.0, 0.0, 0.0, 0.0);
+    let (time, audio) = (f.time, f.audio);
+    let beat = (time * f.bpm / 60.0).fract();
+    let bar = (time * f.bpm / 240.0).fract();
+    for (name, v) in [
+        ("u_time", time),
+        ("TIME", time),
+        ("TIMEDELTA", f.dt),
+        ("u_bass", audio.bass),
+        ("u_mid", audio.mid),
+        ("u_treble", audio.treble),
+        ("u_volume", audio.volume),
+        ("u_onset", audio.onset),
+        ("u_beat_onset", audio.onset),
+        ("u_energy", audio.volume),
+        ("u_kick", audio.onset),
+        ("u_bpm", f.bpm),
+        ("u_sub", audio.bass),
+        ("u_low_mid", audio.mid),
+        ("u_high_mid", audio.mid),
+        ("u_hit_low", audio.onset * audio.bass),
+        ("u_hit_mid", audio.onset * audio.mid),
+        ("u_hit_high", audio.onset * audio.treble),
+        ("u_beat_phase", beat),
+        ("u_bar_phase", bar),
+        ("u_locked", 0.0),
+        ("u_flow", f.flow[0]),
+        ("u_flow_low", f.flow[1]),
+        ("u_flow_mid", f.flow[2]),
+        ("u_flow_high", f.flow[3]),
+        ("uSubBass", audio.bass),
+        ("uBass", audio.bass),
+        ("uLowMid", audio.mid),
+        ("uHighMid", audio.mid),
+        ("uTreble", audio.treble),
+        ("uEnergy", audio.volume),
+        ("uKick", audio.onset),
+        ("uBPM", f.bpm),
+        ("uBeatPhase", beat),
+        ("uBarPhase", bar),
+    ] {
+        p.float(gl, name, v);
+    }
+    gl.uniform_1_f32_slice(p.uniforms.get("iChannelTime"), &[time; 4]);
+    gl.uniform_1_f32_slice(p.uniforms.get("u_spectrum"), &spectrum_bands(audio));
+    gl.uniform_1_f32_slice(p.uniforms.get("u_spec_flow"), f.spec_flow);
+    gl.draw_arrays(glow::TRIANGLES, 0, 3);
 }
 impl Renderer {
     /// Construct only on the current SDL GLES context thread. All compilation is startup-only.
@@ -111,7 +217,31 @@ impl Renderer {
             let vao = gl.create_vertex_array().map_err(anyhow::Error::msg)?;
             let render_size = render_size();
             let targets = [target(&gl, render_size)?, target(&gl, render_size)?];
-            let shader_target = target(&gl, render_size)?;
+            let forced = render_override();
+            let shader_sizes: Vec<(u32, u32)> = show
+                .shaders
+                .iter()
+                .map(|shader| forced.unwrap_or(shader.render_size()))
+                .collect();
+            // The compositor always samples a shader texture, so keep one even without shaders.
+            let mut sizes = shader_sizes.clone();
+            sizes.sort_unstable_by(|a, b| b.cmp(a));
+            sizes.dedup();
+            if sizes.is_empty() {
+                sizes.push(render_size);
+            }
+            let mut shader_targets = Vec::new();
+            for size in sizes {
+                shader_targets.push((size, target(&gl, size)?));
+            }
+            eprintln!(
+                "shader targets: {}",
+                shader_targets
+                    .iter()
+                    .map(|((w, h), _)| format!("{w}x{h}"))
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            );
             let hud_texture = gl.create_texture().map_err(anyhow::Error::msg)?;
             gl.bind_texture(glow::TEXTURE_2D, Some(hud_texture));
             gl.tex_image_2d(
@@ -154,7 +284,8 @@ impl Renderer {
                 program,
                 vao,
                 targets,
-                shader_target,
+                shader_targets,
+                shader_sizes,
                 shaders,
                 shader_sources,
                 errors,
@@ -166,7 +297,6 @@ impl Renderer {
                 hud_texture,
                 hud_pixels: vec![0; 768 * 16],
                 hud_stamp: -1.0,
-                render_size,
             })
         }
     }
@@ -212,13 +342,7 @@ impl Renderer {
         {
             *clock += dt * (0.15 + energy * 2.0);
         }
-        let spectrum: [f32; 32] = std::array::from_fn(|i| {
-            audio.spectrum[i * 4..i * 4 + 4]
-                .iter()
-                .copied()
-                .fold(0.0, f32::max)
-        });
-        for (clock, energy) in self.spec_flow.iter_mut().zip(spectrum) {
+        for (clock, energy) in self.spec_flow.iter_mut().zip(spectrum_bands(audio)) {
             *clock += dt * (0.05 + energy * 2.0);
         }
         if state.shader && !state.blackout {
@@ -229,6 +353,16 @@ impl Renderer {
             .and_then(|i| self.shaders.get(i))
             .and_then(Option::as_ref)
             .filter(|_| state.shader && !state.blackout);
+        // The selected shader's tier picks the target; the compositor upsamples it.
+        let wanted = state
+            .selected_shader
+            .and_then(|i| self.shader_sizes.get(i))
+            .copied();
+        let (shader_size, shader_target) = self
+            .shader_targets
+            .iter()
+            .find(|(size, _)| Some(*size) == wanted)
+            .unwrap_or(&self.shader_targets[0]);
         // SAFETY: draw is called with this renderer's context current; cached locations belong to their programs.
         unsafe {
             let gl = &self.gl;
@@ -268,67 +402,23 @@ impl Renderer {
                 );
                 self.hud_stamp = time;
             }
-            gl.disable(glow::DEPTH_TEST);
-            gl.disable(glow::SCISSOR_TEST);
-            gl.disable(glow::BLEND);
-            gl.disable(glow::CULL_FACE);
-            gl.color_mask(true, true, true, true);
-            gl.bind_vertex_array(Some(self.vao));
+            fullscreen_state(gl, self.vao);
             if let Some(p) = shader {
-                gl.bind_framebuffer(glow::FRAMEBUFFER, Some(self.shader_target.fbo));
-                gl.viewport(0, 0, self.render_size.0 as i32, self.render_size.1 as i32);
-                gl.use_program(Some(p.id));
-                gl.clear_color(0.0, 0.0, 0.0, 1.0);
-                gl.clear(glow::COLOR_BUFFER_BIT);
-                p.size(gl, "u_resolution", self.render_size.0 as f32, self.render_size.1 as f32);
-                p.size(gl, "RENDERSIZE", self.render_size.0 as f32, self.render_size.1 as f32);
-                p.int(gl, "FRAMEINDEX", self.frame);
-                gl.uniform_4_f32(p.uniforms.get("DATE"), 0.0, 0.0, 0.0, 0.0);
-                let beat = (time * state.bpm / 60.0).fract();
-                let bar = (time * state.bpm / 240.0).fract();
-                for (name, v) in [
-                    ("u_time", time),
-                    ("TIME", time),
-                    ("TIMEDELTA", dt),
-                    ("u_bass", audio.bass),
-                    ("u_mid", audio.mid),
-                    ("u_treble", audio.treble),
-                    ("u_volume", audio.volume),
-                    ("u_onset", audio.onset),
-                    ("u_beat_onset", audio.onset),
-                    ("u_energy", audio.volume),
-                    ("u_kick", audio.onset),
-                    ("u_bpm", state.bpm),
-                    ("u_sub", audio.bass),
-                    ("u_low_mid", audio.mid),
-                    ("u_high_mid", audio.mid),
-                    ("u_hit_low", audio.onset * audio.bass),
-                    ("u_hit_mid", audio.onset * audio.mid),
-                    ("u_hit_high", audio.onset * audio.treble),
-                    ("u_beat_phase", beat),
-                    ("u_bar_phase", bar),
-                    ("u_locked", 0.0),
-                    ("u_flow", self.flow[0]),
-                    ("u_flow_low", self.flow[1]),
-                    ("u_flow_mid", self.flow[2]),
-                    ("u_flow_high", self.flow[3]),
-                    ("uSubBass", audio.bass),
-                    ("uBass", audio.bass),
-                    ("uLowMid", audio.mid),
-                    ("uHighMid", audio.mid),
-                    ("uTreble", audio.treble),
-                    ("uEnergy", audio.volume),
-                    ("uKick", audio.onset),
-                    ("uBPM", state.bpm),
-                    ("uBeatPhase", beat),
-                    ("uBarPhase", bar),
-                ] {
-                    p.float(gl, name, v);
-                }
-                gl.uniform_1_f32_slice(p.uniforms.get("iChannelTime"), &[time; 4]);
-                gl.uniform_1_f32_slice(p.uniforms.get("u_spectrum"), &spectrum);
-                gl.uniform_1_f32_slice(p.uniforms.get("u_spec_flow"), &self.spec_flow);
-                gl.draw_arrays(glow::TRIANGLES, 0, 3);
+                shader_pass(
+                    gl,
+                    p,
+                    shader_target.fbo,
+                    *shader_size,
+                    &ShaderFrame {
+                        time,
+                        dt,
+                        frame: self.frame,
+                        bpm: state.bpm,
+                        audio,
+                        flow: &self.flow,
+                        spec_flow: &self.spec_flow,
+                    },
+                );
             }
             gl.bind_framebuffer(glow::FRAMEBUFFER, None);
             gl.viewport(0, 0, size.0 as i32, size.1 as i32);
@@ -336,7 +426,7 @@ impl Renderer {
             gl.active_texture(glow::TEXTURE0);
             gl.bind_texture(glow::TEXTURE_2D, Some(self.targets[active.min(1)].texture));
             gl.active_texture(glow::TEXTURE1);
-            gl.bind_texture(glow::TEXTURE_2D, Some(self.shader_target.texture));
+            gl.bind_texture(glow::TEXTURE_2D, Some(shader_target.texture));
             let p = &self.program;
             gl.active_texture(glow::TEXTURE2);
             gl.bind_texture(glow::TEXTURE_2D, Some(self.hud_texture));
@@ -399,7 +489,7 @@ impl Renderer {
         }
     }
 }
-unsafe fn target(gl: &glow::Context, size: (u32, u32)) -> Result<Target> {
+pub(super) unsafe fn target(gl: &glow::Context, size: (u32, u32)) -> Result<Target> {
     let texture = gl.create_texture().map_err(anyhow::Error::msg)?;
     gl.bind_texture(glow::TEXTURE_2D, Some(texture));
     gl.tex_image_2d(
@@ -443,7 +533,7 @@ impl Drop for Renderer {
             for target in self
                 .targets
                 .iter()
-                .chain(std::iter::once(&self.shader_target))
+                .chain(self.shader_targets.iter().map(|(_, target)| target))
             {
                 self.gl.delete_framebuffer(target.fbo);
                 self.gl.delete_texture(target.texture);

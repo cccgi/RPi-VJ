@@ -46,7 +46,52 @@ Controller readiness follows a complete key upload; missing USB hardware keeps i
 
 Before enabling, inspect and disable historical system and user kiosk/broker/controller units and any display manager. Preserve the SD image for rollback. Historical deployment scripts must not be used for this branch. No Pi installation has been performed by this change.
 
+## Shader render tiers
+
+A shader entry in the show manifest may carry `"render_height"`: 1080 (default), 720, 540 or 360. Width is derived at 16:9. The renderer keeps one offscreen target per tier used by the show, renders the selected shader at its tier with matching `u_resolution`/`RENDERSIZE`, and the compositor upsamples it to the 1080p output. Video stays 1080p. Manifests without the field load unchanged; any other value is rejected at load. `RPI_VJ_RENDER_WIDTH`/`RPI_VJ_RENDER_HEIGHT` remain a diagnostic override that takes precedence over every shader's tier. Both binaries parse the manifest strictly, so a manifest that uses `render_height` needs the renderer and the controller from the same build.
+
+The shader-only diagnostic loop (a show without clips) counts late frames the same way as the show loop, a frame over 20 ms, instead of printing a constant zero.
+
+## Shader benchmark
+
+`rpi-vj-native --bench MANIFEST.json [--resume]` measures shader cost in one KMS/GLES session. Manifest, result lines and measurement rules are specified in `docs/native/SHADER_QUALIFICATION_PLAN.md` section 3. Per entry it writes a `begin` line, prepares and compiles the shader, renders the same shader pass the show uses into an offscreen target at each tier with `glFinish` after every frame, and appends one `result` line. Both lines are synced to disk. `--resume` skips `(id, variant)` keys that already hold a `result`.
+
+Details that the plan leaves to the implementation:
+
+- Time and audio are synthetic. Frame `i` uses `u_time = 40 * fract((i + 0.5) * 0.618034)`, so any frame count covers the 0-40 s span; audio uniforms follow a fixed 128 BPM pattern. The same sequence is used at every tier.
+- `compile_ms` is compile, link and one 64x36 warm-up frame, with Mesa's disk shader cache disabled, so it is the cold cost and `first_ms` is render cost. Percentiles are nearest-rank. A tier stops after 90 frames or 2.5 s of measured frame time, with at least 3 frames.
+- Pixel statistics come from three full readbacks of the first tier at 4, 20 and 36 s, box-filtered to 96x54: mean luma, mean per-sample spatial standard deviation of luma, mean absolute luma difference between consecutive samples. The 20 s sample is the PPM thumbnail. A `mean_luma` of 0 means the shader rendered black.
+- Texture unit 0 is unbound, as in the show, so channel samplers read black.
+- `too_slow` has three causes, named in `error`: the first frame of the first tier took over 1500 ms; a 64x36 probe frame predicts more than four times that, in which case the full-size job is never submitted; or the kernel's V3D hang watchdog reset the GPU. The watchdog kills a render job that makes no tile progress for about a second, after which `glFinish` returns normally and the frame would look like a 1024 ms measurement. Frames of 450 ms or more are therefore re-rendered over a sentinel fill and read back; a tier with untouched tiles is reported as `{"skipped":"gpu_reset"}`.
+- `RPI_VJ_BENCH_SYNC=readback|fence` swaps `glFinish` for a 1x1 readback or a fence sync. On the Pi 5 (V3D 7.1, Mesa 26.2) all three agree to 0.02 ms and track the kernel's render-queue accounting in `gpu_stats`, which the engine prints per entry on stderr.
+- SIGTERM and SIGINT stop the engine between frames; the interrupted entry gets no `result`.
+
+`tools/pi_bench.py` supervises a long run on the Pi (Python 3 standard library). It refuses to start while `rpi-vj-native` or `rpi-vj-controller` is active unless `--stop-services` is given, always launches with `--resume`, records `hang` (no new results line for `--hang-seconds`, default 60) or `crash` for the entry whose `begin` has no `result`, relaunches until every entry has a result, pauses between entries above 80 C until below 70 C, and with `--restart-services` starts both services again on every way out, including errors and signals. An entry receives at most one supervisor result. The run aborts after `--max-strikes` (default 3) consecutive launches in which the engine wrote no result, and after any new kernel oops. `--fresh` moves an existing results file aside; without it a rerun of the same command resumes.
+
+Install the bench build beside, not over, the live one, and start it detached so it survives the SSH session:
+
+```sh
+sudo install -D target/release/rpi-vj-native /opt/rpi-vj-bench/rpi-vj-native
+sudo install -D engine/tools/pi_bench.py /opt/rpi-vj-bench/pi_bench.py
+sudo systemd-run --unit=rpi-vj-bench --collect \
+  -p StandardOutput=append:/var/lib/rpi-vj-bench/supervisor.log \
+  -p StandardError=append:/var/lib/rpi-vj-bench/supervisor.log \
+  /usr/bin/python3 /opt/rpi-vj-bench/pi_bench.py /var/lib/rpi-vj-bench/manifest.json \
+  --stop-services --restart-services
+systemctl status rpi-vj-bench                  # running or finished
+tail -f /var/lib/rpi-vj-bench/supervisor.log   # one progress line per result
+sudo systemctl stop rpi-vj-bench               # stop early; services are restored
+```
+
+Engine stderr goes to `<out>.engine.log`. The benchmark needs DRM master, which is why the live services must be stopped for its duration.
+
+Known hazard: on kernel 6.18.34+rpt, the one time the engine was killed with SIGKILL while a V3D render job was in flight, the next engine process hit a kernel oops in `drm_gem_put_pages` when it exited. This was seen once and not reproduced on purpose. The supervisor therefore sends SIGTERM and waits `--term-seconds` (default 30) for the engine to leave at a frame boundary before it resorts to SIGKILL, and the probe frame keeps single jobs short. Reboot the Pi after any oops.
+
+`tools/benchmark_native_shaders.py` is the superseded per-process benchmark; its FPS and late-frame figures are not cost measurements.
+
 ## Verification
+
+The lockfile needs Rust 1.88 or newer (`image` 0.25.10); on the Pi that is the rustup toolchain in `~/.cargo/bin`, not the distribution's cargo 1.85.
 
 ```sh
 cargo test --locked --features controller --lib

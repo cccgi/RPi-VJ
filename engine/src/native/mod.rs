@@ -1,3 +1,4 @@
+pub mod bench;
 mod capture;
 mod control_link;
 mod mpv;
@@ -46,7 +47,7 @@ pub fn run(
     if !windowed {
         builder.fullscreen_desktop();
     }
-    let mut window = builder.build()?;
+    let window = builder.build()?;
     let _context = window.gl_create_context().map_err(anyhow::Error::msg)?;
     if let Err(error) = video.gl_set_swap_interval(1) {
         if allow_software {
@@ -422,9 +423,11 @@ fn run_shader_only(show: Show, windowed: bool, allow_software: bool) -> Result<(
     let mut selected = 0usize;
     let mut last_shader = Instant::now();
     let mut frames = 0u64;
+    let mut late_frames = 0u64;
     let mut health_time = Instant::now();
     if !show.shaders.is_empty() { let _ = window.set_title(&format!("Shader Gallery [{}/{}] {} | Left/Right: select, Esc: quit", 1, show.shaders.len(), show.shaders[0].label)); }
     loop {
+        let frame_start = Instant::now();
         for event in events.poll_iter() {
             match event {
                 Event::Quit { .. } | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => return Ok(()),
@@ -457,10 +460,13 @@ fn run_shader_only(show: Show, windowed: bool, allow_software: bool) -> Result<(
         renderer.draw(0, &state, &audio, start.elapsed().as_secs_f32(), window.drawable_size());
         window.gl_swap_window();
         frames += 1;
+        // Same rule as the show loop: a frame that misses the 60 Hz slot with margin is late.
+        if frame_start.elapsed() > Duration::from_millis(20) {
+            late_frames += 1;
+        }
         if health_time.elapsed() >= Duration::from_secs(1) {
-            // Keep the diagnostic path observable too: the Pi benchmark consumes
-            // this stable frame counter rather than wall-clock guesses.
-            eprintln!("renderer frames={frames} late=0 audio_dropped=0 warmed=None");
+            // Keep the diagnostic path observable too; cost qualification itself is `--bench`.
+            eprintln!("renderer frames={frames} late={late_frames} audio_dropped=0 warmed=None");
             health_time = Instant::now();
         }
     }
