@@ -177,9 +177,14 @@ pub fn run(show: Show, path: &Path) -> Result<()> {
                 dirty = true;
             }
         }
+        let mut refresh_leds = false;
         for (channel, event) in midi.events.try_iter().take(64) {
             use crate::xtouch::Event;
             midi_channel = channel;
+            if matches!(event, Event::Note { .. }) {
+                feedback.refresh_leds();
+                refresh_leds = true;
+            }
             let now = started.elapsed().as_millis() as u64;
             let event = match event {
                 Event::Control { number, value } => match crate::xtouch::knob_index(number) {
@@ -203,7 +208,7 @@ pub fn run(show: Show, path: &Path) -> Result<()> {
             last_clip = Some(clip);
         }
         let epoch = midi.connections();
-        if epoch != midi_epoch || dirty {
+        if epoch != midi_epoch || dirty || refresh_leds {
             if epoch != midi_epoch {
                 midi_epoch = epoch;
                 feedback = crate::xtouch::Feedback::default();

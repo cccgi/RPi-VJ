@@ -45,27 +45,16 @@ const BLENDS: [BlendMode; 8] = [
     BlendMode::LumaKey,
     BlendMode::Difference,
 ];
-/// Pads whose LED mirrors state, as (bottom row, column): clip on, shader on, clip on
-/// top, blackout.
-const LED_PADS: [(bool, u8); 4] = [(false, 0), (false, 1), (true, 0), (true, 7)];
-/// The unit lights an LED on velocity 1 (127 does nothing, 2 blinks).
+/// Pads whose LED mirrors state: clip on, shader on, clip on top, blackout. Calibrated on
+/// the unit (2026-10-07): an LED has the number of the note its pad sends, on the unit's
+/// own channel, and lights on velocity 1 (127 does nothing, 2 blinks). Layer B pads and
+/// their LEDs are 24 higher.
+const LED_NOTES: [u8; 4] = [8, 9, 16, 23];
+const LAYER_B_LED: u8 = 24;
 const LED_ON: u8 = 1;
 /// One raw step of a knob moves its value this many steps of 127, so about 32 clicks
 /// cover the range instead of 127.
 pub const KNOB_STEP: i16 = 4;
-/// LED notes for one pad. The numbering is not settled on this unit: note 15 lit the top
-/// row's eighth pad while 23 and 47 lit nothing on the unit's own channel. Until it is,
-/// every numbering consistent with that is sent, on the unit's channel and on channel 1:
-/// the pad's own notes on both layers, and the documented 0-15 and 16-31 blocks with the
-/// rows as observed. The sets of different pads do not overlap.
-fn led_notes(bottom: bool, column: u8) -> [u8; 3] {
-    if bottom {
-        [column, 16 + column, 40 + column]
-    } else {
-        [8 + column, 24 + column, 32 + column]
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Event {
     Control { number: u8, value: u8 },
@@ -197,11 +186,16 @@ fn raw(value: f32) -> u8 {
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Feedback {
     pub knobs: [Option<u8>; KNOBS],
-    leds: [Option<bool>; LED_PADS.len()],
+    leds: [Option<bool>; LED_NOTES.len()],
     /// Where the unit said a knob was before the last ring write, and when (ms).
     before: [Option<(u8, u64)>; KNOBS],
 }
 impl Feedback {
+    /// The unit drives a pad LED itself while the pad is held and switches it off on
+    /// release, whatever it was told before. After any pad event the LEDs are sent again.
+    pub fn refresh_leds(&mut self) {
+        self.leds = Default::default();
+    }
     /// A knob reported `raw`. Returns the value it now stands for: the previous value
     /// moved by `KNOB_STEP` per raw step. `update` then writes that value back, so the
     /// unit and the ring jump with it. A report that was already on its way when the
@@ -260,14 +254,9 @@ impl Feedback {
         for (index, on) in lit.into_iter().enumerate() {
             if self.leds[index] != Some(on) {
                 self.leds[index] = Some(on);
-                let (bottom, column) = LED_PADS[index];
                 let velocity = if on { LED_ON } else { 0 };
-                for note in led_notes(bottom, column) {
-                    out.push(([0x90 | channel, note, velocity], None));
-                    if channel != 0 {
-                        out.push(([0x90, note, velocity], None));
-                    }
-                }
+                out.push(([0x90 | channel, LED_NOTES[index], velocity], None));
+                out.push(([0x90 | channel, LED_NOTES[index] + LAYER_B_LED, velocity], None));
             }
         }
         out
@@ -368,7 +357,7 @@ mod tests {
     fn feedback_writes_only_what_changed() {
         let mut state = State::new(1);
         let mut feedback = Feedback::default();
-        assert_eq!(feedback.update(&state, 10).len(), 6 + 8 + 4 * 6);
+        assert_eq!(feedback.update(&state, 10).len(), 6 + 8 + 4 * 2);
         assert!(feedback.update(&state, 10).is_empty());
         state.apply(Command::SetOpacity { opacity: 1.0 }).unwrap();
         // Knobs 2 and 3 both show the shader opacity.
@@ -381,11 +370,15 @@ mod tests {
         state.apply(Command::SetVideoOpacity { opacity: 64.0 / 127.0 }).unwrap();
         assert!(feedback.update(&state, 10).is_empty());
         state.apply(Command::Blackout { enabled: true }).unwrap();
-        let lit = feedback.update(&state, 10);
-        assert_eq!(lit.len(), 6);
-        for message in [[0x9a, 7, 1], [0x90, 7, 1], [0x9a, 23, 1], [0x90, 23, 1], [0x9a, 47, 1]] {
-            assert!(lit.contains(&(message, None)), "{message:?}");
-        }
+        assert_eq!(
+            feedback.update(&state, 10),
+            vec![([0x9a, 23, 1], None), ([0x9a, 47, 1], None)]
+        );
+        // Releasing a pad makes the unit clear its LED, so all four are sent again.
+        feedback.refresh_leds();
+        let again = feedback.update(&state, 10);
+        assert_eq!(again.len(), 8);
+        assert!(again.contains(&([0x9a, 23, 1], None)) && again.contains(&([0x9a, 8, 0], None)));
         // Layer B: a macro knob moves its own ring only, and its click restores the default.
         apply(&mut state, Event::Control { number: 18, value: 127 });
         apply(&mut state, Event::Control { number: 11, value: 127 });
