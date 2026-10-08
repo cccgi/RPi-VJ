@@ -27,6 +27,9 @@ pub struct Shader {
     /// that does not parse or validate disables this shader only, never the show.
     #[serde(default, skip_serializing_if = "crate::texture::Bindings::is_empty")]
     pub channels: crate::texture::Bindings,
+    /// Picture for this shader's Stream Deck key; relative to the manifest.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thumbnail: Option<PathBuf>,
 }
 /// Allowed shader render tiers. Width is always derived at 16:9.
 pub const RENDER_HEIGHTS: [u32; 4] = [1080, 720, 540, 360];
@@ -137,6 +140,13 @@ impl Show {
                 show.warnings
                     .push(format!("missing shader: {}", shader.path.display()));
             }
+            if let Some(thumb) = &mut shader.thumbnail {
+                *thumb = base.join(&*thumb);
+                if !thumb.is_file() {
+                    show.warnings
+                        .push(format!("missing thumbnail: {}", thumb.display()));
+                }
+            }
             if let Some(error) = &shader.channels.error {
                 show.warnings.push(format!(
                     "shader {} disabled: invalid channel bindings: {error}",
@@ -190,7 +200,7 @@ mod tests {
             Show::load(&Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/legacy-show.json"))
                 .unwrap();
         assert_eq!(s.pages.len(), 9);
-        assert_eq!(s.shaders.len(), 18);
+        assert_eq!(s.shaders.len(), 15);
         let state = State::from_show(&s);
         assert!(state.key_in_show(&s, 24).is_some());
         assert!(state.key_in_show(&s, 31).is_some());

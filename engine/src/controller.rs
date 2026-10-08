@@ -2,20 +2,21 @@
 //! Input is polled between JPEG packets; decoding/encoding never runs on the HID thread.
 use crate::{
     control::{Command, State},
+    keyface,
     show::Show,
     surface::{self, KeyDescriptor},
 };
 use anyhow::{ensure, Result};
 use crossbeam_channel::{bounded, Receiver, Sender};
-use font8x8::UnicodeFonts;
 use hidapi::{HidApi, HidDevice};
-use image::{Rgb, RgbImage};
 use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
     sync::{
         atomic::{AtomicBool, AtomicU64, Ordering},
         Arc,
     },
-    time::Duration,
+    time::{Duration, SystemTime},
 };
 
 struct View {
@@ -72,6 +73,7 @@ impl Deck {
         std::thread::Builder::new()
             .name("deck-images".into())
             .spawn(move || {
+                let mut painter = Painter::default();
                 while !image_health.stopping.load(Ordering::Acquire) {
                     image_health.images_progress.fetch_add(1, Ordering::Relaxed);
                     let view = match updates.recv_timeout(Duration::from_millis(100)) {
@@ -79,7 +81,7 @@ impl Deck {
                         Err(crossbeam_channel::RecvTimeoutError::Timeout) => continue,
                         Err(_) => break,
                     };
-                    match prepare(view) {
+                    match prepare(view, &mut painter) {
                         Ok(page) => {
                             let _ = old_pages.try_recv();
                             let _ = images.try_send(page);
@@ -269,96 +271,95 @@ fn image_packet(key: usize, jpeg: &[u8], offset: usize) -> Result<([u8; 1024], u
     packet[8..8 + count].copy_from_slice(&jpeg[offset..next]);
     Ok((packet, next, last))
 }
-fn prepare(view: View) -> Result<Page> {
-    ensure!(view.keys.len() == 32, "surface must contain 32 keys");
-    let mut keys = Vec::with_capacity(32);
-    for descriptor in view.keys {
-        let mut canvas = RgbImage::from_pixel(96, 96, Rgb(descriptor.color));
-        if let Some(path) = descriptor.thumbnail.as_deref() {
-            // Limit compressed bytes, dimensions and decoder allocations independently.
-            if std::fs::metadata(path).is_ok_and(|m| m.is_file() && m.len() <= 4 * 1024 * 1024) {
-                if let Ok(mut reader) = image::ImageReader::open(path) {
-                    let mut limits = image::Limits::default();
-                    limits.max_image_width = Some(2048);
-                    limits.max_image_height = Some(2048);
-                    limits.max_alloc = Some(32 * 1024 * 1024);
-                    reader.limits(limits);
-                    if let Ok(decoded) = reader.decode() {
-                        let thumb = decoded
-                            .resize_exact(88, 64, image::imageops::FilterType::Triangle)
-                            .to_rgb8();
-                        image::imageops::replace(&mut canvas, &thumb, 4, 4);
-                    }
-                }
+/// When a thumbnail file was read, and what it decoded to (`None`: unusable).
+type Thumbnail = (u64, Option<SystemTime>, Option<Vec<u8>>);
+/// Turns key descriptors into the JPEGs the XL displays. Key faces are drawn by
+/// `keyface`; this adds only file and codec work, and involves no HID.
+#[derive(Default)]
+pub struct Painter {
+    /// Decoded thumbnails; a repaint of a clip page would otherwise decode up to 28 files.
+    thumbnails: HashMap<PathBuf, Thumbnail>,
+}
+impl Painter {
+    /// One JPEG per key, already rotated for the device.
+    pub fn page(&mut self, keys: &[KeyDescriptor], renderer_online: bool) -> Result<Vec<Vec<u8>>> {
+        ensure!(keys.len() == 32, "surface must contain 32 keys");
+        for key in keys {
+            if let Some(path) = key.thumbnail.as_deref() {
+                self.load(path);
             }
         }
-        let label = descriptor.label;
-        if label.starts_with('#') {
-            draw_large_index(&mut canvas, &label);
-        } else {
-            draw_text(&mut canvas, &label, 72, 20);
-        }
-        if !view.renderer_online {
-            // Preserve navigation and emergency bindings during renderer recovery.
-            for y in 0..10 {
-                for x in 0..96 {
-                    canvas.put_pixel(x, y, Rgb([160, 60, 0]));
-                }
-            }
-            draw_text(&mut canvas, "OFFLINE", 1, 7);
-        }
-        let canvas = image::imageops::rotate180(&canvas);
-        let mut jpeg = Vec::new();
-        image::codecs::jpeg::JpegEncoder::new_with_quality(&mut jpeg, 85).encode_image(&canvas)?;
-        keys.push(Key {
-            jpeg,
-            command: descriptor.command,
-        });
+        let thumbnails: Vec<Option<&[u8]>> = keys
+            .iter()
+            .map(|key| self.thumbnails.get(key.thumbnail.as_deref()?)?.2.as_deref())
+            .collect();
+        keyface::page(keys, &thumbnails, renderer_online)
+            .iter()
+            .map(|canvas| {
+                let size = keyface::SIZE as u32;
+                let mut jpeg = Vec::new();
+                image::codecs::jpeg::JpegEncoder::new_with_quality(&mut jpeg, 85).encode(
+                    &canvas.rotated(),
+                    size,
+                    size,
+                    image::ExtendedColorType::Rgb8,
+                )?;
+                Ok(jpeg)
+            })
+            .collect()
     }
+    fn load(&mut self, path: &Path) {
+        // Limit compressed bytes, dimensions and decoder allocations independently.
+        let Some(meta) = std::fs::metadata(path)
+            .ok()
+            .filter(|m| m.is_file() && m.len() <= 4 * 1024 * 1024)
+        else {
+            self.thumbnails.remove(path);
+            return;
+        };
+        let stamp = (meta.len(), meta.modified().ok());
+        if self
+            .thumbnails
+            .get(path)
+            .is_some_and(|(len, modified, _)| (*len, *modified) == stamp)
+        {
+            return;
+        }
+        let decoded = image::ImageReader::open(path).ok().and_then(|mut reader| {
+            let mut limits = image::Limits::default();
+            limits.max_image_width = Some(2048);
+            limits.max_image_height = Some(2048);
+            limits.max_alloc = Some(32 * 1024 * 1024);
+            reader.limits(limits);
+            // Cover the picture area without distorting the frame.
+            let thumb = reader.decode().ok()?.resize_to_fill(
+                keyface::THUMB_WIDTH as u32,
+                keyface::THUMB_HEIGHT as u32,
+                image::imageops::FilterType::Triangle,
+            );
+            Some(thumb.to_rgb8().into_raw())
+        });
+        // A show holds at most 4096 clips; this only guards against path churn.
+        if self.thumbnails.len() >= 1024 {
+            self.thumbnails.clear();
+        }
+        self.thumbnails
+            .insert(path.to_path_buf(), (stamp.0, stamp.1, decoded));
+    }
+}
+fn prepare(view: View, painter: &mut Painter) -> Result<Page> {
+    let jpegs = painter.page(&view.keys, view.renderer_online)?;
     Ok(Page {
         revision: view.revision,
-        keys,
+        keys: jpegs
+            .into_iter()
+            .zip(&view.keys)
+            .map(|(jpeg, descriptor)| Key {
+                jpeg,
+                command: descriptor.command,
+            })
+            .collect(),
     })
-}
-fn draw_large_index(canvas: &mut RgbImage, text: &str) {
-    let scale = 3_u32;
-    let width = text.chars().count() as u32 * 8 * scale;
-    let left = (96_u32.saturating_sub(width)) / 2;
-    let top = 36;
-    for (index, character) in text.chars().enumerate() {
-        if let Some(glyph) = font8x8::BASIC_FONTS.get(character) {
-            for (y, bits) in glyph.iter().enumerate() {
-                for x in 0..8 {
-                    if bits & (1 << x) != 0 {
-                        for dy in 0..scale {
-                            for dx in 0..scale {
-                                let px = left + index as u32 * 8 * scale + x * scale + dx;
-                                let py = top + y as u32 * scale + dy;
-                                if px < 96 && py < 96 { canvas.put_pixel(px, py, Rgb([255, 255, 255])); }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-fn draw_text(canvas: &mut RgbImage, text: &str, top: u32, max: usize) {
-    for (index, character) in text.to_uppercase().chars().take(max).enumerate() {
-        if let Some(glyph) = font8x8::BASIC_FONTS.get(character) {
-            for (y, bits) in glyph.iter().enumerate() {
-                for x in 0..8 {
-                    if bits & (1 << x) != 0 {
-                        canvas.put_pixel(
-                            8 + (index % 10) as u32 * 8 + x,
-                            top + (index / 10) as u32 * 10 + y as u32,
-                            Rgb([255, 255, 255]),
-                        );
-                    }
-                }
-            }
-        }
-    }
 }
 #[cfg(test)]
 mod tests {

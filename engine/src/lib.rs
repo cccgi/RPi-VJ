@@ -8,6 +8,7 @@ pub mod controller;
 #[cfg(feature = "controller")]
 pub mod controller_runtime;
 pub mod ipc;
+pub mod keyface;
 #[cfg(feature = "renderer")]
 pub mod native;
 pub mod notify;
