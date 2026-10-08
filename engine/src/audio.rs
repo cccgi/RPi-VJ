@@ -92,6 +92,79 @@ pub fn idle_audio(frame: &AudioFrame, time: f32, amount: f32) -> AudioFrame {
     }
     out
 }
+/// Shortest time between two section changes, seconds.
+pub const SECTION_MIN_GAP: f32 = 12.0;
+/// A section that never changes still ends after this long.
+pub const SECTION_MAX_LENGTH: f32 = 60.0;
+/// Loudness or one band must rise by this factor against the seconds before, or fall by its
+/// inverse, to count as a new section.
+pub const SECTION_JUMP: f32 = 1.5;
+/// Below this on every level there is no music, only the noise of the input.
+const SECTION_SILENCE: f32 = 0.04;
+/// Seconds of sound before levels are trusted, after a start or a silence.
+const SECTION_SETTLE: f32 = 4.0;
+/// Notices where a song changes character: a drop, a breakdown, a chorus, a new track.
+/// It follows loudness, bass and the two halves of the mids twice, over about a second
+/// and over about eight, and calls it a change when a short view leaves its long one by
+/// `SECTION_JUMP`. Mastered music often keeps loudness and bass level throughout, and
+/// only the mids show where a part enters or leaves. Sound
+/// returning after silence is a change too, and so is `SECTION_MAX_LENGTH` without one.
+#[derive(Clone, Debug, Default)]
+pub struct SectionDetector {
+    fast: [f32; 4],
+    slow: [f32; 4],
+    since_change: f32,
+    heard: f32,
+    quiet: f32,
+    fresh: bool,
+}
+impl SectionDetector {
+    /// Advance by `dt` seconds with the levels heard now; true when a new section begins.
+    pub fn tick(&mut self, dt: f32, audio: &AudioFrame) -> bool {
+        let now = [audio.volume, (audio.sub + audio.bass) * 0.5, audio.low_mid, audio.high_mid].map(|v| v.max(0.0));
+        self.since_change += dt;
+        if now.iter().all(|v| *v < SECTION_SILENCE) {
+            self.quiet += dt;
+            if self.quiet > 2.0 {
+                self.fresh = self.heard > 0.0 || self.fresh;
+                self.heard = 0.0;
+            }
+            if self.quiet > 0.5 {
+                return false;
+            }
+        } else {
+            self.quiet = 0.0;
+        }
+        if self.heard == 0.0 {
+            self.fast = now;
+        }
+        self.heard += dt;
+        let (short, long) = (1.0 - (-dt / 1.2).exp(), 1.0 - (-dt / 8.0).exp());
+        // While levels settle, the long view just follows the short one.
+        let settling = self.heard < SECTION_SETTLE || self.since_change < 3.0;
+        for ((fast, slow), now) in self.fast.iter_mut().zip(&mut self.slow).zip(now) {
+            *fast += (now - *fast) * short;
+            *slow = if settling { *fast } else { *slow + (*fast - *slow) * long };
+        }
+        if self.since_change < SECTION_MIN_GAP {
+            return false;
+        }
+        let jumped = (0..4).any(|index| {
+            let ratio = (self.fast[index] + 0.05) / (self.slow[index] + 0.05);
+            !(1.0 / SECTION_JUMP..=SECTION_JUMP).contains(&ratio)
+        });
+        let new_track = self.fresh && self.heard > 0.5;
+        // An overdue change waits for a beat, but not for long.
+        let overdue = self.since_change > SECTION_MAX_LENGTH
+            && (audio.onset > 0.5 || self.since_change > SECTION_MAX_LENGTH + 2.0);
+        let change = new_track || (self.heard >= SECTION_SETTLE && (jumped || overdue));
+        if change {
+            self.since_change = 0.0;
+            self.fresh = false;
+        }
+        change
+    }
+}
 impl Default for AudioFrame {
     fn default() -> Self {
         Self {
@@ -401,6 +474,54 @@ mod tests {
                 clock.tick(dt, bpm, &audio)
             })
             .collect()
+    }
+    /// Times at which the detector reports a change, for `(seconds, volume, bass, mids)` parts
+    /// played one after another with a kick on every beat at 128 BPM.
+    fn section_changes(parts: &[(f32, f32, f32, f32)]) -> Vec<f32> {
+        let (dt, beat) = (1.0 / 60.0, 60.0 / 128.0);
+        let mut detector = SectionDetector::default();
+        let (mut time, mut changes) = (0.0f32, Vec::new());
+        for &(length, volume, bass, mids) in parts {
+            let end = time + length;
+            while time < end {
+                let kick = (1.0 - (time / beat).fract()).powi(3);
+                let audio = AudioFrame {
+                    volume: volume * (0.6 + 0.4 * kick),
+                    bass: bass * kick,
+                    sub: bass * kick,
+                    low_mid: mids,
+                    high_mid: mids,
+                    onset: if (time / beat).fract() < dt / beat { 1.0 } else { 0.0 },
+                    ..AudioFrame::default()
+                };
+                if detector.tick(dt, &audio) {
+                    changes.push(time);
+                }
+                time += dt;
+            }
+        }
+        changes
+    }
+    #[test]
+    fn a_section_change_is_a_clear_move_in_loudness_or_bass() {
+        // Verse into a drop, a breakdown that only loses the bass, then one where only
+        // the mids thin out.
+        let changes = section_changes(&[(20.0, 0.3, 0.3, 0.4), (20.0, 0.8, 0.9, 0.4), (20.0, 0.8, 0.05, 0.4), (20.0, 0.8, 0.05, 0.18)]);
+        assert_eq!(changes.len(), 3, "{changes:?}");
+        for (change, start) in changes.iter().zip([20.0, 40.0, 60.0]) {
+            assert!((start..start + 2.5).contains(change), "{changes:?}");
+        }
+        // A steady groove is one section until it has run too long.
+        let changes = section_changes(&[(SECTION_MAX_LENGTH + 10.0, 0.6, 0.7, 0.4)]);
+        assert_eq!(changes.len(), 1, "{changes:?}");
+        assert!(changes[0] > SECTION_MAX_LENGTH, "{changes:?}");
+    }
+    #[test]
+    fn silence_changes_nothing_and_a_new_track_starts_a_section() {
+        // The silence is the hiss of an open input, not zero.
+        let changes = section_changes(&[(15.0, 0.6, 0.7, 0.4), (90.0, 0.02, 0.03, 0.01), (15.0, 0.6, 0.7, 0.4)]);
+        assert_eq!(changes.len(), 1, "{changes:?}");
+        assert!((105.0..106.5).contains(&changes[0]), "{changes:?}");
     }
     #[test]
     fn beat_clock_locks_onto_kicks_at_the_set_tempo_from_any_phase() {

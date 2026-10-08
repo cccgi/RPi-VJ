@@ -194,6 +194,15 @@ pub fn page(show: &Show, state: &State) -> Vec<KeyDescriptor> {
         keys[31].state = KeyState::Active;
         keys[31].caption = "ON".into();
     }
+    // Auto shuffle takes the next system key, on every page that leaves it free.
+    if keys[26].kind == KeyKind::Empty {
+        let color = if state.auto_shuffle { [30, 170, 65] } else { [70, 50, 120] };
+        keys[26] = key("SHUFFLE", Some(Command::ToggleAutoShuffle), color);
+        if state.auto_shuffle {
+            keys[26].state = KeyState::Active;
+            keys[26].caption = "ON".into();
+        }
+    }
     keys
 }
 #[cfg(test)]
@@ -231,6 +240,24 @@ mod tests {
         let keys = page(&show, &state);
         assert_eq!(keys[0].command, Some(Command::TriggerShader { shader: 0 }));
         assert_eq!(keys[0].state, KeyState::Idle);
+    }
+    #[test]
+    fn the_shuffle_key_toggles_and_leaves_a_bound_key_alone() {
+        let show: Show = serde_json::from_str(
+            r#"{"version":2,"audio_device":null,"pages":[
+                {"name":"A","bindings":[]},
+                {"name":"B","bindings":[{"key":26,"label":"MINE","command":{"type":"ToggleHud"}}]}]}"#,
+        )
+        .unwrap();
+        let mut state = State::from_show(&show);
+        let keys = page(&show, &state);
+        assert_eq!(keys[26].command, Some(Command::ToggleAutoShuffle));
+        assert_eq!(keys[26].state, KeyState::Idle);
+        state.apply(Command::ToggleAutoShuffle).unwrap();
+        let keys = page(&show, &state);
+        assert_eq!((keys[26].state, keys[26].caption.as_str()), (KeyState::Active, "ON"));
+        state.page = 1;
+        assert_eq!(page(&show, &state)[26].command, Some(Command::ToggleHud));
     }
     #[test]
     fn navigation_keys_name_the_page_they_lead_to() {

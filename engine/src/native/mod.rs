@@ -83,6 +83,7 @@ pub fn run(
     let mut audio = AudioFrame::default();
     let (mut idle_clock, mut idle_tick, mut idle) = (Instant::now(), Instant::now(), 0.0f32);
     let mut last_audio = Instant::now();
+    let (mut sections, mut section_count) = (crate::audio::SectionDetector::default(), 0u32);
     let mut events = sdl.event_pump().map_err(anyhow::Error::msg)?;
     let mut state = State::from_show(&show);
     if !link.external() {
@@ -207,6 +208,9 @@ pub fn run(
         idle = (idle + if quiet { idle_dt * 0.4 } else { -idle_dt * 4.0 }).clamp(0.0, 1.0);
         renderer.geo_idle = idle;
         let heard = audio.clone();
+        if sections.tick(idle_dt, &heard) {
+            section_count = section_count.wrapping_add(1);
+        }
         let moving = crate::audio::idle_audio(&heard, idle_clock.elapsed().as_secs_f32(), idle);
         let mut candidate_error = None;
         for (index, player) in players.iter_mut().enumerate() {
@@ -368,6 +372,7 @@ pub fn run(
                 playing: playing.clone(),
                 failed: failed.clone(),
                 shader_errors: shader_errors.clone(),
+                sections: section_count,
             });
             report_time = Instant::now();
         }
@@ -380,7 +385,7 @@ pub fn run(
                 .as_ref()
                 .map_or(0, |(_, _, n)| n.load(Ordering::Relaxed));
             eprintln!(
-                "renderer frames={frames} late={late_frames} audio_dropped={dropped} warmed={warmed:?} bands={:.2?} macros={:.2?} gain={:.2}",
+                "renderer frames={frames} late={late_frames} audio_dropped={dropped} warmed={warmed:?} bands={:.2?} macros={:.2?} gain={:.2} sections={section_count}",
                 [heard.bass, heard.low_mid, heard.mid, heard.treble, heard.onset],
                 state.macros,
                 state.input_gain

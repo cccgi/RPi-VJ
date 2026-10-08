@@ -119,6 +119,8 @@ pub fn run(show: Show, path: &Path) -> Result<()> {
     let session = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos() as u64
         ^ u64::from(std::process::id());
     let deck = Deck::start(Arc::clone(&show))?;
+    let mut bag = crate::control::ShuffleBag::new(session);
+    let (mut sections_seen, mut shuffling) = (None, state.auto_shuffle);
     let midi = crate::midi::start();
     let mut midi_channel = crate::xtouch::CHANNEL;
     let mut midi_epoch = 0;
@@ -218,6 +220,7 @@ pub fn run(show: Show, path: &Path) -> Result<()> {
             }
         }
         let mut disconnect = false;
+        let mut new_section = false;
         if let Some(connection) = &mut peer {
             match connection.poll() {
                 Ok(messages) => {
@@ -226,6 +229,7 @@ pub fn run(show: Show, path: &Path) -> Result<()> {
                             session: source,
                             frame,
                             shader_errors,
+                            sections,
                             ..
                         } = &message
                         {
@@ -236,6 +240,7 @@ pub fn run(show: Show, path: &Path) -> Result<()> {
                                 report_time = Instant::now();
                                 last_frame = Some(*frame);
                             }
+                            new_section |= sections_seen.replace(*sections).is_some_and(|seen| seen != *sections);
                             if !online {
                                 online = true;
                                 dirty = true;
@@ -260,6 +265,7 @@ pub fn run(show: Show, path: &Path) -> Result<()> {
         }
         if disconnect {
             peer = None;
+            sections_seen = None;
             if online {
                 online = false;
                 dirty = true;
@@ -272,6 +278,18 @@ pub fn run(show: Show, path: &Path) -> Result<()> {
                         .map_err(anyhow::Error::msg)?;
                 }
                 dirty = true;
+            }
+        }
+        // Auto shuffle deals the next shader at each new section of the music, and at once
+        // when it is switched on with no shader showing. A shader the operator switched
+        // off stays off.
+        let switched_on = state.auto_shuffle && !shuffling;
+        shuffling = state.auto_shuffle;
+        if state.auto_shuffle && !state.blackout && (if state.shader { new_section } else { switched_on }) {
+            if let Some(shader) = bag.next(&state) {
+                if state.apply(Command::TriggerShader { shader }).is_ok() {
+                    dirty = true;
+                }
             }
         }
         if dirty {
@@ -338,6 +356,7 @@ mod tests {
             }),
             failed: None,
             shader_errors: Vec::new(),
+            sections: 0,
         };
         assert!(!apply_report(&mut state, 6, &report));
         assert_eq!(state.playing, None);

@@ -42,6 +42,8 @@ pub enum Command {
     SetInputGain { gain: f32 },
     SetSpeed { speed: f64 },
     ToggleLayerOrder,
+    /// Change shader by itself whenever the music moves to a new section.
+    ToggleAutoShuffle,
     /// One of the eight performance macros (X-Touch layer B knobs), 0..=1.
     SetMacro { index: u8, value: f32 },
     CrateShader { crate_id: u8 },
@@ -86,6 +88,8 @@ pub struct State {
     #[serde(default = "default_macros")]
     pub macros: [f32; 8],
     #[serde(default)]
+    pub auto_shuffle: bool,
+    #[serde(default)]
     pub failed_shaders: Vec<usize>,
     #[serde(default)]
     pub shader_crates: Vec<Option<u8>>,
@@ -94,6 +98,37 @@ pub struct State {
 }
 fn one() -> f32 {
     1.0
+}
+/// Deals every shader once, in random order, before any comes round again.
+#[derive(Debug, Clone)]
+pub struct ShuffleBag {
+    left: Vec<usize>,
+    seed: u64,
+}
+impl ShuffleBag {
+    pub fn new(seed: u64) -> Self {
+        Self { left: Vec::new(), seed: seed | 1 }
+    }
+    /// The next shader to show: never the live one, nor one that failed or was deleted.
+    pub fn next(&mut self, state: &State) -> Option<usize> {
+        for _ in 0..2 {
+            while !self.left.is_empty() {
+                self.seed ^= self.seed << 13;
+                self.seed ^= self.seed >> 7;
+                self.seed ^= self.seed << 17;
+                let shader = self.left.swap_remove((self.seed % self.left.len() as u64) as usize);
+                if shader < state.shaders
+                    && Some(shader) != state.selected_shader
+                    && !state.failed_shaders.contains(&shader)
+                    && !state.deleted_shaders.get(shader).copied().unwrap_or(false)
+                {
+                    return Some(shader);
+                }
+            }
+            self.left = (0..state.shaders).collect();
+        }
+        None
+    }
 }
 pub const MAX_INPUT_GAIN: f32 = 4.0;
 pub const MACRO_DEFAULTS: [f32; 8] = [0.0, 0.0, 0.0, 0.0, 0.5, 0.5, 0.5, 0.0];
@@ -130,6 +165,7 @@ impl State {
             input_gain: 1.0,
             invert_order: false,
             macros: MACRO_DEFAULTS,
+            auto_shuffle: false,
             failed_shaders: Vec::new(),
             shader_crates: Vec::new(),
             deleted_shaders: Vec::new(),
@@ -302,6 +338,7 @@ impl State {
                 self.speed = speed.clamp(0.25, 4.0);
             }
             Command::ToggleLayerOrder => self.invert_order = !self.invert_order,
+            Command::ToggleAutoShuffle => self.auto_shuffle = !self.auto_shuffle,
             Command::SetMacro { index, value } => {
                 unit(value)?;
                 *self.macros.get_mut(usize::from(index)).ok_or("unknown macro")? = value;
@@ -388,6 +425,31 @@ impl State {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn the_shuffle_bag_deals_every_usable_shader_before_repeating() {
+        let mut state = State::new(0);
+        state.shaders = 6;
+        state.deleted_shaders = vec![false, false, false, false, false, true];
+        state.failed_shaders = vec![4];
+        let mut bag = ShuffleBag::new(0);
+        let mut round = Vec::new();
+        for _ in 0..4 {
+            let shader = bag.next(&state).unwrap();
+            state.apply(Command::TriggerShader { shader }).unwrap();
+            round.push(shader);
+        }
+        round.sort_unstable();
+        assert_eq!(round, [0, 1, 2, 3]);
+        // The next round never repeats the shader that is showing.
+        for _ in 0..20 {
+            let shader = bag.next(&state).unwrap();
+            assert!(shader < 4 && Some(shader) != state.selected_shader);
+            state.apply(Command::TriggerShader { shader }).unwrap();
+        }
+        state.shaders = 1;
+        state.selected_shader = Some(0);
+        assert_eq!(ShuffleBag::new(1).next(&state), None);
+    }
     #[test]
     fn wraps_without_changing_playback() {
         let mut s = State::new(60);

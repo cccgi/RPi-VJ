@@ -40,6 +40,9 @@ pub enum Message {
         playing: Option<Playing>,
         failed: Option<Failure>,
         shader_errors: Vec<ShaderFailure>,
+        /// Song sections the renderer has counted since it started.
+        #[serde(default)]
+        sections: u32,
     },
 }
 #[derive(Serialize, Deserialize)]
@@ -195,6 +198,7 @@ mod tests {
             playing: None,
             failed: None,
             shader_errors: Vec::new(),
+            sections: 0,
         }
     }
     #[test]
