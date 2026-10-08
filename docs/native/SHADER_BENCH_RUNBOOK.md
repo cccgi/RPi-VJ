@@ -22,7 +22,7 @@ section of `engine/README.md`.
 ## 2. Rules
 
 1. **The benchmark stops the live show.** The Pi's HDMI output goes dark for
-   the whole run (about two hours for 1,000 entries). Ask the owner before you
+   the whole run (about an hour for 500 entries). Ask the owner before you
    start the run in step 6.3, and do not start it if they are using the Pi.
 2. Never write the Pi's password into any file in this repository, including
    scripts, logs and this document. Get it from the owner. Keep helper scripts
@@ -71,8 +71,8 @@ Terms:
 - **Variant**: a converted copy. `base` is the shader as converted. `tex` is
   `base` with a texture fix, where one applies. `lite` lowers quality settings.
   `react` and `react_lite` are the same shaders with the new audio-reactive
-  wrapper. The owner has not yet decided which wrapper the bank will use, so
-  measure both `base` and `react`.
+  wrapper. The owner compared both on 2026-10-07 and kept the original
+  wrapper, so measure `base` (and `tex`) only.
 - **Tier**: the height the shader is drawn at: 1080 or 720. The owner does not
   use shaders below 720, so lower tiers are not measured.
 - **Verdict** per tier, from the 95th-percentile frame time: SOLID up to 10 ms,
@@ -111,8 +111,8 @@ written as `$RUN` below: `export RUN=new-2026-10-07`.
 
 **For the 2026-10-07 batch, steps 5.1, 5.2 and 5.4 are already done.** The
 catalogue was refreshed, the variants were written, and the manifest was built
-at `target/shader-bank/staging/new-2026-10-07/` with 1,064 entries (532 shaders,
-`base` and `react`). Do step 5.3, then run step 5.4 again only if 5.3 fetched
+at `target/shader-bank/staging/new-2026-10-07/` with 532 entries (532 shaders,
+`base`). Do step 5.3, then run step 5.4 again only if 5.3 fetched
 new files, then go to section 6. For a later batch, do all four.
 
 ### 5.1 Refresh the catalogue
@@ -156,7 +156,7 @@ reported as "needs texture"; they do not enter the show. Details:
 MSYS_NO_PATHCONV=1 python engine/tools/shader_bank/make_manifest.py --name $RUN \
   --class selfcontained --class needs_texture \
   --ids-file target/shader-bank/todo-$RUN.txt \
-  --variant base --variant tex --variant react \
+  --variant base --variant tex \
   --pi-out /var/lib/rpi-vj-bench/results-$RUN.jsonl \
   --pi-thumb-dir /var/lib/rpi-vj-bench/thumbs-$RUN
 ```
@@ -216,8 +216,8 @@ it ends, however it ends.
 ssh rpi@rpi-vj3.local "systemctl is-active rpi-vj-bench; tail -3 /var/lib/rpi-vj-bench/supervisor.log; grep -c '\"result\"' /var/lib/rpi-vj-bench/results-$RUN.jsonl"
 ```
 
-Check every 10 to 15 minutes. Expect 3 to 9 seconds per entry, so 1,064 entries
-take one and a half to two and a half hours. Do not upload, build or run
+Check every 10 to 15 minutes. Expect 3 to 9 seconds per entry, so 532 entries
+take about an hour. Do not upload, build or run
 anything else on the Pi while it runs: that distorts the measurements.
 
 Normal: lines with status `too_slow`, `gpu_reset`, `hang`, `crash`,
@@ -274,18 +274,6 @@ This rewrites `docs/native/SHADER_BENCH_RESULTS.md` and
 key pictures, textures, `show.json`) to `target/shader-bank/show-720-$RUN/`.
 It prints the counts per outcome and per tier.
 
-Run it a second time for the new wrapper, to separate output paths, so the
-owner can compare:
-
-```sh
-python engine/tools/shader_bank/report.py $R/wp-j-proof.jsonl $R/$RUN/results-$RUN.jsonl \
-  --variants react,react_lite --min-tier 720 --require-worst-case \
-  --thumbs-dir $R/wp-j-thumbs --thumbs-dir $R/$RUN/thumbs-$RUN \
-  --show-dir target/shader-bank/react-$RUN/show \
-  --doc target/shader-bank/react-$RUN/results.md \
-  --qualified target/shader-bank/react-$RUN/qualified.json
-```
-
 ## 8. Check the output before you report
 
 1. In `qualified.json`, `summary.not_measured` counts shaders with no result.
@@ -308,8 +296,7 @@ A short written report with:
 - run name, date, start and end time, number of entries, and whether the run
   completed in one go or had to be resumed;
 - counts: qualified at 1080p, qualified at 720p, too heavy, suspect, failed,
-  needs texture, for the old wrapper and for the `react` wrapper;
-- the ids that qualify with one wrapper but not the other;
+  needs texture;
 - the list of dangerous shaders (section 8, item 4) with their status;
 - the list of suspect shaders (section 8, item 3);
 - texture inputs that could not be fetched;
@@ -317,6 +304,6 @@ A short written report with:
 - anything that did not match this document.
 
 Files you leave behind: `target/shader-bank/results/$RUN/`,
-`target/shader-bank/show-720-$RUN/`, `target/shader-bank/react-$RUN/`, the
+`target/shader-bank/show-720-$RUN/`, the
 regenerated `docs/native/SHADER_BENCH_RESULTS.md` and `qualified.json`.
 Do not deploy the candidate show and do not commit.
