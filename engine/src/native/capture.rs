@@ -13,6 +13,32 @@ pub fn set_gain(gain: f32) {
     GAIN.store(gain.to_bits(), Ordering::Relaxed);
 }
 
+/// Sound card capture gain for the two kinds of source, in its 0.5 dB steps.
+const MIC_CAPTURE: u8 = 48;
+const LINE_CAPTURE: u8 = 12;
+/// Set the sound card's own input gain for a microphone or a line-level source. It acts
+/// ahead of the converter, where a line signal at microphone gain would clip. Runs in
+/// the background; the picture never waits for the mixer.
+pub fn set_line_level(device: &str, line: bool) {
+    let name = device.split(',').next().unwrap_or(device).trim().to_owned();
+    std::thread::spawn(move || {
+        let cards = std::fs::read_to_string("/proc/asound/cards").unwrap_or_default();
+        let card = cards.lines().find(|l| l.contains(&name)).and_then(|l| l.split_whitespace().next());
+        let Some(card) = card else {
+            eprintln!("input level: no sound card named {name}");
+            return;
+        };
+        let (label, value) = if line { ("line", LINE_CAPTURE) } else { ("mic", MIC_CAPTURE) };
+        let done = std::process::Command::new("amixer")
+            .args(["-q", "-c", card, "cset", "name=Mic Capture Volume", &value.to_string()])
+            .status();
+        match done {
+            Ok(status) if status.success() => eprintln!("input level: {label}, capture gain {value}"),
+            other => eprintln!("input level not set: {other:?}"),
+        }
+    });
+}
+
 pub struct Capture {
     samples: [f32; HOP * 2],
     used: usize,

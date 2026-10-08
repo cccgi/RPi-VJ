@@ -92,6 +92,73 @@ pub fn idle_audio(frame: &AudioFrame, time: f32, amount: f32) -> AudioFrame {
     }
     out
 }
+/// The ways shaders can follow the music, in the order the key steps through them.
+pub const REACT_MODES: [&str; 5] = ["PUMP", "GLIDE", "STEP", "RIDE", "TWIST"];
+/// Share of the zoom and of the turn in each pose that STEP walks through.
+const STEP_POSES: [(f32, f32); 4] = [(1.0, 0.2), (0.3, 1.0), (0.7, 0.5), (0.1, 0.8)];
+/// Reshapes the levels handed to the shaders, so one shader answers the music in
+/// several ways without being changed itself:
+/// - PUMP: the levels as heard; every kick shows.
+/// - GLIDE: slow followers and no hits; the picture swells and sinks with the energy.
+/// - STEP: each beat snaps to a new pose, which holds until the next beat.
+/// - RIDE: a steady travel in and out whose speed and depth follow the energy.
+/// - TWIST: bass and mids trade places, so kicks turn the picture and melody pumps it.
+#[derive(Clone, Debug, Default)]
+pub struct Reactor {
+    /// Followers of bass, mid, treble, volume, sub, low mid and high mid.
+    slow: [f32; 7],
+    held: [f32; 7],
+    shown: [f32; 7],
+    steps: usize,
+    since_beat: f32,
+    in_beat: bool,
+    phase: f32,
+}
+impl Reactor {
+    pub fn apply(&mut self, mode: u8, dt: f32, audio: &AudioFrame) -> AudioFrame {
+        let heard = [audio.bass, audio.mid, audio.treble, audio.volume, audio.sub, audio.low_mid, audio.high_mid];
+        for (slow, level) in self.slow.iter_mut().zip(heard) {
+            let seconds = if level > *slow { 0.5 } else { 1.5 };
+            *slow += (level - *slow) * (1.0 - (-dt / seconds).exp());
+        }
+        // A follower sits well under the peaks it follows; lift it to a comparable size.
+        let glide = self.slow.map(|v| (v * 1.6).min(1.0));
+        let beat = audio.onset > 0.4 && !self.in_beat;
+        self.in_beat = audio.onset > 0.4;
+        self.since_beat += dt;
+        if beat {
+            self.since_beat = 0.0;
+            self.steps += 1;
+            let (zoom, turn) = STEP_POSES[self.steps % STEP_POSES.len()];
+            let (low, middle) = ((glide[0] * 1.3 * zoom).min(1.0), (glide[1] * 1.3 * turn).min(1.0));
+            self.held = [low, middle, glide[2], glide[3], low, middle, middle];
+        } else if self.since_beat > 2.0 {
+            // No beat to step on: follow the energy instead of freezing.
+            self.held = glide;
+        }
+        for (shown, held) in self.shown.iter_mut().zip(self.held) {
+            *shown += (held - *shown) * (1.0 - (-dt / 0.05).exp());
+        }
+        let energy = glide[3].max(glide[0]);
+        self.phase = (self.phase + dt * (0.05 + 0.45 * energy)).rem_euclid(1000.0);
+        let levels = match mode {
+            1 => glide,
+            2 => self.shown,
+            3 => {
+                let depth = (0.3 + 0.9 * energy).min(1.0) * energy.min(0.1) * 10.0;
+                let wave = |rate: f32| (0.5 - 0.5 * (self.phase * rate * std::f32::consts::TAU).cos()) * depth;
+                let (low, middle) = (wave(1.0), wave(0.618));
+                [low, middle, glide[2], glide[3], low, middle, middle]
+            }
+            4 => [heard[1], (heard[0] + 0.5 * audio.onset).min(1.0), heard[2], heard[3], heard[5], heard[4], heard[0]],
+            _ => return audio.clone(),
+        };
+        let mut out = audio.clone();
+        [out.bass, out.mid, out.treble, out.volume, out.sub, out.low_mid, out.high_mid] = levels;
+        out.onset = 0.0;
+        out
+    }
+}
 /// Shortest time between two section changes, seconds.
 pub const SECTION_MIN_GAP: f32 = 12.0;
 /// A section that never changes still ends after this long.
@@ -474,6 +541,58 @@ mod tests {
                 clock.tick(dt, bpm, &audio)
             })
             .collect()
+    }
+    /// Each mode's bass over ten seconds of kicks at 128 BPM, with the onsets heard.
+    fn react(mode: u8) -> Vec<(f32, f32)> {
+        let (dt, beat) = (1.0 / 60.0, 60.0 / 128.0);
+        let mut reactor = Reactor::default();
+        (0..600)
+            .map(|frame| {
+                let since = (frame as f32 * dt / beat).fract();
+                let kick = (1.0 - since).powi(3);
+                let audio = AudioFrame {
+                    volume: 0.4 + 0.3 * kick,
+                    bass: 0.9 * kick,
+                    sub: 0.9 * kick,
+                    mid: 0.3,
+                    low_mid: 0.3,
+                    high_mid: 0.3,
+                    treble: 0.1,
+                    onset: (1.0 - since * 6.0).max(0.0),
+                    ..AudioFrame::default()
+                };
+                let out = reactor.apply(mode, dt, &audio);
+                for level in [out.bass, out.mid, out.treble, out.volume, out.sub, out.low_mid, out.high_mid] {
+                    assert!((0.0..=1.0).contains(&level), "mode {mode}: {level}");
+                }
+                (out.bass, out.onset)
+            })
+            .collect()
+    }
+    /// Largest move of the bass from one frame to the next, once settled.
+    fn roughest(run: &[(f32, f32)]) -> f32 {
+        run[300..].windows(2).map(|pair| (pair[1].0 - pair[0].0).abs()).fold(0.0, f32::max)
+    }
+    #[test]
+    fn react_modes_reshape_how_the_levels_move() {
+        let pump = react(0);
+        assert!(roughest(&pump) > 0.5 && pump.iter().any(|frame| frame.1 > 0.9));
+        // An unknown mode is the plain one.
+        assert_eq!(react(200), pump);
+        for mode in 1..REACT_MODES.len() as u8 {
+            let run = react(mode);
+            assert!(run.iter().all(|frame| frame.1 == 0.0), "mode {mode} passes hits on");
+            assert!(run[300..].iter().any(|frame| frame.0 > 0.15), "mode {mode} stays flat");
+        }
+        // GLIDE and RIDE have no jumps; TWIST moves the kick off the bass.
+        for mode in [1, 3, 4] {
+            assert!(roughest(&react(mode)) < 0.05, "mode {mode}: {}", roughest(&react(mode)));
+        }
+        // STEP holds its pose: most frames barely move, and the beats between them do.
+        let step = react(2);
+        let moves: Vec<f32> = step[300..].windows(2).map(|pair| (pair[1].0 - pair[0].0).abs()).collect();
+        let still = moves.iter().filter(|m| **m < 0.005).count();
+        assert!(still * 2 > moves.len() && roughest(&step) > 0.05, "{still} of {}", moves.len());
     }
     /// Times at which the detector reports a change, for `(seconds, volume, bass, mids)` parts
     /// played one after another with a kick on every beat at 128 BPM.

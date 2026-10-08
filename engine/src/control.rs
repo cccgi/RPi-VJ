@@ -44,6 +44,10 @@ pub enum Command {
     ToggleLayerOrder,
     /// Change shader by itself whenever the music moves to a new section.
     ToggleAutoShuffle,
+    /// Sound card input gain for a microphone or for a line-level source.
+    ToggleInputLevel,
+    /// Step to the next way of following the music (`audio::REACT_MODES`).
+    CycleReact,
     /// One of the eight performance macros (X-Touch layer B knobs), 0..=1.
     SetMacro { index: u8, value: f32 },
     CrateShader { crate_id: u8 },
@@ -89,6 +93,11 @@ pub struct State {
     pub macros: [f32; 8],
     #[serde(default)]
     pub auto_shuffle: bool,
+    #[serde(default)]
+    pub line_input: bool,
+    /// Index into `audio::REACT_MODES`.
+    #[serde(default)]
+    pub react: u8,
     #[serde(default)]
     pub failed_shaders: Vec<usize>,
     #[serde(default)]
@@ -166,6 +175,8 @@ impl State {
             invert_order: false,
             macros: MACRO_DEFAULTS,
             auto_shuffle: false,
+            line_input: false,
+            react: 0,
             failed_shaders: Vec::new(),
             shader_crates: Vec::new(),
             deleted_shaders: Vec::new(),
@@ -205,6 +216,7 @@ impl State {
             && self.selected_shader.is_none_or(|i| i < self.shaders)
             && self.video_effect <= 24
             && self.shader_effect <= 24
+            && usize::from(self.react) < crate::audio::REACT_MODES.len()
             && [
                 self.opacity,
                 self.video_opacity,
@@ -339,6 +351,8 @@ impl State {
             }
             Command::ToggleLayerOrder => self.invert_order = !self.invert_order,
             Command::ToggleAutoShuffle => self.auto_shuffle = !self.auto_shuffle,
+            Command::ToggleInputLevel => self.line_input = !self.line_input,
+            Command::CycleReact => self.react = (self.react + 1) % crate::audio::REACT_MODES.len() as u8,
             Command::SetMacro { index, value } => {
                 unit(value)?;
                 *self.macros.get_mut(usize::from(index)).ok_or("unknown macro")? = value;
@@ -377,6 +391,7 @@ impl State {
                 s.bpm = self.default_bpm;
                 // The input trim belongs to the venue, not to the look being reset.
                 s.input_gain = self.input_gain;
+                s.line_input = self.line_input;
                 s.generation = self.generation.wrapping_add(1);
                 *self = s;
             }

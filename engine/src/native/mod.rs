@@ -84,6 +84,7 @@ pub fn run(
     let (mut idle_clock, mut idle_tick, mut idle) = (Instant::now(), Instant::now(), 0.0f32);
     let mut last_audio = Instant::now();
     let (mut sections, mut section_count) = (crate::audio::SectionDetector::default(), 0u32);
+    let (mut reactor, mut line_applied) = (crate::audio::Reactor::default(), None);
     let mut events = sdl.event_pump().map_err(anyhow::Error::msg)?;
     let mut state = State::from_show(&show);
     if !link.external() {
@@ -163,6 +164,12 @@ pub fn run(
             }
         }
         capture::set_gain(state.input_gain);
+        if line_applied != Some(state.line_input) {
+            line_applied = Some(state.line_input);
+            if let Some(name) = show.audio_device.as_deref() {
+                capture::set_line_level(name, state.line_input);
+            }
+        }
         if state.speed != speed {
             speed = state.speed;
             let value = speed.to_string();
@@ -178,6 +185,8 @@ pub fn run(
                     Ok(device) => {
                         capture = Some(device);
                         last_audio = Instant::now();
+                        // A card that was plugged in again has forgotten its gain.
+                        line_applied = None;
                     }
                     Err(error) => eprintln!("audio unavailable: {error:#}"),
                 }
@@ -212,6 +221,7 @@ pub fn run(
             section_count = section_count.wrapping_add(1);
         }
         let moving = crate::audio::idle_audio(&heard, idle_clock.elapsed().as_secs_f32(), idle);
+        let moving = reactor.apply(state.react, idle_dt, &moving);
         let mut candidate_error = None;
         for (index, player) in players.iter_mut().enumerate() {
             if let Err(error) = player.poll() {

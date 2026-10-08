@@ -203,6 +203,17 @@ pub fn page(show: &Show, state: &State) -> Vec<KeyDescriptor> {
             keys[26].caption = "ON".into();
         }
     }
+    // The next two name what is set now; a press moves on to the other or the next.
+    if keys[27].kind == KeyKind::Empty {
+        let (label, color) = if state.line_input { ("LINE", [20, 110, 120]) } else { ("MIC", [120, 85, 20]) };
+        keys[27] = key(label, Some(Command::ToggleInputLevel), color);
+        keys[27].caption = "INPUT".into();
+    }
+    if keys[28].kind == KeyKind::Empty {
+        let label = crate::audio::REACT_MODES.get(usize::from(state.react)).copied().unwrap_or("PUMP");
+        keys[28] = key(label, Some(Command::CycleReact), [110, 40, 95]);
+        keys[28].caption = "REACT".into();
+    }
     keys
 }
 #[cfg(test)]
@@ -256,6 +267,18 @@ mod tests {
         state.apply(Command::ToggleAutoShuffle).unwrap();
         let keys = page(&show, &state);
         assert_eq!((keys[26].state, keys[26].caption.as_str()), (KeyState::Active, "ON"));
+        // Its neighbours show the current setting and step on when pressed.
+        assert_eq!((keys[27].label.as_str(), keys[28].label.as_str()), ("MIC", "PUMP"));
+        state.apply(keys[27].command.unwrap()).unwrap();
+        for name in ["GLIDE", "STEP", "RIDE", "TWIST", "PUMP"] {
+            state.apply(keys[28].command.unwrap()).unwrap();
+            let keys = page(&show, &state);
+            assert_eq!((keys[27].label.as_str(), keys[28].label.as_str()), ("LINE", name));
+        }
+        // A reset returns the look, not the venue's input setting.
+        state.apply(Command::CycleReact).unwrap();
+        state.apply(Command::Reset).unwrap();
+        assert_eq!((state.react, state.line_input), (0, true));
         state.page = 1;
         assert_eq!(page(&show, &state)[26].command, Some(Command::ToggleHud));
     }
