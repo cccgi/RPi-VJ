@@ -48,7 +48,10 @@ CLASSES = (CLASS_ORIGINAL, CLASS_SELF, CLASS_TEXTURE, CLASS_MULTIPASS)
 
 # Marker lines written by engine/tools/make_native_shadertoy.py.
 SHADERTOY_HEAD_END = "uniform vec3 iChannelResolution[4];"
-SHADERTOY_WRAPPER_RE = re.compile(r"\n[ \t]*void[ \t]+main[ \t]*\([ \t]*\)[ \t]*\{\s*vec2 center = 0\.5 \* u_resolution;")
+# Start of the generated audio wrapper: the legacy `main`, or the comment that
+# opens the reactive wrapper (REACT_MARKER in make_native_shadertoy.py).
+SHADERTOY_WRAPPER_RE = re.compile(r"\n[ \t]*void[ \t]+main[ \t]*\([ \t]*\)[ \t]*\{\s*vec2 center = 0\.5 \* u_resolution;"
+                                  r"|\n// rpi-vj react wrapper v\d+")
 
 _COMMENT_RE = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
 _BLANK_RE = re.compile(r"[^\n]")
@@ -256,13 +259,20 @@ def merge_results(events) -> dict:
     statistics are kept from the latest line that carried them. `channels`
     (which input textures were bound, an engine extension to the result line)
     is the latest line's: a shader re-measured without its textures counts as
-    unbound again."""
+    unbound again.
+
+    Worst-case audio (the second engine extension): `tiers` is the 128 BPM
+    pattern as always; `tiers_max` holds the same tiers measured with every
+    audio input pinned at maximum. A line that measures a tier replaces both
+    patterns for that tier, so an older worst-case figure is never paired with
+    a newer 128 BPM one. `pixels_max` and `thumb_max` follow `pixels` and
+    `thumb`. Lines without these fields merge exactly as before."""
     merged: dict = {}
     for event in events:
         if event.get("event", "result") != "result":
             continue
         key = (str(event["id"]), str(event.get("variant", "base")))
-        record = merged.setdefault(key, {"id": key[0], "variant": key[1], "tiers": {}, "lines": 0})
+        record = merged.setdefault(key, {"id": key[0], "variant": key[1], "tiers": {}, "tiers_max": {}, "lines": 0})
         record["lines"] += 1
         record["status"] = event.get("status", "ok")
         record["error"] = event.get("error")
@@ -272,7 +282,16 @@ def merge_results(events) -> dict:
                 record[field] = event[field]
         if isinstance(event.get("pixels"), dict):
             record["pixels"] = event["pixels"]
+            # the worst-case picture belongs to the same run as the 128 BPM one
+            for field in ("pixels_max", "thumb_max"):
+                record.pop(field, None)
+                if event.get(field) is not None:
+                    record[field] = event[field]
+        loud = event.get("tiers_max") if isinstance(event.get("tiers_max"), dict) else {}
         for tier, data in (event.get("tiers") or {}).items():
             if isinstance(data, dict):
                 record["tiers"][str(tier)] = data
+                record["tiers_max"].pop(str(tier), None)
+                if isinstance(loud.get(tier), dict):
+                    record["tiers_max"][str(tier)] = loud[tier]
     return merged

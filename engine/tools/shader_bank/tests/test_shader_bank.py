@@ -18,6 +18,7 @@ import catalog  # noqa: E402
 import common  # noqa: E402
 import glsl_features  # noqa: E402
 import make_manifest  # noqa: E402
+import make_native_shadertoy  # noqa: E402  (on the path through adapt)
 import report  # noqa: E402
 import synth_results  # noqa: E402
 
@@ -592,8 +593,13 @@ class Show(unittest.TestCase):
         self.assertEqual([b["command"]["shader"] for b in second["bindings"][:6]], list(range(24, 30)))
         # crate 1 (raymarch keyword) comes first; numbered shaders before unnumbered inside a crate
         self.assertEqual([s["label"] for s in manifest["shaders"][:5]], ["s001", "s003", "s000", "s002", "s004"])
-        self.assertEqual(first["bindings"][0]["label"], "#002")
+        # keys are captioned with the entry's label, the id when it has none; never truncated
+        self.assertEqual(first["bindings"][0]["label"], "s001")
         self.assertEqual(first["bindings"][2]["label"], "s000")
+        named, _, _ = report.build_show([{"id": "abc", "render_height": 720, "label": "A much longer shader title",
+                                          "thumbnail": "thumbs/abc.jpg"}])
+        self.assertEqual(named["pages"][0]["bindings"][0]["label"], "A much longer shader title")
+        self.assertEqual(named["shaders"][0]["thumbnail"], "thumbs/abc.jpg")
         self.assertEqual(len(groups["crate_1"]), 5)
         for binding in first["bindings"][:24]:
             shader = manifest["shaders"][binding["command"]["shader"]]
@@ -653,8 +659,7 @@ class EndToEnd(Workspace):
         # the show carries the chosen variant's file
         self.assertEqual((out / "show" / "dddddd.fs").read_bytes(), (self.variants / "lite" / "dddddd.fs").read_bytes())
         labels = [b["label"] for b in show["pages"][0]["bindings"][:3]]
-        self.assertIn("#001", labels)          # dddddd keeps its review number
-        self.assertIn("#002", labels)
+        self.assertEqual(sorted(labels), ["Fixture", "Fixture", "plasma"])   # titles; a hand-built shader keeps its file name
 
         doc = (out / "doc.md").read_text(encoding="utf-8")
         for heading in ("## Summary", "## Reference envelope: the original 18", "## Qualified (3)", "## Renders but suspect (1)",
@@ -998,6 +1003,353 @@ class TextureShow(Workspace):
         show = json.loads((out / "show" / "show.json").read_text(encoding="utf-8"))
         self.assertNotIn("bbbbbb", [s["label"] for s in show["shaders"]])
         self.assertFalse((out / "show" / "bbbbbb.fs").exists())
+
+
+def legacy(body: str, newline: str = "\n") -> str:
+    """A bank file as the converter wrote it: real header, real legacy wrapper."""
+    return (make_native_shadertoy.HEAD + body + make_native_shadertoy.WRAPPER).replace("\n", newline)
+
+
+class ReactWrapper(unittest.TestCase):
+    REACT = adapt.VARIANT_RULES["react"]
+
+    def test_replaces_exactly_the_legacy_wrapper(self):
+        for newline in ("\n", "\r\n"):
+            text = legacy(PLAIN, newline)
+            out, applied = adapt.transform(text, self.REACT)
+            self.assertEqual([a["rule"] for a in applied], ["react_wrapper"])
+            cut = text.index(make_native_shadertoy.WRAPPER.replace("\n", newline))
+            # everything before the wrapper is byte-identical, everything after is the new wrapper
+            self.assertEqual(out[:cut], text[:cut])
+            self.assertEqual(out[cut:], make_native_shadertoy.react_wrapper("normal").replace("\n", newline))
+            self.assertEqual(out.count("void main("), 1)
+            self.assertNotIn("audio_zoom", out)
+            self.assertNotIn("\r\r", out)
+            if newline == "\r\n":
+                self.assertNotRegex(out, r"[^\r]\n")
+            edit = applied[0]["edits"][0]
+            self.assertEqual((edit["mode"], edit["reasons"], edit["direct_fragcoord"]), ("normal", [], False))
+
+    def test_idempotent(self):
+        once, _ = adapt.transform(legacy(PLAIN), self.REACT)
+        twice, applied = adapt.transform(once, self.REACT)
+        self.assertEqual((twice, applied), (once, []))
+        self.assertEqual(adapt.react_skip_reason(once), "already has the react wrapper")
+
+    def test_other_wrappers_and_own_main_are_left_alone(self):
+        for text, reason in ((native(PLAIN), "differs"), ('uniform float u_time;\nvoid main(){ gl_FragColor=vec4(1.); }', "own main"),
+                             (legacy(PLAIN).replace("0.28*u_bass", "0.30*u_bass"), "differs")):
+            out, applied = adapt.transform(text, self.REACT)
+            self.assertEqual((out, applied), (text, []))
+            self.assertIn(reason, adapt.react_skip_reason(text))
+        # the wrapper text inside a comment or mid-file is not the wrapper
+        mid = legacy(PLAIN) + "\nfloat tail;\n"
+        self.assertEqual(adapt.transform(mid, self.REACT), (mid, []))
+
+    def test_shader_that_reads_audio_uniforms_is_reported_not_wrapped(self):
+        text = legacy("void mainImage(out vec4 o, in vec2 u){ o = vec4(u_bass + u_flow_low); }")
+        self.assertEqual(adapt.transform(text, self.REACT), (text, []))
+        self.assertEqual(adapt.react_skip_reason(text), "reads audio uniforms itself: u_bass, u_flow_low")
+        # a mention in a comment, or of the time uniform, is not audio
+        quiet = legacy("// u_bass\nvoid mainImage(out vec4 o, in vec2 u){ o = vec4(sin(u_time)); }")
+        self.assertIsNone(adapt.react_skip_reason(quiet))
+
+    def test_pixel_exact_shaders_get_the_whole_pixel_mode(self):
+        cases = {
+            "void mainImage(out vec4 o, in vec2 u){ o = texelFetch(iChannel0, ivec2(3,4), 0); }": ["texelFetch"],
+            "void mainImage(out vec4 o, vec2 fc){ ivec2 p = ivec2(fc); o = vec4(p.x & p.y); }": ["ivec2(fc)"],
+            "void mainImage(out vec4 O, vec2 I){ O = vec4(int(I.x) ^ int(I.y)); }": ["int(I)"],
+            "void mainImage(out vec4 o, in vec2 u){ o = vec4(mod(u.y, 2.)); }": ["mod(u)"],
+            "void mainImage(out vec4 o, in vec2 u){ o = vec4(floor(u.x)); }": ["floor(u)"],
+        }
+        for body, reasons in cases.items():
+            out, applied = adapt.transform(legacy(body), self.REACT)
+            edit = applied[0]["edits"][0]
+            self.assertEqual((edit["mode"], edit["reasons"]), ("pixel", reasons), body)
+            wrapper = out[out.index(make_native_shadertoy.REACT_MARKER):]
+            self.assertIn("floor(", wrapper)
+            self.assertIn("u_resolution - 0.5", wrapper)
+            for absent in ("rv_wave", "RV_SWAY *", "rv_sn"):        # no rotation, no ripple
+                self.assertNotIn(absent, wrapper.split("void main")[1], body)
+        # scaled or normalised coordinates are not pixel-exact
+        for body in ("void mainImage(out vec4 o, in vec2 u){ o = vec4(floor(u / 8.)); }",
+                     "void mainImage(out vec4 o, in vec2 u){ vec2 p = u / u_resolution; o = vec4(mod(p.x * 9., 1.)); }", PLAIN):
+            self.assertEqual(make_native_shadertoy.react_analysis(body)["mode"], "normal", body)
+
+    def test_direct_gl_fragcoord_reads_are_redirected(self):
+        body = "void mainImage(out vec4 o, in vec2 u){ vec2 uv = gl_FragCoord.xy / u_resolution; o = vec4(uv, 0, 1); }"
+        out, applied = adapt.transform(legacy(body), self.REACT)
+        self.assertTrue(applied[0]["edits"][-1]["direct_fragcoord"])
+        head_end = out.index(common.SHADERTOY_HEAD_END) + len(common.SHADERTOY_HEAD_END)
+        self.assertTrue(out[head_end:].startswith("\nvec4 rv_FragCoord;\n#define gl_FragCoord rv_FragCoord\n"))
+        wrapper = out[out.index(make_native_shadertoy.REACT_MARKER):]
+        self.assertLess(wrapper.index("#undef gl_FragCoord"), wrapper.index("void main"))
+        self.assertLess(wrapper.index("rv_FragCoord = vec4(rv_q, gl_FragCoord.zw);"), wrapper.index("mainImage(rv_out"))
+        self.assertEqual(adapt.transform(out, self.REACT), (out, []))
+        self.assertNotIn("rv_FragCoord", adapt.transform(legacy(PLAIN), self.REACT)[0])
+
+    def test_macros_named_like_builtins_are_undefined_first(self):
+        out, _ = adapt.transform(legacy("#define max(a,b,c) (a)\n" + PLAIN), self.REACT)
+        wrapper = out[out.index(make_native_shadertoy.REACT_MARKER):]
+        self.assertLess(wrapper.index("#undef max"), wrapper.index("void main"))
+        self.assertNotIn("#undef", adapt.transform(legacy(PLAIN), self.REACT)[0])
+
+    def test_wrapper_costs_no_trig_or_pow_and_has_a_low_floor(self):
+        for mode in make_native_shadertoy.REACT_MODES:
+            code = common.strip_comments(make_native_shadertoy.react_wrapper(mode))
+            for call in ("sin", "cos", "tan", "atan", "exp", "pow", "log", "sqrt", "normalize", "length"):
+                self.assertNotRegex(code, rf"\b{call}\s*\(", f"{mode}: {call}")
+            self.assertIn("const float RV_FLOOR = 0.15;", code)
+            self.assertNotIn("u_time", code)                       # motion comes from the flow clocks
+            self.assertEqual(code.count("mainImage("), 1)
+        normal = make_native_shadertoy.react_wrapper("normal")
+        for uniform in ("u_flow_low", "u_flow_mid", "u_flow_high", "u_hit_low", "u_hit_mid", "u_hit_high", "u_onset",
+                        "u_bass", "u_sub", "u_treble", "u_high_mid"):
+            self.assertIn(uniform, normal)
+        # the legacy wrapper is what the comparison is against
+        old = make_native_shadertoy.WRAPPER
+        self.assertEqual((old.count("sin(") + old.count("cos("), old.count("pow(")), (7, 1))
+
+    def test_composes_with_lite_and_tex(self):
+        aa = "#define AA 2\nvoid mainImage(out vec4 o, in vec2 u){ for(int m=0;m<AA;m++) o+=1.; }"
+        out, applied = adapt.transform(legacy(aa), adapt.VARIANT_RULES["react_lite"])
+        self.assertEqual([a["rule"] for a in applied], ["aa_samples_1", "react_wrapper"])
+        self.assertIn("#define AA 1", out)
+        self.assertIn(make_native_shadertoy.REACT_MARKER, out)
+        # order does not matter for the result: lite on a react file gives the same text
+        react_first, _ = adapt.transform(legacy(aa), self.REACT)
+        self.assertEqual(adapt.transform(react_first, adapt.VARIANT_RULES["lite"])[0], out)
+        # tex: the cut cubemap coordinate comes back and the wrapper is replaced
+        cube = "void mainImage(out vec4 o, in vec2 u){ vec3 dir = vec3(u, 1.); o = texture(iChannel0, dir.xy); }"
+        record = {"channels": {"kinds": {"0": "cubemap"}}}
+        out, applied = adapt.transform(legacy(cube), self.REACT, record)
+        self.assertEqual([a["rule"] for a in applied], ["restore_3d_coords", "react_wrapper"])
+        self.assertIn("texture(iChannel0, dir)", out)
+        self.assertEqual(adapt.transform(out, self.REACT, record), (out, []))
+
+    def test_converter_can_emit_the_react_wrapper(self):
+        document = {"info": {"name": "N"}, "renderpass": [{"type": "image", "code": "void mainImage(out vec4 o, in vec2 u){ o = vec4(iTime); }", "inputs": []}]}
+        old, _ = make_native_shadertoy.convert("x", document=document)
+        new, _ = make_native_shadertoy.convert("x", document=document, wrapper="react")
+        self.assertTrue(old.endswith(make_native_shadertoy.WRAPPER))
+        self.assertTrue(new.endswith(make_native_shadertoy.react_wrapper("normal")))
+        # converting with the legacy wrapper and adapting gives the same file
+        self.assertEqual(adapt.transform(old, self.REACT)[0], new)
+        # the catalog still finds where the shader's own code ends
+        start, end = common.split_shadertoy(new)
+        self.assertEqual(new[start:end].strip(), "void mainImage(out vec4 o, in vec2 u){ o = vec4(u_time); }")
+        with self.assertRaises(ValueError):
+            make_native_shadertoy.convert("x", document=document, wrapper="other")
+
+
+class ReactVariants(Workspace):
+    def setUp(self):
+        super().setUp()
+        aa_body = "#define AA 2\nvoid mainImage(out vec4 o, in vec2 u){ for(int m=0;m<AA;m++) for(int n=0;n<AA;n++) o+=1.; }"
+        (self.native / "aaaaaa.fs").write_text(legacy(PLAIN), encoding="utf-8", newline="")
+        (self.native / "dddddd.fs").write_text(legacy(aa_body), encoding="utf-8", newline="")
+        (self.native / "eeeeee.fs").write_text(legacy("void mainImage(out vec4 o, in vec2 u){ o = vec4(u_bass); }"),
+                                              encoding="utf-8", newline="")
+        (self.native / "ffffff.fs").write_text(legacy("void mainImage(out vec4 o, in vec2 u){ o = texelFetch(iChannel0, ivec2(u), 0); }"),
+                                              encoding="utf-8", newline="")
+        self.reports = {v: adapt.build_variant(v, self.catalog, self.variants, self.root) for v in ("react", "react_lite")}
+
+    def test_react_files_only_for_legacy_wrapped_shaders_and_everything_is_reported(self):
+        self.assertEqual(sorted(p.name for p in (self.variants / "react").glob("*.fs")), ["aaaaaa.fs", "dddddd.fs", "ffffff.fs"])
+        document = json.loads((self.variants / "react" / "transforms.json").read_text(encoding="utf-8"))
+        react = document["react"]
+        self.assertEqual(react["modes"], {"normal": 2, "pixel": 1})
+        self.assertEqual(react["pixel_mode"], {"ffffff": ["texelFetch", "ivec2(u)"]})
+        self.assertEqual(react["gl_fragcoord_redirected"], [])
+        reasons = {i: v["reason"] for i, v in react["not_wrapped"].items()}
+        self.assertEqual(reasons["eeeeee"], "reads audio uniforms itself: u_bass")
+        self.assertIn("own main", reasons["plasma"])
+        self.assertIn("own main", reasons["mandel"])
+        self.assertIn("differs", reasons["bbbbbb"])         # the fixture wrapper is not the converter's
+        self.assertEqual(document["summary"]["not_wrapped"], len(reasons))
+        # the source library is never written to
+        self.assertTrue((self.native / "aaaaaa.fs").read_text(encoding="utf-8").endswith(make_native_shadertoy.WRAPPER))
+
+    def test_react_lite_needs_both_a_lite_transform_and_the_wrapper(self):
+        self.assertEqual(sorted(p.name for p in (self.variants / "react_lite").glob("*.fs")), ["dddddd.fs"])
+        text = (self.variants / "react_lite" / "dddddd.fs").read_text(encoding="utf-8")
+        self.assertIn("#define AA 1", text)
+        self.assertIn(make_native_shadertoy.REACT_MARKER, text)
+        again = adapt.build_variant("react", self.catalog, self.variants, self.root)
+        self.assertEqual((again["files_written"], again["files_removed"]), (0, 0))
+
+    def test_manifest_can_take_react_first(self):
+        entries, _ = make_manifest.select(self.catalog, ids=["aaaaaa", "dddddd", "eeeeee"], variants=("react_lite", "react", "base"),
+                                          variants_dir=self.variants, first_only=True)
+        adapt.build_variant("base", self.catalog, self.variants, self.root)
+        entries, _ = make_manifest.select(self.catalog, ids=["aaaaaa", "dddddd", "eeeeee"], variants=("react_lite", "react", "base"),
+                                          variants_dir=self.variants, first_only=True)
+        self.assertEqual([(r["id"], v) for r, v, _ in entries], [("aaaaaa", "react"), ("dddddd", "react_lite"), ("eeeeee", "base")])
+
+
+def tier(p95, frames=90):
+    return {"frames": frames, "mean_ms": p95 * 0.9, "p50_ms": p95 * 0.9, "p95_ms": p95, "max_ms": p95 * 1.2, "first_ms": p95 * 2}
+
+
+def two_pattern_event(shader_id, variant="base", beat=(4.0, 9.0), loud=(5.0, 10.0), **extra):
+    """A result line of the engine with the worst-case audio extension."""
+    event = ok_event(shader_id, variant, beat[0], beat[1], audio=["beat128", "max"],
+                     tiers_max={"720": tier(loud[0]), "1080": tier(loud[1])},
+                     pixels_max={"mean_luma": 0.5, "spatial_std": 0.2, "temporal_diff": 0.05},
+                     thumb_max=f"{shader_id}.{variant}.max.ppm")
+    event.update(extra)
+    return event
+
+
+class TwoPatternVerdict(unittest.TestCase):
+    def assess(self, events, **kwargs):
+        record = {"id": "x", "class": "selfcontained", "channels": {"kinds": {}}, "name": "X", "review_number": 7}
+        merged = common.merge_results(events)
+        return report.assess_shader(record, {v: r for (i, v), r in merged.items()}, **kwargs)
+
+    def test_combined_verdict_is_the_worse_of_the_two(self):
+        self.assertEqual(report.combined_verdict("SOLID", "SOLID"), "SOLID")
+        self.assertEqual(report.combined_verdict("SOLID", "OK"), "OK")
+        self.assertEqual(report.combined_verdict("OK", "SOLID"), "OK")
+        self.assertEqual(report.combined_verdict("SOLID", "FAIL"), "FAIL")
+        self.assertEqual(report.combined_verdict("MARGINAL", "OK"), "MARGINAL")
+        self.assertEqual(report.combined_verdict("SOLID", None), "SOLID")            # old results: one pattern
+        self.assertEqual(report.combined_verdict("SOLID", "SKIPPED"), "SKIPPED")     # attempted, no measurement
+        self.assertEqual(report.combined_verdict("SOLID", "NO_DATA"), "NO_DATA")
+        self.assertEqual(report.combined_verdict("SKIPPED", "SOLID"), "SKIPPED")
+
+    def test_a_tier_qualifies_only_within_budget_under_both_patterns(self):
+        both = self.assess([two_pattern_event("x", beat=(4.0, 9.0), loud=(5.0, 12.9))])
+        self.assertEqual((both["outcome"], both["render_height"]), ("qualified", 1080))
+        self.assertEqual(both["chosen"]["verdicts"], {720: "SOLID", 1080: "OK"})
+        self.assertEqual(both["chosen"]["verdicts_beat"][1080], "SOLID")
+        self.assertEqual(both["chosen"]["one_pattern_tiers"], [])
+        # fine on the beat pattern, over budget when everything is loud: 1080p is lost
+        loud = self.assess([two_pattern_event("x", beat=(4.0, 9.0), loud=(6.0, 13.1))])
+        self.assertEqual((loud["outcome"], loud["render_height"]), ("qualified", 720))
+        self.assertEqual(loud["chosen"]["verdicts"][1080], "MARGINAL")
+        # over budget under worst-case audio at every tier: not qualified at all
+        heavy = self.assess([two_pattern_event("x", beat=(9.0, 12.0), loud=(14.0, 30.0))])
+        self.assertEqual(heavy["outcome"], "too_heavy")
+        self.assertIn("720p/1080p", heavy["reason"])
+        # the other way round counts too
+        beat = self.assess([two_pattern_event("x", beat=(9.0, 17.0), loud=(5.0, 9.0))])
+        self.assertEqual(beat["render_height"], 720)
+
+    def test_worst_case_attempt_without_a_measurement_does_not_qualify(self):
+        event = two_pattern_event("x")
+        event["tiers_max"]["1080"] = {"skipped": "gpu_reset", "first_ms": 1001.0}
+        self.assertEqual(self.assess([event])["render_height"], 720)
+        event["tiers_max"]["720"] = tier(5.0, frames=2)
+        self.assertNotEqual(self.assess([event])["outcome"], "qualified")
+
+    def test_old_results_are_read_and_judged_on_one_pattern_unless_required(self):
+        old = ok_event("x", p95_720=4.0, p95_1080=9.0)
+        item = self.assess([old])
+        self.assertEqual((item["outcome"], item["render_height"]), ("qualified", 1080))
+        self.assertEqual(item["chosen"]["one_pattern_tiers"], [720, 1080])
+        self.assertIn("128 BPM pattern only", report.shader_row(dict(item, catalog={"id": "x", "name": "X"}))[-1])
+        strict = self.assess([old], require_worst_case=True)
+        self.assertEqual(strict["outcome"], "not_measured")
+        self.assertIn("worst-case audio is required", strict["reason"])
+        self.assertEqual(strict["chosen"]["verdicts"], {720: "ONE_PATTERN", 1080: "ONE_PATTERN"})
+        # a two-pattern result is unaffected by the switch
+        self.assertEqual(self.assess([two_pattern_event("x")], require_worst_case=True)["render_height"], 1080)
+
+    def test_merge_never_pairs_patterns_from_different_runs(self):
+        first = two_pattern_event("x", beat=(4.0, 9.0), loud=(5.0, 30.0))
+        # a later single-pattern line for 1080 replaces both patterns of that tier, and keeps 720
+        later = {"event": "result", "id": "x", "variant": "base", "status": "ok", "tiers": {"1080": tier(8.0)}}
+        record = common.merge_results([first, later])[("x", "base")]
+        self.assertEqual(sorted(record["tiers_max"]), ["720"])
+        self.assertEqual(record["tiers"]["1080"]["p95_ms"], 8.0)
+        self.assertEqual(record["pixels_max"]["mean_luma"], 0.5)        # no new picture: the old pair stands
+        # a later line with its own picture but no worst-case picture drops the stale one
+        repaint = ok_event("x")
+        record = common.merge_results([first, repaint])[("x", "base")]
+        self.assertNotIn("pixels_max", record)
+        self.assertNotIn("thumb_max", record)
+        self.assertEqual(record["tiers_max"], {})
+        # and the newest two-pattern line wins as a whole
+        record = common.merge_results([repaint, first])[("x", "base")]
+        self.assertEqual(record["tiers_max"]["1080"]["p95_ms"], 30.0)
+        self.assertEqual(record["thumb_max"], "x.base.max.ppm")
+        # a line that carries tiers_max for a tier it does not measure is ignored there
+        stray = {"event": "result", "id": "y", "variant": "base", "status": "ok", "tiers": {"720": tier(4.0)},
+                 "tiers_max": {"1080": tier(5.0), "720": "broken"}}
+        self.assertEqual(common.merge_results([stray])[("y", "base")]["tiers_max"], {})
+
+    def test_loud_picture_is_noted_but_never_decides_the_outcome(self):
+        self.assertEqual(report.loud_flags({"mean_luma": 0.6}), [])
+        self.assertEqual(report.loud_flags({"mean_luma": 0.9}), ["white_when_loud"])
+        self.assertEqual(report.loud_flags({"mean_luma": 0.0}), ["black_when_loud"])
+        self.assertEqual(report.loud_flags({"mean_luma": None}), [])
+        self.assertEqual(report.loud_flags(None), [])
+        white = self.assess([two_pattern_event("x", pixels_max={"mean_luma": 0.95, "spatial_std": 0.0, "temporal_diff": 0.0})])
+        self.assertEqual((white["outcome"], white["chosen"]["pixel_flags"]), ("qualified", []))
+        self.assertEqual(white["chosen"]["loud_flags"], ["white_when_loud"])
+        self.assertIn("white_when_loud", report.shader_row(dict(white, catalog={"id": "x", "name": "X"}))[-1])
+
+    def test_react_variant_is_assessed_beside_base_and_can_be_preferred(self):
+        events = [two_pattern_event("x", "base", (4.0, 9.0), (5.0, 10.0)), two_pattern_event("x", "react", (4.0, 9.0), (5.0, 10.0))]
+        self.assertEqual(self.assess(events)["variant"], "base")            # tie: least modified
+        better = [two_pattern_event("x", "base", (4.0, 12.0), (5.0, 14.0)), two_pattern_event("x", "react", (4.0, 9.0), (5.0, 10.0))]
+        item = self.assess(better)
+        self.assertEqual((item["variant"], item["render_height"]), ("react", 1080))
+        saved = report.VARIANT_PREFERENCE
+        try:
+            report.VARIANT_PREFERENCE = ("react_lite", "react", "base")
+            self.assertEqual(self.assess(events)["variant"], "react")
+        finally:
+            report.VARIANT_PREFERENCE = saved
+
+
+class TwoPatternReport(Workspace):
+    def run_report(self, events, *extra):
+        results = self.write_results("results.jsonl", events)
+        catalog_path = self.root / "catalog.json"
+        common.write_json(catalog_path, self.catalog)
+        out = self.root / "out"
+        saved = report.VARIANT_PREFERENCE
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                code = report.main([str(results), "--catalog", str(catalog_path), "--variants-dir", str(self.variants),
+                                    "--doc", str(out / "doc.md"), "--qualified", str(out / "qualified.json"), "--no-show", *extra])
+        finally:
+            report.VARIANT_PREFERENCE = saved
+        self.assertEqual(code, 0)
+        return json.loads((out / "qualified.json").read_text(encoding="utf-8")), (out / "doc.md").read_text(encoding="utf-8")
+
+    def events(self):
+        return [ok_event("plasma", p95_720=2.0, p95_1080=4.5),                                   # old line, one pattern
+                two_pattern_event("aaaaaa", "base", (5.0, 11.0), (6.0, 14.0)),                   # loud costs it 1080p
+                two_pattern_event("dddddd", "base", (4.0, 9.0), (5.0, 10.0)),
+                two_pattern_event("dddddd", "react", (3.0, 8.0), (4.0, 9.0))]
+
+    def test_document_and_qualified_json_carry_both_patterns(self):
+        qualified, doc = self.run_report(self.events())
+        by_id = {q["id"]: q for q in qualified["qualified"]}
+        self.assertEqual({i: (q["variant"], q["render_height"], q["audio"]) for i, q in by_id.items()},
+                         {"plasma": ("base", 1080, ["beat128"]), "aaaaaa": ("base", 720, ["beat128", "max"]),
+                          "dddddd": ("base", 1080, ["beat128", "max"])})
+        self.assertEqual(by_id["aaaaaa"]["p95_ms_max"], {"720": 6.0, "1080": 14.0})
+        self.assertEqual(by_id["aaaaaa"]["p95_ms"], {"720": 5.0, "1080": 11.0})          # unchanged meaning
+        self.assertEqual(by_id["plasma"]["p95_ms_max"], {})
+        self.assertEqual(qualified["qualified_on_one_pattern"], ["plasma"])
+        self.assertFalse(qualified["require_worst_case"])
+        self.assertIn("9.9 / 11.0 (loud 14.0) | MARGINAL", doc)
+        self.assertIn("Qualified on both audio patterns: 2. Qualified on the 128 BPM pattern alone", doc)
+        self.assertIn("128 BPM pattern only", doc)
+
+    def test_require_worst_case_and_variant_selection(self):
+        qualified, doc = self.run_report(self.events(), "--require-worst-case")
+        self.assertEqual(sorted(q["id"] for q in qualified["qualified"]), ["aaaaaa", "dddddd"])
+        self.assertIn("plasma", qualified["not_measured"])
+        self.assertIn("ONE_PATTERN", doc)
+        qualified, _ = self.run_report(self.events(), "--variants", "react,react_lite")
+        self.assertEqual([(q["id"], q["variant"]) for q in qualified["qualified"]], [("dddddd", "react")])
+        qualified, _ = self.run_report(self.events(), "--prefer", "react,base")
+        self.assertEqual({q["id"]: q["variant"] for q in qualified["qualified"]}["dddddd"], "react")
 
 
 if __name__ == "__main__":

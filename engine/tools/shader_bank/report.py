@@ -41,13 +41,21 @@ STATIC_TEMPORAL_DIFF_MAX = 0.001     # mean abs temporal difference at or below 
 # --- assignment -----------------------------------------------------------
 ASSIGNABLE_TIERS = (1080, 720, 540, 360)     # plan R1, best first
 MAIN_TIERS = (720, 1080)                     # always shown as columns
-VARIANT_PREFERENCE = ("base", "tex", "lite", "pi")  # least modified first; ties go to the earlier one
+# Least modified first; ties go to the earlier one. --prefer replaces the order.
+VARIANT_PREFERENCE = ("base", "tex", "lite", "pi", "react", "react_lite")
 GOOD_VERDICTS = ("SOLID", "OK")
+# --- two audio patterns ----------------------------------------------------
+# `tiers` is the 128 BPM pattern, `tiers_max` the same tier with every audio
+# input pinned at maximum. A tier's verdict is the worse of the two.
+VERDICT_RANK = {"SOLID": 0, "OK": 1, "MARGINAL": 2, "FAIL": 3}
+ONE_PATTERN = "ONE_PATTERN"          # verdict under --require-worst-case when only the 128 BPM pattern was measured
+WHITE_MEAN_LUMA_MIN = 0.85           # mean luma at or above this under worst-case audio is a white-out
 # --- show manifest (engine/src/show.rs limits, build_shader_review_show.py layout)
 SHOW_MAX_SHADERS = 1024
 SHOW_MAX_PAGES = 128
 KEYS_PER_PAGE = 24
 SHOW_MARKER = ".shader-bank-show"
+SHOW_THUMB_DIR = "thumbs"            # key pictures, relative to show.json
 SHOW_ASSET_DIR = "assets"            # channel textures, relative to show.json
 
 OUTCOMES = ("qualified", "suspect", "too_heavy", "failed", "unverified_texture", "excluded_multipass", "not_measured")
@@ -76,6 +84,32 @@ def tier_verdict(data):
     return "FAIL"
 
 
+def combined_verdict(beat, loud):
+    """Verdict of a tier from its two audio patterns: the worse one. `loud` is
+    None when the tier was not measured under worst-case audio; then the 128 BPM
+    verdict stands alone. A worst-case attempt that produced no measurement
+    (skipped, too few frames) is never good enough."""
+    if loud is None or beat not in VERDICT_RANK:
+        return beat
+    if loud not in VERDICT_RANK:
+        return loud
+    return max(beat, loud, key=VERDICT_RANK.get)
+
+
+def loud_flags(pixels_max) -> list:
+    """What the picture does under worst-case audio: `white_when_loud` or
+    `black_when_loud`. Reported in the note column and in qualified.json, never
+    used for the outcome: every input pinned at maximum for seconds is a cost
+    test, not something music does, and several of the owner's own shaders
+    saturate there by design."""
+    loud = pixels_max.get("mean_luma") if isinstance(pixels_max, dict) else None
+    if not isinstance(loud, (int, float)) or isinstance(loud, bool):
+        return []
+    if loud >= WHITE_MEAN_LUMA_MIN:
+        return ["white_when_loud"]
+    return ["black_when_loud"] if loud <= BLACK_MEAN_LUMA_MAX else []
+
+
 def pixel_flags(pixels) -> list:
     """Why a rendered frame is suspect. Missing statistics are themselves a flag:
     without them we cannot tell a working shader from a black frame (audit F3)."""
@@ -94,18 +128,32 @@ def pixel_flags(pixels) -> list:
     return flags
 
 
-def assess_variant(record: dict) -> dict:
+def assess_variant(record: dict, require_worst_case: bool = False) -> dict:
+    """`verdicts` is what qualification uses: per tier, the worse of the 128 BPM
+    verdict and the worst-case-audio verdict. A tier measured under the 128 BPM
+    pattern only (results from before the second pattern existed) keeps its
+    single verdict and is listed in `one_pattern_tiers`; with
+    `require_worst_case` such a tier is ONE_PATTERN, which never qualifies."""
     status = record.get("status", "ok")
-    verdicts = {int(h): tier_verdict(d) for h, d in record.get("tiers", {}).items() if str(h).isdigit()}
+    tiers = {int(h): d for h, d in record.get("tiers", {}).items() if str(h).isdigit()}
+    tiers_max = {int(h): d for h, d in (record.get("tiers_max") or {}).items() if str(h).isdigit() and int(h) in tiers}
+    beat = {h: tier_verdict(d) for h, d in tiers.items()}
+    loud = {h: tier_verdict(d) for h, d in tiers_max.items()}
+    verdicts = {h: combined_verdict(v, loud.get(h)) for h, v in beat.items()}
+    one_pattern = sorted(h for h, v in beat.items() if v in VERDICT_RANK and h not in loud)
+    if require_worst_case:
+        verdicts.update({h: ONE_PATTERN for h in one_pattern})
     assigned = None
     if status == "ok":
         good = [h for h, v in verdicts.items() if v in GOOD_VERDICTS]
         assigned = max(good) if good else None
     return {"variant": record["variant"], "status": status, "error": record.get("error"),
             "channels": {str(c): k for c, k in (record.get("channels") or {}).items()},
-            "tiers": {int(h): d for h, d in record.get("tiers", {}).items() if str(h).isdigit()},
+            "tiers": tiers, "tiers_max": tiers_max, "verdicts_beat": beat, "verdicts_max": loud,
+            "one_pattern_tiers": one_pattern,
             "verdicts": verdicts, "assigned_tier": assigned,
             "pixel_flags": pixel_flags(record.get("pixels")) if status == "ok" else [],
+            "loud_flags": loud_flags(record.get("pixels_max")) if status == "ok" else [],
             "compile_ms": record.get("compile_ms"), "throttled": record.get("throttled"), "temp_c": record.get("temp_c")}
 
 
@@ -124,7 +172,7 @@ def unbound_channels(catalog_record: dict, assessed_variant) -> list:
             if CATALOG_BINDING_KINDS.get(kind) is None or bound.get(str(channel)) != CATALOG_BINDING_KINDS[kind]]
 
 
-def assess_shader(catalog_record: dict, variant_records: dict) -> dict:
+def assess_shader(catalog_record: dict, variant_records: dict, require_worst_case: bool = False) -> dict:
     """Outcome, best variant and render tier for one shader.
 
     Best variant: among variants that run and reach a SOLID/OK tier, clean
@@ -134,7 +182,7 @@ def assess_shader(catalog_record: dict, variant_records: dict) -> dict:
     self-contained shader over the variants that were measured with every
     channel the shader reads bound (the result line's `channels`); without
     such a measurement it stays unverified."""
-    assessed = {v: assess_variant(r) for v, r in variant_records.items()}
+    assessed = {v: assess_variant(r, require_worst_case) for v, r in variant_records.items()}
     ordered = sorted(assessed.values(), key=lambda a: _preference(a["variant"]))
     klass = catalog_record["class"]
     everything = ordered
@@ -179,6 +227,9 @@ def assess_shader(catalog_record: dict, variant_records: dict) -> dict:
         reason = "over budget at " + "/".join(f"{h}p" for h in measured)
         if untried:
             reason += "; not yet measured at " + "/".join(f"{h}p" for h in untried)
+    elif any(v == ONE_PATTERN for a in ordered for v in a["verdicts"].values()):
+        outcome = "not_measured"
+        reason = "measured under the 128 BPM pattern only; worst-case audio is required"
     else:
         outcome = "failed"
         reason = "no usable tier measurement"
@@ -188,7 +239,7 @@ def assess_shader(catalog_record: dict, variant_records: dict) -> dict:
             "chosen": shown, "variants": assessed}
 
 
-def assess_all(catalog: dict, merged: dict) -> tuple[list, list]:
+def assess_all(catalog: dict, merged: dict, require_worst_case: bool = False) -> tuple[list, list]:
     """Assess every catalog shader. Returns (assessments, result keys with no catalog entry)."""
     by_id = collections.defaultdict(dict)
     for (shader_id, variant), record in merged.items():
@@ -196,7 +247,7 @@ def assess_all(catalog: dict, merged: dict) -> tuple[list, list]:
     known = {r["id"] for r in catalog["shaders"]}
     assessments = []
     for record in catalog["shaders"]:
-        item = assess_shader(record, by_id.get(record["id"], {}))
+        item = assess_shader(record, by_id.get(record["id"], {}), require_worst_case)
         item["catalog"] = record
         assessments.append(item)
     orphans = sorted(f"{i}/{v}" for (i, v) in merged if i not in known)
@@ -247,9 +298,14 @@ def _tier_cells(assessed, height):
         return "-", "-"
     if verdict == "SKIPPED":
         return "-", f"skipped ({data.get('skipped')})"
-    if verdict == "NO_DATA":
+    if verdict == "NO_DATA" and assessed.get("verdicts_beat", {}).get(height, verdict) == "NO_DATA":
         return "-", "no data"
-    return f"{_ms(data.get('p50_ms'))} / {_ms(data.get('p95_ms'))}", verdict
+    timing = f"{_ms(data.get('p50_ms'))} / {_ms(data.get('p95_ms'))}"
+    loud = (assessed.get("tiers_max") or {}).get(height)
+    if loud is not None:
+        # p95 under worst-case audio, or why there is none
+        timing += " (loud " + (_ms(loud.get("p95_ms")) if "skipped" not in loud else f"skipped: {loud['skipped']}") + ")"
+    return timing, verdict
 
 
 def _review(record) -> str:
@@ -277,6 +333,10 @@ def shader_row(item) -> list:
     flags = list(chosen["pixel_flags"]) if chosen else []
     cells.append(", ".join(flags) if flags else ("ok" if chosen and chosen["status"] == "ok" else "-"))
     note = item["reason"]
+    if chosen and item["render_height"] and item["render_height"] in chosen.get("one_pattern_tiers", ()):
+        note = (note + "; " if note else "") + "128 BPM pattern only"
+    if chosen and chosen.get("loud_flags"):
+        note = (note + "; " if note else "") + ", ".join(chosen["loud_flags"])
     if chosen and chosen.get("throttled") not in (None, "0x0", "0x0\n"):
         note = (note + "; " if note else "") + f"measured while throttled={chosen['throttled']}"
     cells.append(note[:200] or "-")
@@ -328,6 +388,17 @@ def render_markdown(assessments, context: dict) -> str:
               "`needs_texture` shader is assessed like any other once it was measured with every channel it reads bound to its "
               "texture, cubemap or volume (the result line then carries `channels`); measured unbound, or reading an input "
               "the renderer cannot supply (keyboard, audio, video, buffer), it stays unverified.", "",
+              "Audio: every tier is measured under the fixed 128 BPM pattern and again under worst-case audio (all bands "
+              "and the onset pinned at maximum, flow clocks at full rate). The timing columns show p50 / p95 under the "
+              "128 BPM pattern and `(loud N)`, the p95 under worst-case audio; the verdict is the worse of the two, so a "
+              "shader qualifies at a tier only if it fits the budget under both. A tier without `(loud ...)` comes from a "
+              "results file written before the second pattern existed and is judged on the 128 BPM pattern alone"
+              + (" - with `--require-worst-case`, as here, that is `ONE_PATTERN` and does not qualify."
+                 if context.get("require_worst_case")
+                 else "; `--require-worst-case` turns those into `ONE_PATTERN`, which does not qualify.")
+              + f" `white_when_loud` / `black_when_loud` in the note column = mean luma under worst-case audio >= "
+              f"{WHITE_MEAN_LUMA_MIN:g} / <= {BLACK_MEAN_LUMA_MAX:g}; a note for the person reviewing the look, not part of "
+              "the outcome.", "",
               "`#` is the Stream Deck review number (position in `show-fixed-first-latest.json`).", ""]
 
     lines += ["## Summary", "", "Outcome by class:", ""]
@@ -342,6 +413,8 @@ def render_markdown(assessments, context: dict) -> str:
     lines += ["", "Verdict per tier (chosen variant of every measured shader):", ""]
     heights = sorted({h for i in assessments if i["chosen"] for h in i["chosen"]["verdicts"]}, reverse=True)
     verdict_names = ["SOLID", "OK", "MARGINAL", "FAIL", "SKIPPED", "NO_DATA"]
+    if any(ONE_PATTERN in i["chosen"]["verdicts"].values() for i in assessments if i["chosen"]):
+        verdict_names.append(ONE_PATTERN)
     rows = []
     for klass in classes:
         for height in heights:
@@ -356,6 +429,9 @@ def render_markdown(assessments, context: dict) -> str:
     variant_counter = collections.Counter(i["variant"] for i in by_outcome["qualified"])
     lines += _table(["tier", "shaders"], [[f"{h}p", tier_counter[h]] for h in sorted(tier_counter, reverse=True)] or [["-", 0]])
     lines += ["", "Variant used by qualified shaders: " + (", ".join(f"{k}={v}" for k, v in sorted(variant_counter.items())) or "none") + "."]
+    one_pattern = [i["id"] for i in by_outcome["qualified"] if i["render_height"] in i["chosen"]["one_pattern_tiers"]]
+    lines += ["", f"Qualified on both audio patterns: {len(by_outcome['qualified']) - len(one_pattern)}. Qualified on the "
+              f"128 BPM pattern alone (not measured under worst-case audio): {len(one_pattern)}."]
     statuses = collections.Counter(a["status"] for i in assessments for a in i["variants"].values())
     lines += ["", "Result status over all measured (id, variant) keys: " + (", ".join(f"{k}={v}" for k, v in sorted(statuses.items())) or "none") + "."]
     temps = [a["temp_c"] for i in assessments for a in i["variants"].values() if isinstance(a.get("temp_c"), (int, float))]
@@ -425,7 +501,8 @@ def render_markdown(assessments, context: dict) -> str:
                       "the output is not the shader; excluded until a buffer graph exists (plan phase 3)."],
                      sorted(by_outcome["excluded_multipass"], key=lambda i: i["id"].lower()),
                      ["id", "#", "name", "passes", "Image pass reads", "Image-only timing (not meaningful)"], multipass_row)
-    lines += section("Not measured", ["Self-contained shaders with no result line in these files."],
+    lines += section("Not measured", ["Shaders with no result line in these files, or (with `--require-worst-case`) with "
+                                      "no measurement under worst-case audio."],
                      sorted(by_outcome["not_measured"], key=lambda i: i["id"].lower()),
                      ["id", "#", "name", "class"],
                      lambda i: [f"`{i['id']}`", _review(i["catalog"]), i["catalog"]["name"][:48], i["class"]])
@@ -454,8 +531,12 @@ def qualified_document(assessments, context: dict, follow: dict) -> dict:
         return {"id": item["id"], "review_number": record.get("review_number"), "name": record["name"], "class": item["class"],
                 "variant": item["variant"], "render_height": item["render_height"], "channels": chosen.get("channels") or {},
                 "p95_ms": {str(h): d.get("p95_ms") for h, d in sorted(chosen["tiers"].items()) if "p95_ms" in d},
+                "p95_ms_max": {str(h): d.get("p95_ms") for h, d in sorted(chosen["tiers_max"].items()) if "p95_ms" in d},
+                # the patterns the assigned tier was judged on
+                "audio": ["beat128"] if item["render_height"] in chosen["one_pattern_tiers"] else ["beat128", "max"],
                 "verdicts": {str(h): v for h, v in sorted(chosen["verdicts"].items())},
-                "compile_ms": chosen["compile_ms"], "pixel_flags": chosen["pixel_flags"]}
+                "compile_ms": chosen["compile_ms"], "pixel_flags": chosen["pixel_flags"],
+                "loud_flags": chosen["loud_flags"]}
 
     groups = collections.defaultdict(list)
     for item in sorted(assessments, key=lambda i: i["id"].lower()):
@@ -463,6 +544,9 @@ def qualified_document(assessments, context: dict, follow: dict) -> dict:
     return {
         "version": 1, "synthetic": bool(context.get("synthetic")), "results_files": context.get("results_files", []),
         "budgets_p95_ms": {"SOLID": SOLID_P95_MS, "OK": OK_P95_MS, "MARGINAL": MARGINAL_P95_MS},
+        "require_worst_case": bool(context.get("require_worst_case")),
+        "qualified_on_one_pattern": sorted(i["id"] for i in groups["qualified"]
+                                           if i["render_height"] in i["chosen"]["one_pattern_tiers"]),
         "pixel_thresholds": {"black_mean_luma_max": BLACK_MEAN_LUMA_MAX, "flat_spatial_std_max": FLAT_SPATIAL_STD_MAX,
                              "static_temporal_diff_max": STATIC_TEMPORAL_DIFF_MAX},
         "summary": {outcome: len(groups[outcome]) for outcome in OUTCOMES},
@@ -493,10 +577,11 @@ def build_show(entries) -> tuple[dict, dict, list]:
     """Show manifest in the existing format plus `render_height` per shader.
 
     `entries` are dicts with id, review_number, render_height and text (shader
-    source, for the crate keywords), plus optional `channels`: the shader's
-    channel bindings in manifest spelling, paths relative to show.json. Layout per page as in
-    build_shader_review_show.py: keys 0-23 shader triggers, 24/25 page
-    navigation, 26-29 crates, 30 delete, 31 blackout."""
+    source, for the keyword grouping), plus optional `channels` (the shader's
+    channel bindings in manifest spelling), `label` (key caption; the id if
+    absent) and `thumbnail` (key picture); paths are relative to show.json.
+    Layout per page: keys 0-23 shader triggers, 24/25 page navigation,
+    31 blackout."""
     groups = [[] for _ in range(4)]
     for entry in entries:
         groups[crate_group(entry.get("text", ""))].append(entry)
@@ -511,7 +596,7 @@ def build_show(entries) -> tuple[dict, dict, list]:
     for start in range(0, len(ordered), KEYS_PER_PAGE):
         bindings = []
         for key, entry in enumerate(ordered[start:start + KEYS_PER_PAGE]):
-            label = f"#{entry['review_number']:03d}" if entry.get("review_number") else entry["id"][:10]
+            label = entry.get("label") or entry["id"]
             bindings.append({"key": key, "label": label, "command": {"type": "TriggerShader", "shader": start + key},
                              "color": [25, 75, 120]})
         bindings += [
@@ -524,7 +609,8 @@ def build_show(entries) -> tuple[dict, dict, list]:
                 "clips": [{"label": "NO VIDEO", "path": "no-video.mp4", "thumbnail": None, "quad_mirror": False}],
                 "shaders": [dict({"label": entry["id"], "path": f"{entry['id']}.fs", "blend": "Additive", "opacity": 0.9,
                                   "render_height": int(entry["render_height"])},
-                                 **({"channels": entry["channels"]} if entry.get("channels") else {})) for entry in ordered],
+                                 **({"channels": entry["channels"]} if entry.get("channels") else {}),
+                                 **({"thumbnail": entry["thumbnail"]} if entry.get("thumbnail") else {})) for entry in ordered],
                 "pages": pages}
     kept = {entry["id"] for entry in ordered}
     group_doc = {f"crate_{i + 1}": [{"index": e.get("review_number"), "shader": e["id"], "render_height": e["render_height"]}
@@ -532,16 +618,40 @@ def build_show(entries) -> tuple[dict, dict, list]:
     return manifest, group_doc, dropped
 
 
+def key_label(record: dict) -> str:
+    """Caption under the key picture: the Shadertoy title, or the file name of a hand-built shader."""
+    if record.get("class") == CLASS_ORIGINAL or not (record.get("name") or "").strip():
+        return record["id"].replace("_", " ")
+    return " ".join(record["name"].split())
+
+
+def key_thumbnail(thumb_dirs, shader_id: str, variant: str):
+    """JPEG bytes of the bench thumbnail for this shader and variant, or None.
+    Later directories win, so newer runs replace older pictures."""
+    for directory in reversed(list(thumb_dirs or [])):
+        source = Path(directory) / f"{shader_id}.{variant}.ppm"
+        if source.is_file():
+            import io
+
+            from PIL import Image
+            out = io.BytesIO()
+            Image.open(source).convert("RGB").save(out, "JPEG", quality=90)
+            return out.getvalue()
+    return None
+
+
 def write_show(assessments, show_dir: Path, variants_dir: Path = VARIANTS_DIR, asset_manifest=None,
-               assets_dir: Path = ASSETS_DIR) -> dict:
+               assets_dir: Path = ASSETS_DIR, min_tier: int = 0, exclude=(), thumb_dirs=()) -> dict:
     """Write the show directory. A qualified texture shader gets its channel
     bindings from `asset_manifest` and its texture files copied to
     <show_dir>/assets/; if a file it needs is not in `assets_dir` the shader is
-    left out rather than shipped unbound."""
+    left out rather than shipped unbound. Shaders below `min_tier` or named in
+    `exclude` are left out; each key gets its bench thumbnail from `thumb_dirs`."""
     show_dir = Path(show_dir)
-    entries, sources, missing, missing_assets, asset_names = [], {}, [], [], set()
+    entries, sources, missing, missing_assets, asset_names, thumbs = [], {}, [], [], set(), {}
+    exclude = set(exclude)
     for item in assessments:
-        if item["outcome"] != "qualified":
+        if item["outcome"] != "qualified" or item["render_height"] < min_tier or item["id"] in exclude:
             continue
         source = Path(variants_dir) / item["variant"] / f"{item['id']}.fs"
         if not source.is_file():
@@ -560,9 +670,13 @@ def write_show(assessments, show_dir: Path, variants_dir: Path = VARIANTS_DIR, a
             asset_names |= {name for b in bindings if str(b["channel"]) in measured for name in binding_files(b)}
         data = source.read_bytes()
         sources[item["id"]] = data
+        picture = key_thumbnail(thumb_dirs, item["id"], item["variant"])
+        if picture:
+            thumbs[f"{item['id']}.jpg"] = picture
         entries.append({"id": item["id"], "review_number": item["catalog"].get("review_number"),
                         "render_height": item["render_height"], "text": data.decode("utf-8", errors="ignore"),
-                        "channels": channels})
+                        "channels": channels, "label": key_label(item["catalog"]),
+                        "thumbnail": f"{SHOW_THUMB_DIR}/{item['id']}.jpg" if picture else None})
     manifest, group_doc, dropped = build_show(entries)
     owned = (show_dir / SHOW_MARKER).is_file() or not show_dir.exists() or not any(show_dir.iterdir())
     show_dir.mkdir(parents=True, exist_ok=True)
@@ -576,8 +690,16 @@ def write_show(assessments, show_dir: Path, variants_dir: Path = VARIANTS_DIR, a
                           for name in binding_files({"file": channel["path"].rsplit("/", 1)[-1], "kind": channel["kind"]})})
     for name in used_assets:
         write_bytes_if_changed(show_dir / SHOW_ASSET_DIR / name, (Path(assets_dir) / name).read_bytes())
+    used_thumbs = {f"{label}.jpg" for label in kept} & set(thumbs)
+    for name in sorted(used_thumbs):
+        write_bytes_if_changed(show_dir / SHOW_THUMB_DIR / name, thumbs[name])
     removed = 0
     if owned:
+        if (show_dir / SHOW_THUMB_DIR).is_dir():
+            for stale in (show_dir / SHOW_THUMB_DIR).iterdir():
+                if stale.is_file() and stale.name not in used_thumbs:
+                    stale.unlink()
+                    removed += 1
         for stale in show_dir.glob("*.fs"):
             if stale.name not in wanted:
                 stale.unlink()
@@ -591,6 +713,7 @@ def write_show(assessments, show_dir: Path, variants_dir: Path = VARIANTS_DIR, a
     write_json(show_dir / "groups.json", group_doc)
     return {"shaders": len(manifest["shaders"]), "pages": len(manifest["pages"]), "dropped": dropped,
             "missing_variant_files": missing, "missing_assets": missing_assets, "assets": len(used_assets),
+            "thumbnails": len(used_thumbs),
             "stale_removed": removed}
 
 
@@ -603,6 +726,7 @@ def available_variants(variants_dir: Path = VARIANTS_DIR) -> dict:
 
 
 def main(argv=None) -> int:
+    global VARIANT_PREFERENCE
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("results", nargs="+", type=Path, help="results JSONL files, oldest first")
     parser.add_argument("--catalog", type=Path, default=None)
@@ -615,7 +739,22 @@ def main(argv=None) -> int:
     parser.add_argument("--asset-manifest", type=Path, default=ASSET_MANIFEST_PATH,
                         help="asset store manifest, for the channel bindings of qualified texture shaders")
     parser.add_argument("--assets-dir", type=Path, default=ASSETS_DIR)
+    parser.add_argument("--min-tier", type=int, default=0, metavar="HEIGHT",
+                        help="leave shaders assigned a lower render tier out of the show (the deployed bank uses 720)")
+    parser.add_argument("--exclude-file", type=Path, action="append", default=[],
+                        help="file of shader ids (one per line, # comments) to leave out of the show; repeatable")
+    parser.add_argument("--thumbs-dir", type=Path, action="append", default=[],
+                        help="directory of bench thumbnails (<id>.<variant>.ppm) for the key pictures; repeatable, later wins")
+    parser.add_argument("--require-worst-case", action="store_true",
+                        help="a tier measured under the 128 BPM pattern only (results from before the worst-case audio "
+                             "pattern) does not qualify")
+    parser.add_argument("--variants", default=None, metavar="V1,V2",
+                        help="assess only these variants (e.g. react,react_lite for a bank on the reactive wrapper)")
+    parser.add_argument("--prefer", default=None, metavar="V1,V2",
+                        help="variant preference for ties, best first (default: " + ",".join(VARIANT_PREFERENCE) + ")")
     args = parser.parse_args(argv)
+    if args.prefer:
+        VARIANT_PREFERENCE = tuple(v.strip() for v in args.prefer.split(",") if v.strip())
 
     events, warnings = iter_results(args.results)
     if any(event.get("synthetic") for event in events) and not args.synthetic:
@@ -628,10 +767,13 @@ def main(argv=None) -> int:
 
     catalog = load_catalog(args.catalog) if args.catalog else load_catalog()
     merged = merge_results(events)
-    assessments, orphans = assess_all(catalog, merged)
+    if args.variants:
+        wanted = {v.strip() for v in args.variants.split(",") if v.strip()}
+        merged = {key: record for key, record in merged.items() if key[1] in wanted}
+    assessments, orphans = assess_all(catalog, merged, args.require_worst_case)
     if orphans:
         warnings.append(f"{len(orphans)} result keys have no catalog entry (re-run catalog.py?)")
-    context = {"synthetic": args.synthetic, "results_files": [rel(p) for p in args.results], "warnings": warnings,
+    context = {"synthetic": args.synthetic, "require_worst_case": args.require_worst_case, "results_files": [rel(p) for p in args.results], "warnings": warnings,
                "catalog_total": len(catalog["shaders"]), "result_keys": len(merged), "orphans": orphans}
     follow = followups(assessments, available_variants(args.variants_dir))
     write_bytes_if_changed(doc_path, render_markdown(assessments, context).encode("utf-8"))
@@ -647,8 +789,12 @@ def main(argv=None) -> int:
     print(f"  {rel(qualified_path)}; follow-up lists: lower tiers={len(follow['measure_lower_tiers'])}, "
           f"other variants={len(follow['bench_other_variants'])}")
     if not args.no_show:
-        show = write_show(assessments, show_dir, args.variants_dir, load_asset_manifest(args.asset_manifest), args.assets_dir)
-        print(f"  show manifest: {show['shaders']} shaders on {show['pages']} pages, {show['assets']} texture files "
+        exclude = {line.split("#")[0].strip() for path in args.exclude_file
+                   for line in path.read_text(encoding="utf-8").splitlines()} - {""}
+        show = write_show(assessments, show_dir, args.variants_dir, load_asset_manifest(args.asset_manifest), args.assets_dir,
+                          args.min_tier, exclude, args.thumbs_dir)
+        print(f"  show manifest: {show['shaders']} shaders on {show['pages']} pages, {show['assets']} texture files, "
+              f"{show['thumbnails']} key pictures "
               f"-> {rel(show_dir / 'show.json')}")
         if show["missing_assets"]:
             print(f"  WARNING: {len(show['missing_assets'])} qualified texture shaders were left out of the show because their "

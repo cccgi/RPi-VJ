@@ -11,6 +11,15 @@
           `sampler2D`). Only shaders that carry such a rewrite get a `tex`
           file; it needs its channel bindings to compile. The sampler type in
           the header is left alone: the renderer sets it from the binding.
+    react the converter's legacy audio wrapper replaced by the reactive one
+          (make_native_shadertoy.py: geometry on the flow clocks and smoothed
+          bands, per-band hits, low brightness floor), on top of the `tex`
+          rewrite where that applies. Every shader that ends with the legacy
+          wrapper gets a file, except one whose own code reads the audio
+          uniforms. transforms.json lists, under `react`, the shaders given the
+          whole-pixel mode, those whose gl_FragCoord reads were redirected, and
+          those not wrapped, each with the reason.
+    react_lite  `lite` and `react` together, where a `lite` transform applies.
 
 Each variant directory gets a transforms.json recording exactly which rules
 fired per shader and what they changed.
@@ -40,10 +49,11 @@ from typing import Callable, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import (ROOT, VARIANTS_DIR, decode, load_catalog, rel, sha256_bytes, strip_comments,  # noqa: E402
-                    write_bytes_if_changed, write_json)
+from common import (ROOT, SHADERTOY_HEAD_END, SHADERTOY_WRAPPER_RE, VARIANTS_DIR, decode, load_catalog, rel,  # noqa: E402
+                    sha256_bytes, strip_comments, write_bytes_if_changed, write_json)
 from glsl_features import AA_NAME_RE  # noqa: E402
-from make_native_shadertoy import COORD_REGEX_RESTORES, COORD_REWRITES  # noqa: E402
+from make_native_shadertoy import (COORD_REGEX_RESTORES, COORD_REWRITES, REACT_MARKER, REACT_PRELUDE,  # noqa: E402
+                                   WRAPPER as LEGACY_WRAPPER, react_analysis, react_wrapper)
 
 SPATIAL_KINDS = ("cubemap", "volume")   # catalog channel kinds sampled with a 3-component coordinate
 _CHANNEL_RE = re.compile(r"\biChannel([0-3])\b")
@@ -199,6 +209,61 @@ def rule_restore_3d_coords(text: str, code: str, record: Optional[dict] = None):
     return _apply(text, replacements) if replacements else (text, [])
 
 
+# The legacy wrapper exactly as the converter wrote it, in any newline style
+# (the bank holds it with CRLF), up to the end of the file.
+_LEGACY_WRAPPER_RE = re.compile(r"\r*\n".join(re.escape(line) for line in LEGACY_WRAPPER.split("\n")) + r"\s*\Z")
+
+
+def _react_body(text: str, code: str, wrapper_start: int) -> tuple[int, str]:
+    """(offset where the Shadertoy code starts, that code comment-blanked)."""
+    start = text.find(SHADERTOY_HEAD_END)
+    start = 0 if start < 0 else start + len(SHADERTOY_HEAD_END)
+    return start, code[start:wrapper_start]
+
+
+def react_skip_reason(text: str) -> Optional[str]:
+    """Why `react_wrapper` leaves a file alone; None when it rewrites it."""
+    if REACT_MARKER in text:
+        return "already has the react wrapper"
+    match = _LEGACY_WRAPPER_RE.search(text)
+    if not match:
+        if SHADERTOY_WRAPPER_RE.search(text):
+            return "generated wrapper differs from the converter's (edited by hand?)"
+        return "no generated wrapper: the shader has its own main()"
+    _, body = _react_body(text, strip_comments(text), match.start())
+    return react_analysis(body)["skip"]
+
+
+def rule_react_wrapper(text: str, code: str):
+    """Replace the converter's legacy audio wrapper with the reactive one.
+
+    Fires only on a file that ends with exactly the legacy wrapper; a file that
+    already has the reactive wrapper, has its own `main`, or reads the audio
+    uniforms in its own code (wrapping it would double the reaction) is left
+    alone. `react_analysis` picks the mode: `pixel` for shaders that need whole
+    pixel coordinates, `normal` otherwise; a shader that reads gl_FragCoord
+    itself also gets REACT_PRELUDE so that read is transformed too."""
+    match = _LEGACY_WRAPPER_RE.search(text)
+    if not match or REACT_MARKER in text:
+        return text, []
+    body_start, body = _react_body(text, code, match.start())
+    plan = react_analysis(body)
+    if plan["skip"]:
+        return text, []
+    newline = "\r\n" if "\r\n" in match.group(0) else "\n"
+    wrapper = react_wrapper(plan["mode"], plan["direct_fragcoord"], plan["undef"]).replace("\n", newline)
+    edits = [{"line": _line_of(text, match.start()) + 1, "before": "legacy audio wrapper main()",
+              "after": f"react wrapper ({plan['mode']})", "mode": plan["mode"], "reasons": plan["reasons"],
+              "direct_fragcoord": plan["direct_fragcoord"]}]
+    new_text = text[:match.start()] + wrapper
+    if plan["direct_fragcoord"]:
+        prelude = newline + REACT_PRELUDE.replace("\n", newline).rstrip("\r\n")
+        new_text = new_text[:body_start] + prelude + new_text[body_start:]
+        edits.insert(0, {"line": _line_of(text, body_start) + 1, "before": "",
+                         "after": "gl_FragCoord redirected to the transformed coordinate"})
+    return new_text, edits
+
+
 @dataclass(frozen=True)
 class Rule:
     id: str
@@ -217,14 +282,28 @@ RULES = {rule.id: rule for rule in (
     Rule("aa_switch_off", "boolean AA switch tested only by #if -> 0", rule_aa_switch_off, "anti-aliasing only", "E10"),
     Rule("restore_3d_coords", "cubemap/volume lookups get back the 3-component coordinate the converter cut to .xy",
          rule_restore_3d_coords, "the shader as designed, once its cubemap/volume channel is bound", None, True),
+    Rule("react_wrapper", "legacy audio wrapper main() -> reactive wrapper (flow-clock geometry, low brightness floor)",
+         rule_react_wrapper, "audio response: geometry moves on the flow clocks, dark at silence; the shader's own code "
+         "is untouched", "section 5"),
 )}
 
 # Variant -> ordered rule ids. `base` is the unchanged file. A later `pi`
 # variant is added here as  "pi": VARIANT_RULES["lite"] + (<new rule ids>,).
+_LITE = ("hw_performance_0", "aa_samples_1", "aa_switch_off")
 VARIANT_RULES = {
     "base": (),
-    "lite": ("hw_performance_0", "aa_samples_1", "aa_switch_off"),
+    "lite": _LITE,
     "tex": ("restore_3d_coords",),
+    # The reactive wrapper on the file as it has to be with textures bound, so one
+    # variant serves self-contained and texture shaders alike.
+    "react": ("restore_3d_coords", "react_wrapper"),
+    "react_lite": _LITE + ("restore_3d_coords", "react_wrapper"),
+}
+# Variant -> groups of rule ids; a file is written only when at least one rule
+# of every group fired. Variants not listed need any one of their rules.
+VARIANT_NEEDS = {
+    "react": (("react_wrapper",),),
+    "react_lite": (("react_wrapper",), _LITE),
 }
 
 
@@ -250,13 +329,19 @@ def build_variant(variant: str, catalog: dict, out_root: Path = VARIANTS_DIR, ro
     out_dir = Path(out_root) / variant
     out_dir.mkdir(parents=True, exist_ok=True)
     shaders, written, rule_counts = {}, 0, collections.Counter()
+    needs = VARIANT_NEEDS.get(variant, ())
+    reactive = "react_wrapper" in rule_ids
+    not_wrapped = {}
     for record in catalog["shaders"]:
         source = Path(root) / record["path"]
         data = source.read_bytes()
         if rule_ids:
             text, encoding = decode(data)
             new_text, applied = transform(text, rule_ids, record)
-            if not applied:
+            fired = {item["rule"] for item in applied}
+            if reactive and "react_wrapper" not in fired:
+                not_wrapped[record["id"]] = {"class": record["class"], "reason": react_skip_reason(text)}
+            if not applied or any(not fired & set(group) for group in needs):
                 continue
             out_data = new_text.encode(encoding)
         else:
@@ -280,6 +365,23 @@ def build_variant(variant: str, catalog: dict, out_root: Path = VARIANTS_DIR, ro
                     "rule_counts": {r: rule_counts.get(r, 0) for r in rule_ids}},
         "shaders": dict(sorted(shaders.items())),
     }
+    if reactive:
+        # How the reactive wrapper treated each shader, for review: which ones got
+        # the whole-pixel mode or the gl_FragCoord redirect and why, and which
+        # were left with what they had.
+        modes, pixel, direct = collections.Counter(), {}, []
+        for shader_id, entry in sorted(shaders.items()):
+            edit = next(e for item in entry["transforms"] if item["rule"] == "react_wrapper"
+                        for e in item["edits"] if "mode" in e)
+            modes[edit["mode"]] += 1
+            if edit["mode"] == "pixel":
+                pixel[shader_id] = edit["reasons"]
+            if edit["direct_fragcoord"]:
+                direct.append(shader_id)
+        report["react"] = {"modes": dict(sorted(modes.items())), "pixel_mode": pixel, "gl_fragcoord_redirected": direct,
+                           "not_wrapped": dict(sorted(not_wrapped.items()))}
+        report["summary"]["react_modes"] = report["react"]["modes"]
+        report["summary"]["not_wrapped"] = len(not_wrapped)
     write_json(out_dir / "transforms.json", report)
     report["files_written"], report["files_removed"] = written, removed
     return report
