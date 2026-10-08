@@ -179,6 +179,10 @@ pub struct Renderer {
     clock: BeatClock,
     frame: i32,
     clip_layouts: Vec<bool>,
+    /// Per shader: moved over its own canvas (`infinite_canvas`) instead of tiled.
+    canvas_native: Vec<bool>,
+    /// Travel of an endless-canvas shader, x and y, as the phase of a there-and-back sweep.
+    geo_travel: [f32; 2],
     hud_texture: glow::Texture,
     hud_pixels: Vec<u8>,
     hud_stamp: f32,
@@ -222,6 +226,9 @@ pub(super) struct ShaderFrame<'a> {
     pub tempo: Tempo,
     pub audio: &'a AudioFrame,
     pub flow: &'a [f32; 4],
+    /// Canvas turn (cos, sin) and shift (x, y in picture heights) for the bank wrapper;
+    /// `[1, 0, 0, 0]` leaves the shader where it is.
+    pub canvas: [f32; 4],
     pub spec_flow: &'a [f32; 32],
     /// Texture a `u_video` shader samples; `None` reads opaque black.
     pub video: Option<glow::Texture>,
@@ -289,6 +296,10 @@ pub(super) unsafe fn shader_pass(
         ("u_beat_phase", beat),
         ("u_bar_phase", bar),
         ("u_locked", f.tempo.locked),
+        ("u_canvas_cos", f.canvas[0]),
+        ("u_canvas_sin", f.canvas[1]),
+        ("u_canvas_x", f.canvas[2]),
+        ("u_canvas_y", f.canvas[3]),
         ("u_flow", f.flow[0]),
         ("u_flow_low", f.flow[1]),
         ("u_flow_mid", f.flow[2]),
@@ -472,6 +483,8 @@ impl Renderer {
                 clock: BeatClock::default(),
                 frame: 0,
                 clip_layouts: show.clips.iter().map(|c| c.quad_mirror).collect(),
+                canvas_native: show.shaders.iter().map(|s| s.infinite_canvas).collect(),
+                geo_travel: [0.0; 2],
                 hud_texture,
                 hud_pixels: vec![0; 768 * 16],
                 hud_stamp: -1.0,
@@ -600,20 +613,54 @@ impl Renderer {
             -(cos_new * s[0] + sin_new * s[1]) % (2.0 * aspect),
             -(-sin_new * s[0] + cos_new * s[1]) % 2.0,
         ];
+        // An endless-canvas shader takes the move and the turn itself; the compositor then
+        // leaves both alone. Its canvas does not repeat, so instead of scrolling for ever
+        // the picture sweeps out to three quarters of a screen and back.
+        let native = state
+            .selected_shader
+            .and_then(|i| self.canvas_native.get(i))
+            .copied()
+            .unwrap_or(false);
+        for (phase, speed) in self.geo_travel.iter_mut().zip(velocity) {
+            if speed != 0.0 {
+                *phase = (*phase + speed * dt).rem_euclid(4.0);
+            } else if velocity == [0.0, 0.0] && *phase != 0.0 {
+                let signed = if *phase > 2.0 { *phase - 4.0 } else { *phase };
+                let eased = signed * (1.0 - (dt * 3.0).min(1.0));
+                *phase = if eased.abs() < 0.001 { 0.0 } else { eased.rem_euclid(4.0) };
+            }
+        }
+        let sweep = |phase: f32| match phase {
+            p if p < 1.0 => p,
+            p if p < 3.0 => 2.0 - p,
+            p => p - 4.0,
+        };
+        let travel = [sweep(self.geo_travel[0]) * 0.75 * aspect, sweep(self.geo_travel[1]) * 0.75];
+        let canvas = if native {
+            [
+                cos_new,
+                sin_new,
+                -(cos_new * travel[0] + sin_new * travel[1]),
+                -(-sin_new * travel[0] + cos_new * travel[1]),
+            ]
+        } else {
+            [1.0, 0.0, 0.0, 0.0]
+        };
+        let (turn, pan) = if native { (0.0, [0.0; 2]) } else { (self.geo_drift, self.geo_pan) };
         let segments = if m[7] < 0.06 { 0.0 } else { 2.0 + (m[7] * 6.99).floor() };
         let geo = [
             m[0] * 0.85 * level[0],
-            self.geo_drift,
+            turn,
             m[1] * 3.5 * level[1] * (0.6 + 0.4 * (time * 0.7).sin()),
             0.0,
         ];
         let geo2 = [m[3] * 0.12 * level[3], self.flow[3] * 8.0, segments, 0.0];
-        let geo3 = [m[2] * 0.2 * level[2], self.flow[2] * 3.0, self.geo_pan[0], self.geo_pan[1]];
+        let geo3 = [m[2] * 0.2 * level[2], self.flow[2] * 3.0, pan[0], pan[1]];
         // The geometry build of the compositor is used only while something is off its default.
         let geo_on = m[..4].iter().any(|v| *v > 0.0)
             || segments > 0.0
-            || self.geo_drift != 0.0
-            || self.geo_pan != [0.0, 0.0];
+            || turn != 0.0
+            || pan != [0.0, 0.0];
         if state.shader && !state.blackout {
             if let Some(index) = state.selected_shader { self.compile_selected(index); }
         }
@@ -684,6 +731,7 @@ impl Renderer {
                         frame: self.frame,
                         bpm: state.bpm,
                         tempo,
+                        canvas,
                         audio,
                         flow: &self.flow,
                         spec_flow: &self.spec_flow,

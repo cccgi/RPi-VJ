@@ -30,6 +30,10 @@ pub struct Shader {
     /// Picture for this shader's Stream Deck key; relative to the manifest.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub thumbnail: Option<PathBuf>,
+    /// Move and turn this shader over its own endless canvas instead of tiling its
+    /// picture. For shaders built around the screen centre; needs the bank wrapper.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub infinite_canvas: bool,
 }
 /// Allowed shader render tiers. Width is always derived at 16:9.
 pub const RENDER_HEIGHTS: [u32; 4] = [1080, 720, 540, 360];

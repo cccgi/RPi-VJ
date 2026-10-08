@@ -156,6 +156,7 @@ impl Session<'_> {
                 tempo: Tempo::free(time, BPM, 1.0),
                 audio: &audio,
                 flow: &flow,
+                canvas: [1.0, 0.0, 0.0, 0.0],
                 spec_flow: &spec_flow,
                 video: Some(self.video),
                 video_quad_mirror: false,

@@ -6,7 +6,10 @@ use anyhow::{bail, ensure, Context, Result};
 use serde_json::Value;
 use std::{collections::HashSet, io::Read, path::Path};
 pub const MAX_SOURCE_BYTES: usize = 256 * 1024;
-pub const FLOAT_UNIFORMS: &str = "u_time u_bass u_mid u_treble u_volume u_onset u_beat_onset u_beat_phase u_bar_phase u_energy u_kick u_sub u_low_mid u_high_mid u_hit_low u_hit_mid u_hit_high u_locked u_flow u_flow_low u_flow_mid u_flow_high uSubBass uBass uLowMid uHighMid uTreble uEnergy uKick uBPM uBeatPhase uBarPhase TIME TIMEDELTA";
+/// The call the Shadertoy converter's wrapper ends with, and what is put before it.
+const WRAPPER_CALL: &str = "    mainImage(c, q);";
+const CANVAS_MOVE: &str = "    q = 0.5 * u_resolution + mat2(u_canvas_cos, -u_canvas_sin, u_canvas_sin, u_canvas_cos) * (q - 0.5 * u_resolution) + vec2(u_canvas_x, u_canvas_y) * u_resolution.y;\n";
+pub const FLOAT_UNIFORMS: &str = "u_canvas_cos u_canvas_sin u_canvas_x u_canvas_y u_time u_bass u_mid u_treble u_volume u_onset u_beat_onset u_beat_phase u_bar_phase u_energy u_kick u_sub u_low_mid u_high_mid u_hit_low u_hit_mid u_hit_high u_locked u_flow u_flow_low u_flow_mid u_flow_high uSubBass uBass uLowMid uHighMid uTreble uEnergy uKick uBPM uBeatPhase uBarPhase TIME TIMEDELTA";
 #[derive(Debug)]
 pub struct PreparedShader {
     pub source: String,
@@ -78,6 +81,15 @@ pub fn prepare_with(source: &str, channels: &[(u8, Kind)]) -> Result<PreparedSha
         .map(|line| channel_declaration(line, channels).unwrap_or_else(|| line.to_owned()))
         .collect::<Vec<_>>()
         .join("\n");
+    // The converted bank's wrapper hands `mainImage` the pixel coordinate `q`. Turning and
+    // shifting `q` first lets the renderer move such a shader over its own endless canvas
+    // (`infinite_canvas` in the show) instead of tiling the finished picture. The
+    // uniforms are the identity unless that is asked for.
+    let body = if body.matches(WRAPPER_CALL).count() == 1 {
+        body.replacen(WRAPPER_CALL, &format!("{CANVAS_MOVE}{WRAPPER_CALL}"), 1)
+    } else {
+        body
+    };
     let tokens: Vec<_> = body
         .split(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
         .filter(|s| !s.is_empty())
@@ -168,6 +180,14 @@ pub fn prepare_with(source: &str, channels: &[(u8, Kind)]) -> Result<PreparedSha
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn the_bank_wrapper_gets_the_canvas_move_and_other_shaders_do_not() {
+        let wrapped = prepare("uniform vec2 u_resolution;\nvoid mainImage(out vec4 c, vec2 q){c=vec4(q,0.,1.);}\nvoid main(){\n    vec2 q=gl_FragCoord.xy;\n    vec4 c;\n    mainImage(c, q);\n    gl_FragColor=c;\n}").unwrap();
+        assert_eq!(wrapped.source.matches("u_canvas_cos, -u_canvas_sin").count(), 1);
+        assert!(wrapped.source.contains("uniform float u_canvas_x;"));
+        let own = prepare("void main(){gl_FragColor=vec4(1.);}").unwrap();
+        assert!(!own.source.contains("mat2(u_canvas_cos"));
+    }
     #[test]
     fn original_library_prepares() {
         let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/shaders");

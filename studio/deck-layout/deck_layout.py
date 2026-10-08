@@ -14,11 +14,20 @@ paths in the show, relative to it.
   drag a key onto the tray         take it off the deck (it stays in the show)
   drag a tray item onto a key      put it on the deck
   double-click a key               rename its caption
+  right-click a shader key         switch it between tiled and endless canvas
+                                   (marked with a ring; see below)
   Pull from Pi                     replace the local layout with the Pi's
   Sync to Pi                       save, upload and restart the show services
 
 Keys 25, 26, 31 and 32 (bottom row: PREV, NEXT, RESET, BLACK) belong to the
-controller and cannot be assigned. The Pi password is asked for when needed and
+controller and cannot be assigned.
+
+Canvas mode decides what the X-Touch layer B move and spin knobs do to a shader.
+Tiled (default) repeats the finished picture, mirrored; right for textures,
+patterns and small centred graphics you want repeated. Endless canvas moves
+the shader over its own unbounded picture with no tiles; right for shaders
+built around the screen centre, such as tunnels and portals. It only works on
+shaders converted from Shadertoy. The Pi password is asked for when needed and
 kept in memory for the session only; it is never written to disk.
 """
 import copy
@@ -149,6 +158,7 @@ class Editor:
             widget.bind("<B1-Motion>", self.motion)
             widget.bind("<ButtonRelease-1>", self.release)
         self.grid.bind("<Double-Button-1>", self.rename_key)
+        self.grid.bind("<Button-3>", self.toggle_canvas)
         self.ghost = None
         self.refresh()
 
@@ -239,6 +249,9 @@ class Editor:
                 self.grid.create_image(x, y, image=picture, anchor="nw")
                 self.grid.create_rectangle(x, y + CELL - 24, x + CELL, y + CELL, fill="#101216", outline="")
                 self.grid.create_text(x + CELL / 2, y + CELL - 12, text=self.fit(binding["label"], 15), fill=TEXT, font=("Segoe UI", 9))
+            item = item_of(binding)
+            if item and item[0] == "shader" and self.show["shaders"][item[1]].get("infinite_canvas"):
+                self.grid.create_oval(x + CELL - 22, y + 6, x + CELL - 6, y + 22, outline="white", width=3)
             else:
                 self.grid.create_text(x + CELL / 2, y + CELL / 2, text=binding["label"], fill=TEXT, width=CELL - 10,
                                       font=("Segoe UI", 10, "bold"), justify="center")
@@ -348,6 +361,19 @@ class Editor:
             if text and text.strip():
                 binding["label"] = text.strip()
                 self.changed("renamed key")
+
+    def toggle_canvas(self, event):
+        key = self.key_at(event.x_root, event.y_root)
+        item = item_of(self.at(key) or {}) if key is not None else None
+        if not item or item[0] != "shader":
+            return
+        shader = self.show["shaders"][item[1]]
+        if shader.get("infinite_canvas"):
+            del shader["infinite_canvas"]
+            self.changed(f"{shader['label']}: tiled")
+        else:
+            shader["infinite_canvas"] = True
+            self.changed(f"{shader['label']}: endless canvas")
 
     def add_page(self):
         if len(self.show["pages"]) >= MAX_PAGES:
