@@ -179,8 +179,10 @@ pub struct Renderer {
     clock: BeatClock,
     frame: i32,
     clip_layouts: Vec<bool>,
-    /// Per shader: moved over its own canvas (`infinite_canvas`) instead of tiled.
-    canvas_native: Vec<bool>,
+    /// Per shader: how it is moved and turned.
+    canvas_mode: Vec<crate::show::Canvas>,
+    /// Travel of a scrolling shader, x and y, in picture heights.
+    geo_scroll: [f32; 2],
     /// Travel of an endless-canvas shader, x and y, as the phase of a there-and-back sweep.
     geo_travel: [f32; 2],
     hud_texture: glow::Texture,
@@ -298,8 +300,11 @@ pub(super) unsafe fn shader_pass(
         ("u_locked", f.tempo.locked),
         ("u_canvas_cos", f.canvas[0]),
         ("u_canvas_sin", f.canvas[1]),
-        ("u_canvas_x", f.canvas[2]),
-        ("u_canvas_y", f.canvas[3]),
+        // The shift arrives in picture heights; the shader works in pixels.
+        ("u_canvas_x", f.canvas[2] * size.1 as f32),
+        ("u_canvas_y", f.canvas[3] * size.1 as f32),
+        ("u_canvas_cx", size.0 as f32 * 0.5),
+        ("u_canvas_cy", size.1 as f32 * 0.5),
         ("u_flow", f.flow[0]),
         ("u_flow_low", f.flow[1]),
         ("u_flow_mid", f.flow[2]),
@@ -483,7 +488,8 @@ impl Renderer {
                 clock: BeatClock::default(),
                 frame: 0,
                 clip_layouts: show.clips.iter().map(|c| c.quad_mirror).collect(),
-                canvas_native: show.shaders.iter().map(|s| s.infinite_canvas).collect(),
+                canvas_mode: show.shaders.iter().map(|s| s.canvas).collect(),
+                geo_scroll: [0.0; 2],
                 geo_travel: [0.0; 2],
                 hud_texture,
                 hud_pixels: vec![0; 768 * 16],
@@ -613,14 +619,25 @@ impl Renderer {
             -(cos_new * s[0] + sin_new * s[1]) % (2.0 * aspect),
             -(-sin_new * s[0] + cos_new * s[1]) % 2.0,
         ];
-        // An endless-canvas shader takes the move and the turn itself; the compositor then
-        // leaves both alone. Its canvas does not repeat, so instead of scrolling for ever
-        // the picture sweeps out to three quarters of a screen and back.
-        let native = state
+        // Unless a shader is tiled, it takes the move and the turn itself, through its
+        // pixel position, and the compositor leaves both alone. `Scroll` travels for ever;
+        // `Sweep` goes out to three quarters of a screen and back.
+        use crate::show::Canvas;
+        let mode = state
             .selected_shader
-            .and_then(|i| self.canvas_native.get(i))
+            .and_then(|i| self.canvas_mode.get(i))
             .copied()
-            .unwrap_or(false);
+            .unwrap_or_default();
+        let native = mode != Canvas::Tile;
+        for (position, speed) in self.geo_scroll.iter_mut().zip(velocity) {
+            *position += speed * dt;
+            if velocity == [0.0, 0.0] {
+                *position *= 1.0 - (dt * 3.0).min(1.0);
+                if position.abs() < 0.001 {
+                    *position = 0.0;
+                }
+            }
+        }
         for (phase, speed) in self.geo_travel.iter_mut().zip(velocity) {
             if speed != 0.0 {
                 *phase = (*phase + speed * dt).rem_euclid(4.0);
@@ -635,7 +652,11 @@ impl Renderer {
             p if p < 3.0 => 2.0 - p,
             p => p - 4.0,
         };
-        let travel = [sweep(self.geo_travel[0]) * 0.75 * aspect, sweep(self.geo_travel[1]) * 0.75];
+        let travel = if mode == Canvas::Sweep {
+            [sweep(self.geo_travel[0]) * 0.75 * aspect, sweep(self.geo_travel[1]) * 0.75]
+        } else {
+            self.geo_scroll
+        };
         let canvas = if native {
             [
                 cos_new,

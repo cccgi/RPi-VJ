@@ -30,10 +30,27 @@ pub struct Shader {
     /// Picture for this shader's Stream Deck key; relative to the manifest.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub thumbnail: Option<PathBuf>,
-    /// Move and turn this shader over its own endless canvas instead of tiling its
-    /// picture. For shaders built around the screen centre; needs the bank wrapper.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub infinite_canvas: bool,
+    /// What the layer B move knobs do to this shader.
+    #[serde(default, skip_serializing_if = "Canvas::is_default")]
+    pub canvas: Canvas,
+}
+/// How a shader is moved and turned.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Canvas {
+    /// Scroll for ever over the shader's own unbounded picture. Right for patterns.
+    #[default]
+    Scroll,
+    /// The same canvas, but out and back: for pictures built around the screen centre,
+    /// which endless scrolling would carry away.
+    Sweep,
+    /// Repeat the finished picture, mirrored: for a small figure that should multiply.
+    Tile,
+}
+impl Canvas {
+    fn is_default(&self) -> bool {
+        *self == Self::Scroll
+    }
 }
 /// Allowed shader render tiers. Width is always derived at 16:9.
 pub const RENDER_HEIGHTS: [u32; 4] = [1080, 720, 540, 360];
