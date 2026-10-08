@@ -19,12 +19,13 @@ vec2 warp(vec2 uv) {
   vec2 p = (uv - 0.5) * vec2(aspect, 1.0);
   float r = length(p);
   p *= 1.0 - u_geo.x * exp(-r * r * 2.5);
-  // Scroll before turning, so the canvas spins about its own centre wherever it has
-  // moved. Under the mirror fold the scroll is added after the fold, per pixel.
-  if (u_geo2.z < 1.5) p += u_geo3.zw;
   float ang = u_geo.y + u_geo.z * (0.6 - r);
   float c = cos(ang), s = sin(ang);
   p = mat2(c, -s, s, c) * p;
+  // The scroll is an offset in canvas coordinates, added after the turn; the renderer
+  // keeps it so that the canvas still spins about its own centre. Under the mirror fold
+  // it is added after the fold instead, per pixel.
+  if (u_geo2.z < 1.5) p += u_geo3.zw;
   p += vec2(sin(p.y * 7.0 + u_geo3.y), cos(p.x * 5.0 + u_geo3.y * 0.8) * 0.6) * u_geo3.x;
   if (r > 0.0001) p += (p / r) * sin(r * 30.0 - u_geo2.y) * u_geo2.x;
   return p / vec2(aspect, 1.0) + 0.5;

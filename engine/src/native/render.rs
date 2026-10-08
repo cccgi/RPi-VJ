@@ -184,8 +184,10 @@ pub struct Renderer {
     hud_stamp: f32,
     /// Accumulated drift rotation of the shader layer, radians.
     geo_drift: f32,
-    /// Accumulated canvas scroll, x and y, in picture heights.
+    /// Canvas scroll as a lookup offset in canvas coordinates (picture heights), and the
+    /// drift angle it was last computed with.
     geo_pan: [f32; 2],
+    geo_pan_angle: f32,
     /// Recent peak of each band that drives the layer geometry, and its level against it.
     geo_peak: [f32; 5],
     pub geo_level: [f32; 5],
@@ -475,6 +477,7 @@ impl Renderer {
                 hud_stamp: -1.0,
                 geo_drift: 0.0,
                 geo_pan: [0.0; 2],
+                geo_pan_angle: 0.0,
                 geo_peak: [0.02; 5],
                 geo_level: [0.0; 5],
                 geo_idle: 0.0,
@@ -566,21 +569,37 @@ impl Renderer {
             *out = lifted + (value.clamp(0.0, 1.0) - lifted) * self.geo_idle;
         }
         self.geo_level = level;
-        // Knobs 5 and 6 scroll the canvas (centre is still, like drift) and it eases home
-        // when a knob is centred. Units are picture heights; the mirrored edge repeats
-        // every two pictures, so the position wraps there.
+        // Knobs 5 and 6 scroll the canvas along the screen axes (centre is still, like
+        // drift) while it spins about its own centre: lookup = R(angle) * (p - s), with s
+        // the picture's travel on screen. What is kept is t = -R * s, the offset in canvas
+        // coordinates, because only there does the mirrored repeat have a fixed period
+        // (two pictures each way), so wrapping t is exact at any angle. Each frame t is
+        // taken back to s with the angle it was made with, s advances, and t is rebuilt.
         let aspect = size.0 as f32 / size.1.max(1) as f32;
-        for (pan, (knob, period)) in self.geo_pan.iter_mut().zip([(m[5], 2.0 * aspect), (m[4], 2.0)]) {
+        let speed = |knob: f32| {
             let speed = (knob - 0.5) * 2.0;
-            if speed.abs() > 0.04 {
-                *pan = (*pan + dt * speed * 0.5) % period;
-            } else if *pan != 0.0 {
-                *pan *= 1.0 - (dt * 3.0).min(1.0);
-                if pan.abs() < 0.001 {
-                    *pan = 0.0;
-                }
+            if speed.abs() > 0.04 { speed * 0.5 } else { 0.0 }
+        };
+        let velocity = [speed(m[5]), speed(m[4])];
+        let (sin_old, cos_old) = self.geo_pan_angle.sin_cos();
+        let t = self.geo_pan;
+        let mut s = [-(cos_old * t[0] - sin_old * t[1]), -(sin_old * t[0] + cos_old * t[1])];
+        s[0] += velocity[0] * dt;
+        s[1] += velocity[1] * dt;
+        if velocity == [0.0, 0.0] {
+            // Both knobs centred: ease home.
+            let keep = 1.0 - (dt * 3.0).min(1.0);
+            s = [s[0] * keep, s[1] * keep];
+            if s[0].abs() + s[1].abs() < 0.001 {
+                s = [0.0, 0.0];
             }
         }
+        let (sin_new, cos_new) = self.geo_drift.sin_cos();
+        self.geo_pan_angle = self.geo_drift;
+        self.geo_pan = [
+            -(cos_new * s[0] + sin_new * s[1]) % (2.0 * aspect),
+            -(-sin_new * s[0] + cos_new * s[1]) % 2.0,
+        ];
         let segments = if m[7] < 0.06 { 0.0 } else { 2.0 + (m[7] * 6.99).floor() };
         let geo = [
             m[0] * 0.85 * level[0],
@@ -589,8 +608,7 @@ impl Renderer {
             0.0,
         ];
         let geo2 = [m[3] * 0.12 * level[3], self.flow[3] * 8.0, segments, 0.0];
-        // The picture moves right and up for positive pan, so the lookup moves the other way.
-        let geo3 = [m[2] * 0.2 * level[2], self.flow[2] * 3.0, -self.geo_pan[0], -self.geo_pan[1]];
+        let geo3 = [m[2] * 0.2 * level[2], self.flow[2] * 3.0, self.geo_pan[0], self.geo_pan[1]];
         // The geometry build of the compositor is used only while something is off its default.
         let geo_on = m[..4].iter().any(|v| *v > 0.0)
             || segments > 0.0
