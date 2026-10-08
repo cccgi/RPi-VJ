@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """Emit shader variants -> target/shader-bank/variants/<variant>/<id>.fs.
 
+    pi75/pi50/pi28  experimental copies reducing one largest recognized loop;
+          use a batch-filtered --catalog and benchmark/visually review every copy.
+    pi_fbm2  two-octave experiments in recognized fbm functions.
+    pi_tuned source-reviewed per-shader settings with normalization preserved.
+
     base  the file unchanged (byte copy)
     lite  only transforms that keep the look apart from anti-aliasing
           (plan WP-B item 2). A shader with no applicable transform gets no
@@ -51,6 +56,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common import (ROOT, SHADERTOY_HEAD_END, SHADERTOY_WRAPPER_RE, VARIANTS_DIR, decode, load_catalog, rel,  # noqa: E402
                     sha256_bytes, strip_comments, write_bytes_if_changed, write_json)
+from pi_tuned_rules import rule_pi_tuned
+from pi_loop_rules import rule_pi75, rule_pi50, rule_pi28, rule_pi_fbm2
 from glsl_features import AA_NAME_RE  # noqa: E402
 from make_native_shadertoy import (COORD_REGEX_RESTORES, COORD_REWRITES, REACT_MARKER, REACT_PRELUDE,  # noqa: E402
                                    WRAPPER as LEGACY_WRAPPER, react_analysis, react_wrapper)
@@ -275,6 +282,11 @@ class Rule:
 
 
 RULES = {rule.id: rule for rule in (
+    Rule("pi_fbm2", "Two octaves in literal-bound fbm functions", rule_pi_fbm2, "judgement: fine noise detail loss", "E5a"),
+    Rule("pi_tuned", "Reviewed iteration settings, including dependent normalization", rule_pi_tuned, "judgement: detail/palette changes", "E1/E5a/E11", needs_record=True),
+    Rule("pi_loop_28", "Cap one largest recognized canonical loop at 28 iterations", rule_pi28, "judgement: detail loss", "E1"),
+    Rule("pi_loop_75", "Keep 75% of one largest recognized canonical loop", rule_pi75, "judgement: detail loss", "E1/E11"),
+    Rule("pi_loop_50", "Keep 50% of one largest recognized canonical loop", rule_pi50, "judgement: detail loss", "E1/E11"),
     Rule("hw_performance_0", "#define HW_PERFORMANCE 1 -> 0 where the shader tests it", rule_hw_performance_0,
          "author's own low-performance settings (normally AA only; see transforms.json per shader)", "E10"),
     Rule("aa_samples_1", "supersample count define/const (AA, SSAA, ANTIALIAS*, *_AA, subSamples ...) -> 1", rule_aa_samples_1,
@@ -288,10 +300,15 @@ RULES = {rule.id: rule for rule in (
 )}
 
 # Variant -> ordered rule ids. `base` is the unchanged file. A later `pi`
-# variant is added here as  "pi": VARIANT_RULES["lite"] + (<new rule ids>,).
+# Pi experiments stay separate from lite so each measures one change class.
 _LITE = ("hw_performance_0", "aa_samples_1", "aa_switch_off")
 VARIANT_RULES = {
     "base": (),
+    "pi75": ("pi_loop_75",),
+    "pi_fbm2": ("pi_fbm2",),
+    "pi_tuned": ("pi_tuned",),
+    "pi28": ("pi_loop_28",),
+    "pi50": ("pi_loop_50",),
     "lite": _LITE,
     "tex": ("restore_3d_coords",),
     # The reactive wrapper on the file as it has to be with textures bound, so one

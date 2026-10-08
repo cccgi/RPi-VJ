@@ -1166,6 +1166,1094 @@
    "opacity": 0.9,
    "render_height": 1080,
    "thumbnail": "bank-v2/thumbs/wslBRf.jpg"
+  },
+  {
+   "label": "7Xy3WW",
+   "path": "bank-v2/7Xy3WW.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/7Xy3WW.jpg"
+  },
+  {
+   "label": "3cfGzn",
+   "path": "bank-v2/3cfGzn.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/3cfGzn.jpg"
+  },
+  {
+   "label": "43d3zr",
+   "path": "bank-v2/43d3zr.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/43d3zr.jpg"
+  },
+  {
+   "label": "csd3RM",
+   "path": "bank-v2/csd3RM.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/52d2a8f514c4fd2d9866587f4d7b2a5bfa1a11a0e772077d7682deb8b3b517e5.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/csd3RM.jpg"
+  },
+  {
+   "label": "ctsyW8",
+   "path": "bank-v2/ctsyW8.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/ctsyW8.jpg"
+  },
+  {
+   "label": "DlGXRw",
+   "path": "bank-v2/DlGXRw.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/DlGXRw.jpg"
+  },
+  {
+   "label": "DlVSDm",
+   "path": "bank-v2/DlVSDm.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/DlVSDm.jpg"
+  },
+  {
+   "label": "dscXRj",
+   "path": "bank-v2/dscXRj.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/dscXRj.jpg"
+  },
+  {
+   "label": "fd3cRs",
+   "path": "bank-v2/fd3cRs.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/fd3cRs.jpg"
+  },
+  {
+   "label": "McBcz3",
+   "path": "bank-v2/McBcz3.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/McBcz3.jpg"
+  },
+  {
+   "label": "Mtc3zn",
+   "path": "bank-v2/Mtc3zn.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/Mtc3zn.jpg"
+  },
+  {
+   "label": "MtKyRR",
+   "path": "bank-v2/MtKyRR.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/MtKyRR.jpg"
+  },
+  {
+   "label": "t3fyWM",
+   "path": "bank-v2/t3fyWM.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/8de3a3924cb95bd0e95a443fff0326c869f9d4979cd1d5b6e94e2a01f5be53e9.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/t3fyWM.jpg"
+  },
+  {
+   "label": "wcccDf",
+   "path": "bank-v2/wcccDf.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/wcccDf.jpg"
+  },
+  {
+   "label": "Wl3fz4",
+   "path": "bank-v2/Wl3fz4.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/Wl3fz4.jpg"
+  },
+  {
+   "label": "Ws2cW3",
+   "path": "bank-v2/Ws2cW3.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/8de3a3924cb95bd0e95a443fff0326c869f9d4979cd1d5b6e94e2a01f5be53e9.jpg",
+     "kind": "2d",
+     "filter": "nearest",
+     "wrap": "repeat",
+     "vflip": false
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/Ws2cW3.jpg"
+  },
+  {
+   "label": "ws3fRl",
+   "path": "bank-v2/ws3fRl.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/ws3fRl.jpg"
+  },
+  {
+   "label": "4s2BWw",
+   "path": "bank-v2/4s2BWw.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/4s2BWw.jpg"
+  },
+  {
+   "label": "msVfWV",
+   "path": "bank-v2/msVfWV.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/msVfWV.jpg"
+  },
+  {
+   "label": "NctXRn",
+   "path": "bank-v2/NctXRn.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/NctXRn.jpg"
+  },
+  {
+   "label": "3cs3DS",
+   "path": "bank-v2/3cs3DS.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/3cs3DS.jpg"
+  },
+  {
+   "label": "3dKGDd",
+   "path": "bank-v2/3dKGDd.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/3dKGDd.jpg"
+  },
+  {
+   "label": "NfS3Rz",
+   "path": "bank-v2/NfS3Rz.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/NfS3Rz.jpg"
+  },
+  {
+   "label": "scS3Rd",
+   "path": "bank-v2/scS3Rd.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/scS3Rd.jpg"
+  },
+  {
+   "label": "scs3Wf",
+   "path": "bank-v2/scs3Wf.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/scs3Wf.jpg"
+  },
+  {
+   "label": "ttsfRr",
+   "path": "bank-v2/ttsfRr.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/92d7758c402f0927011ca8d0a7e40251439fba3a1dac26f5b8b62026323501aa.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/ttsfRr.jpg"
+  },
+  {
+   "label": "333fDS",
+   "path": "bank-v2/333fDS.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/333fDS.jpg"
+  },
+  {
+   "label": "333GzH",
+   "path": "bank-v2/333GzH.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/333GzH.jpg"
+  },
+  {
+   "label": "33d3zr",
+   "path": "bank-v2/33d3zr.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/33d3zr.jpg"
+  },
+  {
+   "label": "33S3D1",
+   "path": "bank-v2/33S3D1.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/52d2a8f514c4fd2d9866587f4d7b2a5bfa1a11a0e772077d7682deb8b3b517e5.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/33S3D1.jpg"
+  },
+  {
+   "label": "3cyGRd",
+   "path": "bank-v2/3cyGRd.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/3cyGRd.jpg"
+  },
+  {
+   "label": "3t3fzM",
+   "path": "bank-v2/3t3fzM.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/3t3fzM.jpg"
+  },
+  {
+   "label": "3tS3R3",
+   "path": "bank-v2/3tS3R3.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/3tS3R3.jpg"
+  },
+  {
+   "label": "3Xc3zl",
+   "path": "bank-v2/3Xc3zl.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/3Xc3zl.jpg"
+  },
+  {
+   "label": "4tlXWH",
+   "path": "bank-v2/4tlXWH.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/4tlXWH.jpg"
+  },
+  {
+   "label": "4X33RB",
+   "path": "bank-v2/4X33RB.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/4X33RB.jpg"
+  },
+  {
+   "label": "7dfXDH",
+   "path": "bank-v2/7dfXDH.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/7dfXDH.jpg"
+  },
+  {
+   "label": "7dtczX",
+   "path": "bank-v2/7dtczX.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/7dtczX.jpg"
+  },
+  {
+   "label": "7tsyR2",
+   "path": "bank-v2/7tsyR2.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/7tsyR2.jpg"
+  },
+  {
+   "label": "cdKcz1",
+   "path": "bank-v2/cdKcz1.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/cdKcz1.jpg"
+  },
+  {
+   "label": "cdXyWs",
+   "path": "bank-v2/cdXyWs.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/cdXyWs.jpg"
+  },
+  {
+   "label": "clGSzw",
+   "path": "bank-v2/clGSzw.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/clGSzw.jpg"
+  },
+  {
+   "label": "clycWW",
+   "path": "bank-v2/clycWW.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/clycWW.jpg"
+  },
+  {
+   "label": "ctVfzt",
+   "path": "bank-v2/ctVfzt.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/ctVfzt.jpg"
+  },
+  {
+   "label": "DdjfRV",
+   "path": "bank-v2/DdjfRV.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/DdjfRV.jpg"
+  },
+  {
+   "label": "dlBBzw",
+   "path": "bank-v2/dlBBzw.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/dlBBzw.jpg"
+  },
+  {
+   "label": "dldfWH",
+   "path": "bank-v2/dldfWH.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/dldfWH.jpg"
+  },
+  {
+   "label": "DlfBW2",
+   "path": "bank-v2/DlfBW2.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/DlfBW2.jpg"
+  },
+  {
+   "label": "ds2fzG",
+   "path": "bank-v2/ds2fzG.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/ds2fzG.jpg"
+  },
+  {
+   "label": "ds3yRN",
+   "path": "bank-v2/ds3yRN.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/ds3yRN.jpg"
+  },
+  {
+   "label": "DsffWl",
+   "path": "bank-v2/DsffWl.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/DsffWl.jpg"
+  },
+  {
+   "label": "DsjyRR",
+   "path": "bank-v2/DsjyRR.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/DsjyRR.jpg"
+  },
+  {
+   "label": "dslczj",
+   "path": "bank-v2/dslczj.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/dslczj.jpg"
+  },
+  {
+   "label": "DsscDn",
+   "path": "bank-v2/DsscDn.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/DsscDn.jpg"
+  },
+  {
+   "label": "DsSyzc",
+   "path": "bank-v2/DsSyzc.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/DsSyzc.jpg"
+  },
+  {
+   "label": "DtGXR1",
+   "path": "bank-v2/DtGXR1.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/DtGXR1.jpg"
+  },
+  {
+   "label": "dtyXDW",
+   "path": "bank-v2/dtyXDW.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/dtyXDW.jpg"
+  },
+  {
+   "label": "fcGSDh",
+   "path": "bank-v2/fcGSDh.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/fcGSDh.jpg"
+  },
+  {
+   "label": "fdtcD2",
+   "path": "bank-v2/fdtcD2.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/fdtcD2.jpg"
+  },
+  {
+   "label": "flSXD1",
+   "path": "bank-v2/flSXD1.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/flSXD1.jpg"
+  },
+  {
+   "label": "l3tBRS",
+   "path": "bank-v2/l3tBRS.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/l3tBRS.jpg"
+  },
+  {
+   "label": "lcSSWc",
+   "path": "bank-v2/lcSSWc.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/lcSSWc.jpg"
+  },
+  {
+   "label": "lddSDl",
+   "path": "bank-v2/lddSDl.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/lddSDl.jpg"
+  },
+  {
+   "label": "lltSzB",
+   "path": "bank-v2/lltSzB.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/lltSzB.jpg"
+  },
+  {
+   "label": "lsdBWs",
+   "path": "bank-v2/lsdBWs.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/lsdBWs.jpg"
+  },
+  {
+   "label": "lXyXDy",
+   "path": "bank-v2/lXyXDy.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/lXyXDy.jpg"
+  },
+  {
+   "label": "McjGDD",
+   "path": "bank-v2/McjGDD.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/McjGDD.jpg"
+  },
+  {
+   "label": "McS3Dh",
+   "path": "bank-v2/McS3Dh.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/8de3a3924cb95bd0e95a443fff0326c869f9d4979cd1d5b6e94e2a01f5be53e9.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    },
+    {
+     "channel": 1,
+     "path": "bank-v2/assets/8de3a3924cb95bd0e95a443fff0326c869f9d4979cd1d5b6e94e2a01f5be53e9.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    },
+    {
+     "channel": 2,
+     "path": "bank-v2/assets/8de3a3924cb95bd0e95a443fff0326c869f9d4979cd1d5b6e94e2a01f5be53e9.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/McS3Dh.jpg"
+  },
+  {
+   "label": "MctcR2",
+   "path": "bank-v2/MctcR2.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/MctcR2.jpg"
+  },
+  {
+   "label": "mdVfDK",
+   "path": "bank-v2/mdVfDK.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/mdVfDK.jpg"
+  },
+  {
+   "label": "msSyR3",
+   "path": "bank-v2/msSyR3.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/msSyR3.jpg"
+  },
+  {
+   "label": "MX3BzS",
+   "path": "bank-v2/MX3BzS.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/MX3BzS.jpg"
+  },
+  {
+   "label": "MX3fzX",
+   "path": "bank-v2/MX3fzX.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/MX3fzX.jpg"
+  },
+  {
+   "label": "NdByRG",
+   "path": "bank-v2/NdByRG.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/10eb4fe0ac8a7dc348a2cc282ca5df1759ab8bf680117e4047728100969e7b43.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/NdByRG.jpg"
+  },
+  {
+   "label": "sddSDf",
+   "path": "bank-v2/sddSDf.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/sddSDf.jpg"
+  },
+  {
+   "label": "sfVXzG",
+   "path": "bank-v2/sfVXzG.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/sfVXzG.jpg"
+  },
+  {
+   "label": "slfyWs",
+   "path": "bank-v2/slfyWs.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/slfyWs.jpg"
+  },
+  {
+   "label": "sssXRs",
+   "path": "bank-v2/sssXRs.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/8de3a3924cb95bd0e95a443fff0326c869f9d4979cd1d5b6e94e2a01f5be53e9.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/sssXRs.jpg"
+  },
+  {
+   "label": "ssXyzN",
+   "path": "bank-v2/ssXyzN.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/ssXyzN.jpg"
+  },
+  {
+   "label": "t3yBzy",
+   "path": "bank-v2/t3yBzy.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/52d2a8f514c4fd2d9866587f4d7b2a5bfa1a11a0e772077d7682deb8b3b517e5.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/t3yBzy.jpg"
+  },
+  {
+   "label": "tfdGDX",
+   "path": "bank-v2/tfdGDX.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/tfdGDX.jpg"
+  },
+  {
+   "label": "tl3fD4",
+   "path": "bank-v2/tl3fD4.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/tl3fD4.jpg"
+  },
+  {
+   "label": "tlfcRn",
+   "path": "bank-v2/tlfcRn.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/tlfcRn.jpg"
+  },
+  {
+   "label": "ttVGzD",
+   "path": "bank-v2/ttVGzD.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 1,
+     "path": "bank-v2/assets/10eb4fe0ac8a7dc348a2cc282ca5df1759ab8bf680117e4047728100969e7b43.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/ttVGzD.jpg"
+  },
+  {
+   "label": "W33Gzn",
+   "path": "bank-v2/W33Gzn.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/W33Gzn.jpg"
+  },
+  {
+   "label": "W3SSDG",
+   "path": "bank-v2/W3SSDG.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/W3SSDG.jpg"
+  },
+  {
+   "label": "wcBGWc",
+   "path": "bank-v2/wcBGWc.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/wcBGWc.jpg"
+  },
+  {
+   "label": "wcyGR1",
+   "path": "bank-v2/wcyGR1.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/wcyGR1.jpg"
+  },
+  {
+   "label": "wf3fW2",
+   "path": "bank-v2/wf3fW2.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/wf3fW2.jpg"
+  },
+  {
+   "label": "WflGWS",
+   "path": "bank-v2/WflGWS.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/WflGWS.jpg"
+  },
+  {
+   "label": "wflXzB",
+   "path": "bank-v2/wflXzB.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/52d2a8f514c4fd2d9866587f4d7b2a5bfa1a11a0e772077d7682deb8b3b517e5.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/wflXzB.jpg"
+  },
+  {
+   "label": "WlsfWS",
+   "path": "bank-v2/WlsfWS.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/WlsfWS.jpg"
+  },
+  {
+   "label": "wtKfW3",
+   "path": "bank-v2/wtKfW3.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/wtKfW3.jpg"
+  },
+  {
+   "label": "WX3fWS",
+   "path": "bank-v2/WX3fWS.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/WX3fWS.jpg"
+  },
+  {
+   "label": "WXc3Rn",
+   "path": "bank-v2/WXc3Rn.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/WXc3Rn.jpg"
+  },
+  {
+   "label": "XfcyWN",
+   "path": "bank-v2/XfcyWN.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/XfcyWN.jpg"
+  },
+  {
+   "label": "XfKGDm",
+   "path": "bank-v2/XfKGDm.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/XfKGDm.jpg"
+  },
+  {
+   "label": "XsVXWc",
+   "path": "bank-v2/XsVXWc.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/XsVXWc.jpg"
+  },
+  {
+   "label": "XtBBzw",
+   "path": "bank-v2/XtBBzw.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/XtBBzw.jpg"
+  },
+  {
+   "label": "dtKyDG",
+   "path": "bank-v2/dtKyDG.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/dtKyDG.jpg"
+  },
+  {
+   "label": "f3jXzK",
+   "path": "bank-v2/f3jXzK.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/f3jXzK.jpg"
+  },
+  {
+   "label": "ffd3DM",
+   "path": "bank-v2/ffd3DM.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/ffd3DM.jpg"
+  },
+  {
+   "label": "flKyDh",
+   "path": "bank-v2/flKyDh.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/flKyDh.jpg"
+  },
+  {
+   "label": "ftKyDh",
+   "path": "bank-v2/ftKyDh.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/ftKyDh.jpg"
+  },
+  {
+   "label": "ldd3WX",
+   "path": "bank-v2/ldd3WX.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/ldd3WX.jpg"
+  },
+  {
+   "label": "NlVcWh",
+   "path": "bank-v2/NlVcWh.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/NlVcWh.jpg"
+  },
+  {
+   "label": "sXXSDH",
+   "path": "bank-v2/sXXSDH.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/sXXSDH.jpg"
+  },
+  {
+   "label": "33SyWm",
+   "path": "bank-v2/33SyWm.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/33SyWm.jpg"
+  },
+  {
+   "label": "MffGRX",
+   "path": "bank-v2/MffGRX.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/MffGRX.jpg"
+  },
+  {
+   "label": "MsjcDz",
+   "path": "bank-v2/MsjcDz.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/MsjcDz.jpg"
+  },
+  {
+   "label": "NdfBWS",
+   "path": "bank-v2/NdfBWS.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/NdfBWS.jpg"
+  },
+  {
+   "label": "WtfGDn",
+   "path": "bank-v2/WtfGDn.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/08b42b43ae9d3c0605da11d0eac86618ea888e62cdd9518ee8b9097488b31560.png",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/WtfGDn.jpg"
+  },
+  {
+   "label": "XcdGWf",
+   "path": "bank-v2/XcdGWf.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/XcdGWf.jpg"
+  },
+  {
+   "label": "lX2cWW",
+   "path": "bank-v2/lX2cWW.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/lX2cWW.jpg"
+  },
+  {
+   "label": "4fcXz2",
+   "path": "bank-v2/4fcXz2.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/4fcXz2.jpg"
+  },
+  {
+   "label": "l3GGRd",
+   "path": "bank-v2/l3GGRd.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/l3GGRd.jpg"
+  },
+  {
+   "label": "llX3Dn",
+   "path": "bank-v2/llX3Dn.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/llX3Dn.jpg"
+  },
+  {
+   "label": "tcyGRc",
+   "path": "bank-v2/tcyGRc.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/tcyGRc.jpg"
+  },
+  {
+   "label": "NcXSRf",
+   "path": "bank-v2/NcXSRf.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/NcXSRf.jpg"
   }
  ],
  "pages": [
@@ -2628,6 +3716,1578 @@
      "command": {
       "type": "TriggerShader",
       "shader": 110
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    }
+   ]
+  },
+  {
+   "name": "SHADERS 6",
+   "bindings": [
+    {
+     "key": 0,
+     "label": "Fractal Bang",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 111
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 1,
+     "label": "Optical Pulse",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 112
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 2,
+     "label": "Fractal Hallways",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 113
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 3,
+     "label": "FractalsExperiment",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 114
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 4,
+     "label": "GrayFractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 115
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 5,
+     "label": "Fractals, sweet fractals X",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 116
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 6,
+     "label": "fractals_center",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 117
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 7,
+     "label": "Mandelbrot and other fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 118
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 8,
+     "label": "10 Line Tricorn",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 119
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 9,
+     "label": "Sierpi\u0144ski Triangle Fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 120
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 10,
+     "label": "Curve Fractals? v.0.0.1",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 121
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 11,
+     "label": "Escape Time Sierpinski Triangle",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 122
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 12,
+     "label": "koch00",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 123
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 13,
+     "label": "fractals without name",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 124
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 14,
+     "label": "Fork Lyapunov rsiqueira 526",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 125
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 15,
+     "label": "Day7: Fractals 101",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 126
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 16,
+     "label": "ps_SierpinskisCarpet",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 127
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 17,
+     "label": "Pinwheel Fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 128
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 18,
+     "label": "Into the TV",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 129
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 19,
+     "label": "Tie-Dye Squares",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 130
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 20,
+     "label": "Week 06E - Fractals 5",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 131
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 21,
+     "label": "bit fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 132
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 22,
+     "label": "Hypersymmetrical Fractions",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 133
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 23,
+     "label": "Reuleaux triangle fractal",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 134
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    }
+   ]
+  },
+  {
+   "name": "SHADERS 7",
+   "bindings": [
+    {
+     "key": 0,
+     "label": "Hyperdimensional fractions",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 135
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 1,
+     "label": "Mediterranean tiles",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 136
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 2,
+     "label": "Week 06D - Fractals 4",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 137
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 3,
+     "label": "even more fun with fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 138
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 4,
+     "label": "more fun with fractals (colored)",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 139
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 5,
+     "label": "Banach-Tarski Paradox!",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 140
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 6,
+     "label": "Fork First-Shad PetraRall 807",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 141
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 7,
+     "label": "Animated Lyapunov Flames",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 142
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 8,
+     "label": "Falling into fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 143
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 9,
+     "label": "Use IFS to Construct Fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 144
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 10,
+     "label": "Complex function 1",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 145
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 11,
+     "label": "Neon fractals6502",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 146
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 12,
+     "label": "fractalized Circuit Diagram2",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 147
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 13,
+     "label": "Julia - Dendrite",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 148
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 14,
+     "label": "evolution",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 149
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 15,
+     "label": "First Fractal Shader",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 150
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 16,
+     "label": "Stackathon",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 151
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 17,
+     "label": "kaleidoscope6678",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 152
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 18,
+     "label": "learning shaders youtube",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 153
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 19,
+     "label": "galois field",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 154
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 20,
+     "label": "Dreamscapes",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 155
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 21,
+     "label": "Kuroki Fractal",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 156
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 22,
+     "label": "rainbow wavessss",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 157
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 23,
+     "label": "Shader Art Template",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 158
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    }
+   ]
+  },
+  {
+   "name": "SHADERS 8",
+   "bindings": [
+    {
+     "key": 0,
+     "label": "Fractals - Silviu",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 159
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 1,
+     "label": "fractlee",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 160
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 2,
+     "label": "fractals 00",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 161
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 3,
+     "label": "InitiationShader",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 162
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 4,
+     "label": "Hello World - Shadertoy",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 163
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 5,
+     "label": "SDF Fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 164
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 6,
+     "label": "Fork Initiation sklbz 497",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 165
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 7,
+     "label": "Basic shader helper functions",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 166
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 8,
+     "label": "Una wea Azul",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 167
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 9,
+     "label": "quasiflower",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 168
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 10,
+     "label": "Julia of Tricorn",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 169
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 11,
+     "label": "Trianglotron",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 170
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 12,
+     "label": "Colorful fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 171
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 13,
+     "label": "Week 06F - Fractals 6",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 172
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 14,
+     "label": "Acid fractal stuff",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 173
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 15,
+     "label": "Fun with Fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 174
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 16,
+     "label": "Julia Set Rotator",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 175
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 17,
+     "label": "Dancing patterns",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 176
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 18,
+     "label": "Newton fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 177
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 19,
+     "label": "ewdlop's KIFS Fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 178
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 20,
+     "label": "Cool fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 179
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 21,
+     "label": "Bridge to Infinity || ft DoMa",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 180
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 22,
+     "label": "some nonsense",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 181
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 23,
+     "label": "Fractals II",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 182
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    }
+   ]
+  },
+  {
+   "name": "SHADERS 9",
+   "bindings": [
+    {
+     "key": 0,
+     "label": "Week 06B - Fractals 2",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 183
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 1,
+     "label": "KIFS Fractals Koch curve",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 184
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 2,
+     "label": "amateur attempt at julia set",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 185
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 3,
+     "label": "mezzanesque",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 186
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 4,
+     "label": "miniverse",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 187
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 5,
+     "label": "KIFS Fractals Koch Snowflake",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 188
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 6,
+     "label": "Fractal Idea e",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 189
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 7,
+     "label": "Day13-ever",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 190
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 8,
+     "label": "First-Shader",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 191
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 9,
+     "label": "Rainbow snowflake",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 192
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 10,
+     "label": "Trees of Circles II",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 193
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 11,
+     "label": "Hello Wook World",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 194
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 12,
+     "label": "more fun with fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 195
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 13,
+     "label": "sphere fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 196
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 14,
+     "label": "square tile fractal",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 197
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 15,
+     "label": "teeeeeeeeeeeest1",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 198
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 16,
+     "label": "Wooden Chessboard Pattern",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 199
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 17,
+     "label": "Week 06C - Fractals 3",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 200
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 18,
+     "label": "Infinite Loop Spiral Sierpinski",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 201
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 19,
+     "label": "circle in circle",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 202
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 20,
+     "label": "kifs 2d _5",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 203
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 21,
+     "label": "Week 06A - Fractals 1",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 204
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 22,
+     "label": "fun with fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 205
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 23,
+     "label": "Fractal Spiral Pulse",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 206
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    }
+   ]
+  },
+  {
+   "name": "SHADERS 10",
+   "bindings": [
+    {
+     "key": 0,
+     "label": "Trying to learn shaders properly",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 207
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 1,
+     "label": "Sine Wave Zion",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 208
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 2,
+     "label": "The Beauty of Fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 209
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 3,
+     "label": "angle fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 210
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 4,
+     "label": "Radial Fractal",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 211
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 5,
+     "label": "Mandelbrot Sunset",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 212
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 6,
+     "label": "Simple Fractal 4 All (03)",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 213
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 7,
+     "label": "Simple Fractal 4 All (02)",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 214
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 8,
+     "label": "quick fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 215
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 9,
+     "label": "Colorized Simple Fractal For All",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 216
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 10,
+     "label": "Experimental Harmonic Frac",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 217
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 11,
+     "label": "Mandelbrottttt",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 218
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 12,
+     "label": "Mandlebrot <-> Julia",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 219
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 13,
+     "label": "Mandelbrot and Julia relations",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 220
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 14,
+     "label": "Julia set simulation",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 221
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 15,
+     "label": "Mandelbrot (The Green Beast)",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 222
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 16,
+     "label": "AK FYP14: Basic Fractal",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 223
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 17,
+     "label": "Some kind of alien life",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 224
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 18,
+     "label": "Glilia Julitchy",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 225
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 19,
+     "label": "Fractals Explorer",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 226
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 20,
+     "label": "Hello Mandelbrot Shader",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 227
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 21,
+     "label": "Prismatic Noise Ripple V2",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 228
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 22,
+     "label": "Radiant Furnace",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 229
      },
      "color": [
       25,
