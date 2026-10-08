@@ -81,8 +81,8 @@ pub struct State {
     /// Clip drawn over the shader instead of under it.
     #[serde(default)]
     pub invert_order: bool,
-    /// Shader-layer geometry and brightness: pulse, rock, ripple, twist, stretch, mirror,
-    /// drift (0.5 is still) and brightness (0.5 is unchanged).
+    /// Shader-layer geometry and brightness: bass bulge, low-mid twist, mid wave, treble
+    /// ripple, kick stretch, mirror, drift (0.5 is still) and brightness (0.5 is unchanged).
     #[serde(default = "default_macros")]
     pub macros: [f32; 8],
     #[serde(default)]

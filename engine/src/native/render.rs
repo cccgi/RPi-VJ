@@ -521,7 +521,8 @@ impl Renderer {
             *clock += dt * (SPEC_FLOW_RATE.0 + energy * SPEC_FLOW_RATE.1);
         }
         let tempo = self.clock.tick(dt, state.bpm, audio);
-        // Layer B macros: each knob scales one transform, each driven by a different band.
+        // Layer B macros: knobs 1-5 each let one band drive one transform of the shader layer
+        // (bass bulge, low-mid twist, mid wave, treble ripple, kick stretch).
         let m = state.macros;
         let spin = (m[6] - 0.5) * 2.0;
         if spin.abs() > 0.04 {
@@ -533,18 +534,22 @@ impl Renderer {
                 self.geo_drift = 0.0;
             }
         }
+        // Band levels are small on real music; lift and compress them so a knob at full
+        // gives an obvious movement on an ordinary track, not only on a peak.
+        let level = |x: f32| (x * 2.0).clamp(0.0, 1.0).powf(0.6);
         let geo = [
-            1.0 - m[0] * 0.45 * audio.bass.min(1.0),
-            self.geo_drift + m[1] * 0.9 * audio.mid.min(1.0) * (time * 1.3).sin(),
-            m[3] * (0.6 + 2.0 * audio.low_mid.min(1.0)),
-            m[4] * 0.3 * audio.high_mid.min(1.0),
+            m[0] * 0.7 * level(audio.bass),
+            self.geo_drift,
+            m[1] * 2.2 * level(audio.low_mid) * (0.6 + 0.4 * (time * 0.7).sin()),
+            m[4] * 0.45 * level(audio.onset),
         ];
         let geo2 = [
-            m[2] * 0.06 * audio.treble.min(1.0),
-            time * 6.0,
+            m[3] * 0.07 * level(audio.treble),
+            self.flow[3] * 8.0,
             if m[5] < 0.06 { 0.0 } else { 2.0 + (m[5] * 6.99).floor() },
             m[7] * 2.0,
         ];
+        let geo3 = [m[2] * 0.12 * level(audio.mid), self.flow[2] * 3.0, 0.0, 0.0];
         let geo_on = m[..6].iter().any(|v| *v > 0.0) || self.geo_drift != 0.0;
         if state.shader && !state.blackout {
             if let Some(index) = state.selected_shader { self.compile_selected(index); }
@@ -658,7 +663,7 @@ impl Renderer {
             );
             p.float(gl, "u_fx_time", time);
             p.int(gl, "u_geo_on", i32::from(geo_on));
-            for (name, value) in [("u_geo", geo), ("u_geo2", geo2)] {
+            for (name, value) in [("u_geo", geo), ("u_geo2", geo2), ("u_geo3", geo3)] {
                 if let Some(location) = gl.get_uniform_location(p.id, name) {
                     gl.uniform_4_f32(Some(&location), value[0], value[1], value[2], value[3]);
                 }

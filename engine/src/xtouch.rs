@@ -14,7 +14,9 @@
 //!   pads 1-8   clip on/off, shader on/off, opacity 25/50/75/100 %, blend prev/next
 //!   pads 9-16  layer order, tap, BPM -, BPM +, -, HUD, reset, blackout
 //!
-//!   layer B knobs 1-7  shader geometry: pulse, rock, ripple, twist, stretch, mirror, drift
+//!   layer B knobs 1-5  how far one band bends the shader layer: bass bulge, low-mid
+//!                      twist, mid wave, treble ripple, kick stretch
+//!   layer B knobs 6-7  mirror segments, drift (spin; centre is still)
 //!   layer B knob 8     shader brightness            click: back to the default
 //!   layer B pads       as layer A
 //! ```
@@ -43,8 +45,11 @@ const BLENDS: [BlendMode; 8] = [
     BlendMode::LumaKey,
     BlendMode::Difference,
 ];
-/// Pads whose LED mirrors state: clip on, shader on, clip on top, blackout.
-const LED_NOTES: [u8; 4] = [8, 9, 16, 23];
+/// Pads whose LED mirrors state: clip on, shader on, clip on top, blackout. In standard
+/// mode the unit numbers its pad LEDs 0-15 although the pads send notes 8-23, and takes
+/// velocity 1 as on (2 would blink).
+const LED_NOTES: [u8; 4] = [0, 1, 8, 15];
+const LED_ON: u8 = 1;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Event {
@@ -218,7 +223,7 @@ impl Feedback {
         for (index, on) in lit.into_iter().enumerate() {
             if self.leds[index] != Some(on) {
                 self.leds[index] = Some(on);
-                let velocity = if on { 127 } else { 0 };
+                let velocity = if on { LED_ON } else { 0 };
                 out.push(([0x90 | channel, LED_NOTES[index], velocity], None));
                 // The unit lights pads addressed on channel 1 as well; the browser rig sent both.
                 if channel != 0 {
@@ -314,7 +319,7 @@ mod tests {
         state.apply(Command::Blackout { enabled: true }).unwrap();
         assert_eq!(
             feedback.update(&state, 10),
-            vec![([0x9a, 23, 127], None), ([0x90, 23, 127], None)]
+            vec![([0x9a, 15, 1], None), ([0x90, 15, 1], None)]
         );
         // Layer B: a macro knob moves its own ring only, and its click restores the default.
         apply(&mut state, Event::Control { number: 18, value: 127 });

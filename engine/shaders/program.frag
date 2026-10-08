@@ -19,7 +19,8 @@ uniform int u_sfx;          // video effect applied to the SHADER layer
 uniform float u_sfx_amount;
 uniform sampler2D u_hud_tex;
 uniform int u_geo_on;   // shader-layer geometry active
-uniform vec4 u_geo;     // zoom scale, angle, twist, stretch
+uniform vec4 u_geo;     // bulge, angle, twist, stretch
+uniform vec4 u_geo3;    // wave amplitude, wave phase
 uniform vec4 u_geo2;    // ripple amplitude, ripple phase, mirror segments, brightness
 uniform int u_hud;
 
@@ -114,8 +115,10 @@ vec3 mixLayers(vec3 base, vec3 top, float a, int mode) {
   return mix(base, clamp(r, 0.0, 1.0), clamp(amt, 0.0, 1.0));
 }
 
-// Shader-layer geometry: mirror fold, rotation that differs from centre to edge, zoom,
-// stretch and a radial ripple. Edges mirror so a rotated layer never shows a border.
+// Shader-layer geometry. Every term varies across the picture, so the layer bends and
+// flows instead of scaling as one piece: a bulge that zooms the centre more than the
+// edges, a twist that turns the centre against the edges, crossing waves, radial ripples
+// and an axis stretch. Edges mirror so a displaced layer never shows a border.
 vec2 geoUV(vec2 uv) {
   float aspect = u_resolution.x / u_resolution.y;
   vec2 p = (uv - 0.5) * vec2(aspect, 1.0);
@@ -125,11 +128,13 @@ vec2 geoUV(vec2 uv) {
     p = length(p) * vec2(cos(a), sin(a));
   }
   float r = length(p);
-  float ang = u_geo.y + u_geo.z * (0.5 - r);
+  p *= 1.0 - u_geo.x * exp(-r * r * 2.5);
+  float ang = u_geo.y + u_geo.z * (0.6 - r);
   float c = cos(ang), s = sin(ang);
-  p = mat2(c, -s, s, c) * p * u_geo.x;
+  p = mat2(c, -s, s, c) * p;
   p *= vec2(1.0 + u_geo.w, 1.0 - u_geo.w);
-  if (r > 0.0001) p += (p / r) * sin(r * 36.0 - u_geo2.y) * u_geo2.x;
+  p += vec2(sin(p.y * 7.0 + u_geo3.y), cos(p.x * 5.0 + u_geo3.y * 0.8) * 0.6) * u_geo3.x;
+  if (r > 0.0001) p += (p / r) * sin(r * 30.0 - u_geo2.y) * u_geo2.x;
   uv = p / vec2(aspect, 1.0) + 0.5;
   return 1.0 - abs(mod(uv, 2.0) - 1.0);
 }
