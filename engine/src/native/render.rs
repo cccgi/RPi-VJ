@@ -184,6 +184,8 @@ pub struct Renderer {
     hud_stamp: f32,
     /// Accumulated drift rotation of the shader layer, radians.
     geo_drift: f32,
+    /// Accumulated canvas scroll, x and y, in picture heights.
+    geo_pan: [f32; 2],
     /// Recent peak of each band that drives the layer geometry, and its level against it.
     geo_peak: [f32; 5],
     pub geo_level: [f32; 5],
@@ -472,6 +474,7 @@ impl Renderer {
                 hud_pixels: vec![0; 768 * 16],
                 hud_stamp: -1.0,
                 geo_drift: 0.0,
+                geo_pan: [0.0; 2],
                 geo_peak: [0.02; 5],
                 geo_level: [0.0; 5],
                 geo_idle: 0.0,
@@ -538,8 +541,8 @@ impl Renderer {
             *clock += dt * (SPEC_FLOW_RATE.0 + energy * SPEC_FLOW_RATE.1);
         }
         let tempo = self.clock.tick(dt, state.bpm, audio);
-        // Layer B macros: knobs 1-5 each let one band drive one transform of the shader layer
-        // (bass bulge, low-mid twist, mid wave, treble ripple, kick stretch).
+        // Layer B macros: knobs 1-4 each let one band drive one transform of the shader layer
+        // (bass bulge, low-mid twist, mid wave, treble ripple); 5-8 move, spin and mirror it.
         let m = state.macros;
         let spin = (m[6] - 0.5) * 2.0;
         if spin.abs() > 0.04 {
@@ -563,23 +566,36 @@ impl Renderer {
             *out = lifted + (value.clamp(0.0, 1.0) - lifted) * self.geo_idle;
         }
         self.geo_level = level;
+        // Knobs 5 and 6 scroll the canvas (centre is still, like drift) and it eases home
+        // when a knob is centred. Units are picture heights; the mirrored edge repeats
+        // every two pictures, so the position wraps there.
+        let aspect = size.0 as f32 / size.1.max(1) as f32;
+        for (pan, (knob, period)) in self.geo_pan.iter_mut().zip([(m[5], 2.0 * aspect), (m[4], 2.0)]) {
+            let speed = (knob - 0.5) * 2.0;
+            if speed.abs() > 0.04 {
+                *pan = (*pan + dt * speed * 0.5) % period;
+            } else if *pan != 0.0 {
+                *pan *= 1.0 - (dt * 3.0).min(1.0);
+                if pan.abs() < 0.001 {
+                    *pan = 0.0;
+                }
+            }
+        }
+        let segments = if m[7] < 0.06 { 0.0 } else { 2.0 + (m[7] * 6.99).floor() };
         let geo = [
             m[0] * 0.85 * level[0],
             self.geo_drift,
             m[1] * 3.5 * level[1] * (0.6 + 0.4 * (time * 0.7).sin()),
-            m[4] * 0.6 * level[4],
+            0.0,
         ];
-        let geo2 = [
-            m[3] * 0.12 * level[3],
-            self.flow[3] * 8.0,
-            if m[5] < 0.06 { 0.0 } else { 2.0 + (m[5] * 6.99).floor() },
-            m[7] * 2.0,
-        ];
-        let geo3 = [m[2] * 0.2 * level[2], self.flow[2] * 3.0, 0.0, 0.0];
-        // The geometry build of the compositor is used only while a knob is off its default.
-        let geo_on = m[..6].iter().any(|v| *v > 0.0)
+        let geo2 = [m[3] * 0.12 * level[3], self.flow[3] * 8.0, segments, 0.0];
+        // The picture moves right and up for positive pan, so the lookup moves the other way.
+        let geo3 = [m[2] * 0.2 * level[2], self.flow[2] * 3.0, -self.geo_pan[0], -self.geo_pan[1]];
+        // The geometry build of the compositor is used only while something is off its default.
+        let geo_on = m[..4].iter().any(|v| *v > 0.0)
+            || segments > 0.0
             || self.geo_drift != 0.0
-            || (m[7] - 0.5).abs() > 0.004;
+            || self.geo_pan != [0.0, 0.0];
         if state.shader && !state.blackout {
             if let Some(index) = state.selected_shader { self.compile_selected(index); }
         }

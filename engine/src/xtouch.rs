@@ -14,10 +14,11 @@
 //!   pads 1-8   clip on/off, shader on/off, opacity 25/50/75/100 %, blend prev/next
 //!   pads 9-16  layer order, tap, BPM -, BPM +, -, HUD, reset, blackout
 //!
-//!   layer B knobs 1-5  how far one band bends the shader layer: bass bulge, low-mid
-//!                      twist, mid wave, treble ripple, kick stretch
-//!   layer B knobs 6-7  mirror segments, drift (spin; centre is still)
-//!   layer B knob 8     shader brightness            click: back to the default
+//!   layer B knobs 1-4  how far one band bends the shader layer: bass bulge, low-mid
+//!                      twist, mid wave, treble ripple
+//!   layer B knobs 5-7  move the seamless canvas: scroll up/down, scroll left/right,
+//!                      drift (spin); centre is still   click: back to the default
+//!   layer B knob 8     mirror segments
 //!   layer B pads       as layer A
 //! ```
 use crate::control::{BlendMode, Command, Layer, State, MACRO_DEFAULTS};
@@ -385,7 +386,10 @@ mod tests {
         assert_eq!((state.macros[7], state.macros[0]), (1.0, 1.0));
         assert_eq!(feedback.update(&state, 10).len(), 2);
         apply(&mut state, Event::Note { number: 31, pressed: true });
-        assert_eq!(state.macros[7], 0.5);
+        assert_eq!(state.macros[7], 0.0);
+        apply(&mut state, Event::Control { number: 15, value: 0 });
+        apply(&mut state, Event::Note { number: 28, pressed: true });
+        assert_eq!(state.macros[4], 0.5);
         apply(&mut state, Event::Note { number: 47, pressed: true });
         assert!(!state.blackout);
     }

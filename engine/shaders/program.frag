@@ -23,7 +23,8 @@ uniform sampler2D u_hud_tex;
 // and this lean one otherwise, so an idle layer B costs nothing.
 #ifdef GEO
 in vec2 v_guv;          // shader-layer coordinate, warped in the vertex stage
-uniform vec4 u_geo2;    // ripple amplitude, ripple phase, mirror segments, brightness
+uniform vec4 u_geo2;    // ripple amplitude, ripple phase, mirror segments
+uniform vec4 u_geo3;    // wave amplitude, wave phase, canvas scroll x and y
 #endif
 uniform int u_hud;
 
@@ -127,7 +128,8 @@ vec2 geoUV(vec2 uv) {
     vec2 p = (uv - 0.5) * vec2(aspect, 1.0);
     float seg = 3.14159265 / u_geo2.z;
     float a = abs(mod(atan(p.y, p.x), 2.0 * seg) - seg);
-    uv = length(p) * vec2(cos(a), sin(a)) / vec2(aspect, 1.0) + 0.5;
+    // The content scrolls beneath the fixed fold.
+    uv = (length(p) * vec2(cos(a), sin(a)) + u_geo3.zw) / vec2(aspect, 1.0) + 0.5;
   }
   return 1.0 - abs(mod(uv, 2.0) - 1.0);
 }
@@ -165,9 +167,6 @@ void main() {
   }
   if (u_sfx > 0) shaderSample.rgb = clamp(fxColor(shaderSample.rgb, uv, u_sfx, u_sfx_amount), 0.0, 1.0);
 
-#ifdef GEO
-  shaderSample.rgb = clamp(shaderSample.rgb * u_geo2.w, 0.0, 1.0);
-#endif
 
   // Displace warps the base using the top layer's red/green, so it must offset
   // the lookup rather than blend colours.
