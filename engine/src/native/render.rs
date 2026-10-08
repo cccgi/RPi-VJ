@@ -621,7 +621,7 @@ impl Renderer {
             p.float(
                 gl,
                 "u_deck_opacity",
-                if state.playing.is_some() { 1.0 } else { 0.0 },
+                if state.playing.is_some() { state.video_opacity } else { 0.0 },
             );
             p.float(
                 gl,
@@ -634,7 +634,7 @@ impl Renderer {
             p.int(gl, "u_fx", state.video_effect as i32);
             p.int(gl, "u_sfx", state.shader_effect as i32);
             p.int(gl, "u_blackout", i32::from(state.blackout));
-            p.int(gl, "u_invert_order", 0);
+            p.int(gl, "u_invert_order", i32::from(state.invert_order));
             p.int(
                 gl,
                 "u_deck_layout",

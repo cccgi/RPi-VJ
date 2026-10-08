@@ -119,6 +119,12 @@ pub fn run(show: Show, path: &Path) -> Result<()> {
     let session = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos() as u64
         ^ u64::from(std::process::id());
     let deck = Deck::start(Arc::clone(&show))?;
+    let midi = crate::midi::start();
+    let mut midi_channel = crate::xtouch::CHANNEL;
+    let mut midi_epoch = 0;
+    let mut feedback = crate::xtouch::Feedback::default();
+    let mut knob_written = [Instant::now(); crate::xtouch::KNOBS];
+    let mut last_clip = None;
     deck.publish(&state, false);
     let mut peer: Option<Connection> = None;
     let mut revision = 1;
@@ -170,6 +176,43 @@ pub fn run(show: Show, path: &Path) -> Result<()> {
                 eprintln!("controller command rejected: {error}");
             } else {
                 dirty = true;
+            }
+        }
+        for (channel, event) in midi.events.try_iter().take(64) {
+            use crate::xtouch::Event;
+            midi_channel = channel;
+            if let Event::Control { number, value } = event {
+                if let Some(knob) = crate::xtouch::knob_index(number) {
+                    // The unit may echo what we just wrote to a ring; that is not a turn.
+                    if knob_written[knob].elapsed() < Duration::from_millis(80) {
+                        continue;
+                    }
+                    feedback.knobs[knob] = Some(value);
+                }
+            }
+            let now = started.elapsed().as_millis() as u64;
+            for command in crate::xtouch::commands(event, &state, last_clip, now) {
+                if let Err(error) = state.apply(command) {
+                    eprintln!("midi command rejected: {error}");
+                } else {
+                    dirty = true;
+                }
+            }
+        }
+        if let Some(clip) = state.requested.or(state.playing) {
+            last_clip = Some(clip);
+        }
+        let epoch = midi.connections();
+        if epoch != midi_epoch || dirty {
+            if epoch != midi_epoch {
+                midi_epoch = epoch;
+                feedback = crate::xtouch::Feedback::default();
+            }
+            for (bytes, knob) in feedback.update(&state, midi_channel) {
+                midi.send(&bytes);
+                if let Some(knob) = knob {
+                    knob_written[knob] = Instant::now();
+                }
             }
         }
         let mut disconnect = false;

@@ -160,6 +160,7 @@ pub fn run(
                 preload_attempted = None;
             }
         }
+        capture::set_gain(state.input_gain);
         if state.speed != speed {
             speed = state.speed;
             let value = speed.to_string();

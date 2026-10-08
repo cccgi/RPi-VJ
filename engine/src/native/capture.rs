@@ -3,9 +3,15 @@ use anyhow::{ensure, Result};
 use crossbeam_channel::{bounded, Receiver, Sender};
 use sdl2::audio::{AudioCallback, AudioDevice, AudioSpecDesired};
 use std::sync::{
-    atomic::{AtomicU64, Ordering},
+    atomic::{AtomicU32, AtomicU64, Ordering},
     Arc,
 };
+
+/// Input gain as `f32` bits; written by the render loop from the control state.
+static GAIN: AtomicU32 = AtomicU32::new(0x3f80_0000);
+pub fn set_gain(gain: f32) {
+    GAIN.store(gain.to_bits(), Ordering::Relaxed);
+}
 
 pub struct Capture {
     samples: [f32; HOP * 2],
@@ -16,8 +22,10 @@ pub struct Capture {
 impl AudioCallback for Capture {
     type Channel = f32;
     fn callback(&mut self, samples: &mut [f32]) {
+        let gain = f32::from_bits(GAIN.load(Ordering::Relaxed));
         for pair in samples.as_chunks::<2>().0 {
-            self.samples[self.used..self.used + 2].copy_from_slice(pair);
+            self.samples[self.used] = pair[0] * gain;
+            self.samples[self.used + 1] = pair[1] * gain;
             self.used += 2;
             if self.used == HOP * 2 {
                 if self.tx.try_send(self.samples).is_err() {

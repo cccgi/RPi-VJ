@@ -9,6 +9,8 @@ pub mod controller;
 pub mod controller_runtime;
 pub mod ipc;
 pub mod keyface;
+#[cfg(all(unix, feature = "controller"))]
+pub mod midi;
 #[cfg(feature = "renderer")]
 pub mod native;
 pub mod notify;
@@ -16,3 +18,4 @@ pub mod shader;
 pub mod show;
 pub mod surface;
 pub mod texture;
+pub mod xtouch;

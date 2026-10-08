@@ -37,6 +37,11 @@ pub enum Command {
     AdjustBpm { delta: f32 },
     TapTempo { time_ms: u64 },
     ToggleHud,
+    SetVideoOpacity { opacity: f32 },
+    /// Linear gain on the audio input before analysis; 0 mutes the reaction.
+    SetInputGain { gain: f32 },
+    SetSpeed { speed: f64 },
+    ToggleLayerOrder,
     CrateShader { crate_id: u8 },
     DeleteShader,
 }
@@ -67,6 +72,13 @@ pub struct State {
     pub speed: f64,
     pub bpm: f32,
     pub hud: bool,
+    #[serde(default = "one")]
+    pub video_opacity: f32,
+    #[serde(default = "one")]
+    pub input_gain: f32,
+    /// Clip drawn over the shader instead of under it.
+    #[serde(default)]
+    pub invert_order: bool,
     #[serde(default)]
     pub failed_shaders: Vec<usize>,
     #[serde(default)]
@@ -74,6 +86,10 @@ pub struct State {
     #[serde(default)]
     pub deleted_shaders: Vec<bool>,
 }
+fn one() -> f32 {
+    1.0
+}
+pub const MAX_INPUT_GAIN: f32 = 4.0;
 impl State {
     pub fn new(clips: usize) -> Self {
         Self {
@@ -100,6 +116,9 @@ impl State {
             speed: 1.0,
             bpm: 128.0,
             hud: false,
+            video_opacity: 1.0,
+            input_gain: 1.0,
+            invert_order: false,
             failed_shaders: Vec::new(),
             shader_crates: Vec::new(),
             deleted_shaders: Vec::new(),
@@ -141,11 +160,14 @@ impl State {
             && self.shader_effect <= 24
             && [
                 self.opacity,
+                self.video_opacity,
                 self.video_effect_amount,
                 self.shader_effect_amount,
             ]
             .iter()
             .all(|v| v.is_finite() && (0.0..=1.0).contains(v))
+            && self.input_gain.is_finite()
+            && (0.0..=MAX_INPUT_GAIN).contains(&self.input_gain)
             && self.speed.is_finite()
             && (0.25..=4.0).contains(&self.speed)
             && self.bpm.is_finite()
@@ -251,6 +273,23 @@ impl State {
                 self.last_tap = Some(time_ms);
             }
             Command::ToggleHud => self.hud = !self.hud,
+            Command::SetVideoOpacity { opacity } => {
+                unit(opacity)?;
+                self.video_opacity = opacity;
+            }
+            Command::SetInputGain { gain } => {
+                if !(gain.is_finite() && (0.0..=MAX_INPUT_GAIN).contains(&gain)) {
+                    return Err("input gain out of range");
+                }
+                self.input_gain = gain;
+            }
+            Command::SetSpeed { speed } => {
+                if !speed.is_finite() {
+                    return Err("nonfinite speed");
+                }
+                self.speed = speed.clamp(0.25, 4.0);
+            }
+            Command::ToggleLayerOrder => self.invert_order = !self.invert_order,
             Command::CrateShader { crate_id } => {
                 if crate_id >= 4 { return Err("unknown shader crate"); }
                 if let Some(shader) = self.selected_shader {
@@ -283,6 +322,8 @@ impl State {
                 s.deleted_shaders = self.deleted_shaders.clone();
                 s.default_bpm = self.default_bpm;
                 s.bpm = self.default_bpm;
+                // The input trim belongs to the venue, not to the look being reset.
+                s.input_gain = self.input_gain;
                 s.generation = self.generation.wrapping_add(1);
                 *self = s;
             }
