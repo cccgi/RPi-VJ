@@ -366,7 +366,12 @@ pub fn run(
             let dropped = capture
                 .as_ref()
                 .map_or(0, |(_, _, n)| n.load(Ordering::Relaxed));
-            eprintln!("renderer frames={frames} late={late_frames} audio_dropped={dropped} warmed={warmed:?}");
+            eprintln!(
+                "renderer frames={frames} late={late_frames} audio_dropped={dropped} warmed={warmed:?} bands={:.2?} macros={:.2?} gain={:.2}",
+                [audio.bass, audio.low_mid, audio.mid, audio.treble, audio.onset],
+                state.macros,
+                state.input_gain
+            );
             health_time = Instant::now();
         }
     }

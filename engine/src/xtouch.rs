@@ -45,10 +45,11 @@ const BLENDS: [BlendMode; 8] = [
     BlendMode::LumaKey,
     BlendMode::Difference,
 ];
-/// Pads whose LED mirrors state: clip on, shader on, clip on top, blackout. In standard
-/// mode the unit numbers its pad LEDs 0-15 although the pads send notes 8-23, and takes
-/// velocity 1 as on (2 would blink).
-const LED_NOTES: [u8; 4] = [0, 1, 8, 15];
+/// Pads whose LED mirrors state: clip on, shader on, clip on top, blackout. Checked on
+/// the unit: an LED has the number of the note its pad sends and lights on velocity 1
+/// (127 does nothing; 2 would blink). Each is also lit on layer B, whose pads are 24 up.
+const LED_NOTES: [u8; 4] = [8, 9, 16, 23];
+const LAYER_B_LED: u8 = 24;
 const LED_ON: u8 = 1;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -225,10 +226,7 @@ impl Feedback {
                 self.leds[index] = Some(on);
                 let velocity = if on { LED_ON } else { 0 };
                 out.push(([0x90 | channel, LED_NOTES[index], velocity], None));
-                // The unit lights pads addressed on channel 1 as well; the browser rig sent both.
-                if channel != 0 {
-                    out.push(([0x90, LED_NOTES[index], velocity], None));
-                }
+                out.push(([0x90 | channel, LED_NOTES[index] + LAYER_B_LED, velocity], None));
             }
         }
         out
@@ -305,6 +303,7 @@ mod tests {
         let mut state = State::new(1);
         let mut feedback = Feedback::default();
         assert_eq!(feedback.update(&state, 10).len(), 6 + 8 + 4 * 2);
+        state.apply(Command::Blackout { enabled: false }).unwrap();
         assert!(feedback.update(&state, 10).is_empty());
         state.apply(Command::SetOpacity { opacity: 1.0 }).unwrap();
         // Knobs 2 and 3 both show the shader opacity.
@@ -319,7 +318,7 @@ mod tests {
         state.apply(Command::Blackout { enabled: true }).unwrap();
         assert_eq!(
             feedback.update(&state, 10),
-            vec![([0x9a, 15, 1], None), ([0x90, 15, 1], None)]
+            vec![([0x9a, 23, 1], None), ([0x9a, 47, 1], None)]
         );
         // Layer B: a macro knob moves its own ring only, and its click restores the default.
         apply(&mut state, Event::Control { number: 18, value: 127 });

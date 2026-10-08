@@ -28,13 +28,13 @@ pub(super) struct Program {
 
 impl Program {
     pub(super) unsafe fn new(gl: &glow::Context, fragment: &str) -> Result<Self> {
+        Self::with_vertex(gl, include_str!("../../shaders/fullscreen.vert"), fragment)
+    }
+    unsafe fn with_vertex(gl: &glow::Context, vertex: &str, fragment: &str) -> Result<Self> {
         let id = gl.create_program().map_err(anyhow::Error::msg)?;
         let result = (|| {
             for (kind, source) in [
-                (
-                    glow::VERTEX_SHADER,
-                    include_str!("../../shaders/fullscreen.vert"),
-                ),
+                (glow::VERTEX_SHADER, vertex),
                 (glow::FRAGMENT_SHADER, fragment),
             ] {
                 let shader = gl.create_shader(kind).map_err(anyhow::Error::msg)?;
@@ -182,6 +182,9 @@ pub struct Renderer {
     hud_stamp: f32,
     /// Accumulated drift rotation of the shader layer, radians.
     geo_drift: f32,
+    /// Recent peak of each band that drives the layer geometry, and its level against it.
+    geo_peak: [f32; 5],
+    pub geo_level: [f32; 5],
 }
 /// Diagnostic override: when either variable is set, every shader renders at this size
 /// regardless of its manifest `render_height`.
@@ -353,7 +356,11 @@ impl Renderer {
                 gl.get_parameter_string(glow::RENDERER),
                 gl.get_parameter_string(glow::VERSION)
             );
-            let program = Program::new(&gl, include_str!("../../shaders/program.frag"))?;
+            let program = Program::with_vertex(
+                &gl,
+                include_str!("../../shaders/composite.vert"),
+                include_str!("../../shaders/program.frag"),
+            )?;
             let vao = gl.create_vertex_array().map_err(anyhow::Error::msg)?;
             let render_size = render_size();
             let targets = [target(&gl, render_size)?, target(&gl, render_size)?];
@@ -458,6 +465,8 @@ impl Renderer {
                 hud_pixels: vec![0; 768 * 16],
                 hud_stamp: -1.0,
                 geo_drift: 0.0,
+                geo_peak: [0.02; 5],
+                geo_level: [0.0; 5],
             })
         }
     }
@@ -534,22 +543,33 @@ impl Renderer {
                 self.geo_drift = 0.0;
             }
         }
-        // Band levels are small on real music; lift and compress them so a knob at full
-        // gives an obvious movement on an ordinary track, not only on a peak.
-        let level = |x: f32| (x * 2.0).clamp(0.0, 1.0).powf(0.6);
+        // Band levels depend on the track and the input trim, so each band is measured
+        // against its own recent peak: a knob at full then moves the picture on any music.
+        let bands = [audio.bass, audio.low_mid, audio.mid, audio.treble, audio.onset];
+        let mut level = [0.0f32; 5];
+        for ((peak, value), out) in self.geo_peak.iter_mut().zip(bands).zip(&mut level) {
+            *peak = (*peak * (1.0 - dt * 0.07)).max(value).max(0.02);
+            *out = (value / *peak).clamp(0.0, 1.0).powf(0.8);
+        }
+        self.geo_level = level;
         let geo = [
-            m[0] * 0.7 * level(audio.bass),
+            m[0] * 0.85 * level[0],
             self.geo_drift,
-            m[1] * 2.2 * level(audio.low_mid) * (0.6 + 0.4 * (time * 0.7).sin()),
-            m[4] * 0.45 * level(audio.onset),
+            m[1] * 3.5 * level[1] * (0.6 + 0.4 * (time * 0.7).sin()),
+            m[4] * 0.6 * level[4],
         ];
         let geo2 = [
-            m[3] * 0.07 * level(audio.treble),
+            m[3] * 0.12 * level[3],
             self.flow[3] * 8.0,
             if m[5] < 0.06 { 0.0 } else { 2.0 + (m[5] * 6.99).floor() },
             m[7] * 2.0,
         ];
-        let geo3 = [m[2] * 0.12 * level(audio.mid), self.flow[2] * 3.0, 0.0, 0.0];
+        let geo3 = [m[2] * 0.2 * level[2], self.flow[2] * 3.0, 0.0, 0.0];
+        let meters = [
+            ("u_meter_a", [level[0], level[1], level[2], level[3]]),
+            ("u_meter_b", [m[0], m[1], m[2], m[3]]),
+            ("u_meter_c", [level[4], m[4], 1.0, 0.0]),
+        ];
         let geo_on = m[..6].iter().any(|v| *v > 0.0) || self.geo_drift != 0.0;
         if state.shader && !state.blackout {
             if let Some(index) = state.selected_shader { self.compile_selected(index); }
@@ -663,7 +683,7 @@ impl Renderer {
             );
             p.float(gl, "u_fx_time", time);
             p.int(gl, "u_geo_on", i32::from(geo_on));
-            for (name, value) in [("u_geo", geo), ("u_geo2", geo2), ("u_geo3", geo3)] {
+            for (name, value) in [("u_geo", geo), ("u_geo2", geo2), ("u_geo3", geo3)].into_iter().chain(meters) {
                 if let Some(location) = gl.get_uniform_location(p.id, name) {
                     gl.uniform_4_f32(Some(&location), value[0], value[1], value[2], value[3]);
                 }
@@ -700,7 +720,8 @@ impl Renderer {
                     BlendMode::LumaKey => 14,
                 },
             );
-            gl.draw_arrays(glow::TRIANGLES, 0, 3);
+            // The compositor draws the 64x36 quad grid generated in composite.vert.
+            gl.draw_arrays(glow::TRIANGLES, 0, 64 * 36 * 6);
             gl.bind_texture(glow::TEXTURE_2D, None);
             gl.active_texture(glow::TEXTURE1);
             gl.bind_texture(glow::TEXTURE_2D, None);
