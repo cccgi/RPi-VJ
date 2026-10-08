@@ -146,6 +146,10 @@ pub fn page(show: &Show, state: &State) -> Vec<KeyDescriptor> {
                 _ => "ON",
             }
             .into();
+            // A live shader's key is a toggle: pressing it again switches the shader off.
+            if k.kind == KeyKind::Shader {
+                k.command = Some(Command::SelectShader { enabled: false });
+            }
         }
         if let Some(Command::TriggerClip { clip }) = k.command {
             if state.failed == Some(clip) {
@@ -205,6 +209,28 @@ mod tests {
         assert_eq!((keys[0].label.as_str(), keys[0].caption.as_str()), ("TEST", "NO FILE"));
         assert_eq!(keys[1].kind, KeyKind::Empty);
         assert_eq!(keys[30].command, Some(Command::Reset));
+    }
+    #[test]
+    fn a_live_shader_key_switches_its_shader_off() {
+        let show: Show = serde_json::from_str(
+            r#"{"version":2,"audio_device":null,
+                "shaders":[{"label":"a","path":"Cargo.toml"},{"label":"b","path":"Cargo.toml"}],
+                "pages":[{"name":"S","bindings":[
+                    {"key":0,"label":"A","command":{"type":"TriggerShader","shader":0}},
+                    {"key":1,"label":"B","command":{"type":"TriggerShader","shader":1}}]}]}"#,
+        )
+        .unwrap();
+        let mut state = State::from_show(&show);
+        state.apply(Command::TriggerShader { shader: 0 }).unwrap();
+        let keys = page(&show, &state);
+        assert_eq!(keys[0].command, Some(Command::SelectShader { enabled: false }));
+        assert_eq!((keys[0].state, keys[0].caption.as_str()), (KeyState::Active, "LIVE"));
+        assert_eq!(keys[1].command, Some(Command::TriggerShader { shader: 1 }));
+        // Off again: the same key triggers the shader as before.
+        state.apply(keys[0].command.unwrap()).unwrap();
+        let keys = page(&show, &state);
+        assert_eq!(keys[0].command, Some(Command::TriggerShader { shader: 0 }));
+        assert_eq!(keys[0].state, KeyState::Idle);
     }
     #[test]
     fn navigation_keys_name_the_page_they_lead_to() {
