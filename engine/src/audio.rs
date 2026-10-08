@@ -63,21 +63,32 @@ pub struct AudioFrame {
     pub spectrum: [f32; BINS],
     pub sequence: u64,
 }
-/// Stand-in levels for silence: every band drifts on its own slow sine, with no onsets,
-/// so shaders whose only motion is audio-driven keep moving gently. `amount` (0..=1)
-/// fades it in; the result is added to `frame`, which is silent when this is used.
+/// Seconds for the idle sweep to rise from rest to its top and return.
+pub const IDLE_PERIOD: f32 = 44.0;
+/// Top of the idle sweep: half of full loudness.
+pub const IDLE_TOP: f32 = 0.5;
+/// Stand-in levels for silence. One loudness value eases from 0 to `IDLE_TOP` and back
+/// over `IDLE_PERIOD`, so a shader travels the path it takes when music rises from
+/// silence, slowly and only half way. It drives the low bands and the volume; mids and
+/// highs get a tenth of it, because in the bank wrapper they turn and shake the picture,
+/// which reads as wrong with no music. No onsets. `time` counts from the start of the
+/// silence so the sweep begins at rest; `amount` (0..=1) fades it in. The result is added
+/// to `frame`, which is silent when this is used.
 pub fn idle_audio(frame: &AudioFrame, time: f32, amount: f32) -> AudioFrame {
-    let wave = |rate: f32, phase: f32| 0.5 + 0.5 * (time * rate + phase).sin();
+    let sweep = 0.5 - 0.5 * (time * std::f32::consts::TAU / IDLE_PERIOD).cos();
+    let loud = amount * IDLE_TOP * sweep;
     let mut out = frame.clone();
-    out.bass += amount * (0.10 + 0.24 * wave(0.31, 0.0));
-    out.sub += amount * (0.08 + 0.18 * wave(0.19, 1.3));
-    out.low_mid += amount * (0.08 + 0.20 * wave(0.27, 2.1));
-    out.mid += amount * (0.08 + 0.20 * wave(0.23, 0.7));
-    out.high_mid += amount * (0.06 + 0.16 * wave(0.37, 3.3));
-    out.treble += amount * (0.04 + 0.16 * wave(0.41, 4.0));
-    out.volume += amount * (0.14 + 0.12 * wave(0.17, 5.2));
+    out.bass += loud;
+    out.sub += loud;
+    out.low_mid += loud;
+    out.volume += loud * 0.6;
+    out.mid += loud * 0.1;
+    out.high_mid += loud * 0.1;
+    out.treble += loud * 0.1;
+    let bins = out.spectrum.len() as f32;
     for (index, bin) in out.spectrum.iter_mut().enumerate() {
-        *bin += amount * (0.05 + 0.15 * wave(0.29, index as f32 * 0.21));
+        let low = 1.0 - index as f32 / bins;
+        *bin += loud * low * low;
     }
     out
 }
@@ -430,23 +441,24 @@ mod tests {
         assert!(t.beat.is_finite() && t.bar.is_finite() && t.locked == 0.0);
     }
     #[test]
-    fn idle_audio_moves_slowly_stays_bounded_and_fades() {
+    fn idle_audio_sweeps_slowly_from_rest_to_half_and_back() {
         let silent = AudioFrame::default();
         assert_eq!(idle_audio(&silent, 3.0, 0.0).bass, 0.0);
+        // Starts at rest, peaks at half loudness mid-period, returns to rest.
+        assert!(idle_audio(&silent, 0.0, 1.0).bass.abs() < 1e-6);
+        assert!((idle_audio(&silent, IDLE_PERIOD / 2.0, 1.0).bass - IDLE_TOP).abs() < 1e-4);
+        assert!(idle_audio(&silent, IDLE_PERIOD, 1.0).bass < 1e-4);
         let mut previous = idle_audio(&silent, 0.0, 1.0);
-        let mut travelled = 0.0;
-        for step in 1..600 {
+        for step in 1..(IDLE_PERIOD as usize * 60) {
             let frame = idle_audio(&silent, step as f32 / 60.0, 1.0);
-            for value in [frame.bass, frame.mid, frame.treble, frame.volume, frame.spectrum[7]] {
-                assert!((0.0..=0.4).contains(&value));
-            }
+            assert!((0.0..=IDLE_TOP + 1e-4).contains(&frame.bass));
             assert_eq!(frame.onset, 0.0);
-            // Smooth: never more than a small step between frames.
-            assert!((frame.bass - previous.bass).abs() < 0.002);
-            travelled += (frame.bass - previous.bass).abs();
+            // The bands that turn and shake the picture stay nearly at rest.
+            assert!(frame.mid <= 0.051 && frame.treble <= 0.051);
+            // Ken Burns pace: under a thousandth of full scale per frame.
+            assert!((frame.bass - previous.bass).abs() < 0.001);
             previous = frame;
         }
-        assert!(travelled > 0.2);
     }
     #[test]
     fn antiphase_stereo_preserves_energy() {

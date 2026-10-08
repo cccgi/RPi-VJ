@@ -185,6 +185,8 @@ pub struct Renderer {
     /// Recent peak of each band that drives the layer geometry, and its level against it.
     geo_peak: [f32; 5],
     pub geo_level: [f32; 5],
+    /// 1 while the audio is the silence stand-in, 0 with real sound.
+    pub geo_idle: f32,
 }
 /// Diagnostic override: when either variable is set, every shader renders at this size
 /// regardless of its manifest `render_height`.
@@ -467,6 +469,7 @@ impl Renderer {
                 geo_drift: 0.0,
                 geo_peak: [0.02; 5],
                 geo_level: [0.0; 5],
+                geo_idle: 0.0,
             })
         }
     }
@@ -549,7 +552,10 @@ impl Renderer {
         let mut level = [0.0f32; 5];
         for ((peak, value), out) in self.geo_peak.iter_mut().zip(bands).zip(&mut level) {
             *peak = (*peak * (1.0 - dt * 0.07)).max(value).max(0.02);
-            *out = (value / *peak).clamp(0.0, 1.0).powf(0.8);
+            let lifted = (value / *peak).clamp(0.0, 1.0).powf(0.8);
+            // In silence the stand-in levels are used as they are, so the layer moves half
+            // way at most instead of being stretched to full scale against a decayed peak.
+            *out = lifted + (value.clamp(0.0, 1.0) - lifted) * self.geo_idle;
         }
         self.geo_level = level;
         let geo = [

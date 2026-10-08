@@ -81,7 +81,7 @@ pub fn run(
     let mut capture = None;
     let mut capture_retry = Instant::now() - Duration::from_secs(3);
     let mut audio = AudioFrame::default();
-    let (idle_clock, mut idle_tick, mut idle) = (Instant::now(), Instant::now(), 0.0f32);
+    let (mut idle_clock, mut idle_tick, mut idle) = (Instant::now(), Instant::now(), 0.0f32);
     let mut last_audio = Instant::now();
     let mut events = sdl.event_pump().map_err(anyhow::Error::msg)?;
     let mut state = State::from_show(&show);
@@ -201,7 +201,11 @@ pub fn run(
         let idle_dt = idle_tick.elapsed().as_secs_f32().min(0.1);
         idle_tick = Instant::now();
         let quiet = audio.volume < 0.01 && audio.bass < 0.01 && audio.mid < 0.01;
+        if idle == 0.0 {
+            idle_clock = Instant::now();
+        }
         idle = (idle + if quiet { idle_dt * 0.4 } else { -idle_dt * 4.0 }).clamp(0.0, 1.0);
+        renderer.geo_idle = idle;
         let heard = audio.clone();
         let moving = crate::audio::idle_audio(&heard, idle_clock.elapsed().as_secs_f32(), idle);
         let mut candidate_error = None;
