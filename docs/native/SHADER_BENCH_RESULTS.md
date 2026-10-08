@@ -9,8 +9,9 @@ Results files, in merge order (later lines win per id, variant and tier):
 - `target/shader-bank/results/wave2/results-wave2.jsonl`
 - `target/shader-bank/results/textures/results-textures.jsonl`
 - `target/shader-bank/results/wp-j-proof.jsonl`
+- `target/shader-bank/results/new-2026-10-07/results-new-2026-10-07.jsonl`
 
-Catalog: 1739 shaders. Result keys merged: 1062.
+Catalog: 1739 shaders. Result keys merged: 1588.
 
 - warning: 64 result keys have no catalog entry (re-run catalog.py?)
 
@@ -32,13 +33,13 @@ Outcome by class:
 
 | outcome | original18 | selfcontained | needs_texture | multipass | all |
 |---|---|---|---|---|---|
-| qualified | 14 | 158 | 23 | 0 | 195 |
-| renders but suspect | 1 | 27 | 2 | 0 | 30 |
-| too heavy at measured tiers | 0 | 603 | 152 | 0 | 755 |
-| does not work | 0 | 0 | 0 | 0 | 0 |
-| needs texture (not measured as designed) | 0 | 0 | 48 | 0 | 48 |
+| qualified | 14 | 246 | 34 | 0 | 294 |
+| renders but suspect | 1 | 41 | 2 | 0 | 44 |
+| too heavy at measured tiers | 0 | 935 | 166 | 0 | 1101 |
+| does not work | 0 | 29 | 2 | 0 | 31 |
+| needs texture (not measured as designed) | 0 | 0 | 21 | 0 | 21 |
 | multipass (excluded) | 0 | 0 | 0 | 248 | 248 |
-| not measured | 0 | 463 | 0 | 0 | 463 |
+| not measured | 0 | 0 | 0 | 0 | 0 |
 | total | 15 | 1251 | 225 | 248 | 1739 |
 
 Verdict per tier (chosen variant of every measured shader):
@@ -47,12 +48,12 @@ Verdict per tier (chosen variant of every measured shader):
 |---|---|---|---|---|---|---|---|
 | original18 | 1080p | 13 | 1 | 1 | 0 | 0 | 0 |
 | original18 | 720p | 15 | 0 | 0 | 0 | 0 | 0 |
-| selfcontained | 1080p | 67 | 6 | 8 | 707 | 0 | 0 |
-| selfcontained | 720p | 92 | 7 | 6 | 683 | 0 | 0 |
+| selfcontained | 1080p | 104 | 19 | 34 | 1065 | 0 | 0 |
+| selfcontained | 720p | 182 | 19 | 28 | 993 | 0 | 0 |
 | selfcontained | 540p | 10 | 15 | 13 | 74 | 0 | 0 |
 | selfcontained | 360p | 64 | 22 | 16 | 10 | 0 | 0 |
-| needs_texture | 1080p | 17 | 1 | 5 | 154 | 0 | 0 |
-| needs_texture | 720p | 24 | 1 | 0 | 152 | 0 | 0 |
+| needs_texture | 1080p | 25 | 2 | 7 | 182 | 0 | 0 |
+| needs_texture | 720p | 36 | 1 | 0 | 179 | 0 | 0 |
 | multipass | 1080p | 1 | 0 | 0 | 0 | 0 | 0 |
 | multipass | 720p | 1 | 0 | 0 | 0 | 0 | 0 |
 
@@ -60,16 +61,16 @@ Assigned render tier of qualified shaders:
 
 | tier | shaders |
 |---|---|
-| 1080p | 84 |
-| 720p | 32 |
+| 1080p | 130 |
+| 720p | 85 |
 | 540p | 23 |
 | 360p | 56 |
 
-Variant used by qualified shaders: base=191, lite=4.
+Variant used by qualified shaders: base=290, lite=4.
 
-Qualified on both audio patterns: 67. Qualified on the 128 BPM pattern alone (not measured under worst-case audio): 128.
+Qualified on both audio patterns: 166. Qualified on the 128 BPM pattern alone (not measured under worst-case audio): 128.
 
-Result status over all measured (id, variant) keys: ok=994, too_slow=4.
+Result status over all measured (id, variant) keys: compile_error=1, hang=4, ok=1482, prepare_error=2, too_slow=35.
 
 SoC temperature across entries: 49.6 to 56.8 C; entries measured with a non-zero throttle flag: 0.
 
@@ -102,7 +103,7 @@ Compile time ms (min / median / max): 3.9 / 9.4 / 19.2. Measured: 15 of 15.
 | `strobe_geometry` | - | Beat-Synced Hard-Edged Geometric Strobe Matrix w | original18 | base | 2.9 / 2.9 (loud 2.9) | SOLID | 6.3 / 6.4 (loud 6.4) | SOLID | - | 1080p | 12.8 | ok | - |
 | `vs_cyber_wormhole` | - | 3D Relativistic Cyber Wormhole with Audio-Reacti | original18 | base | 4.7 / 4.7 (loud 4.7) | SOLID | 10.4 / 10.4 (loud 10.5) | OK | - | 1080p | 13.2 | ok | - |
 
-## Qualified (195)
+## Qualified (294)
 
 Shaders that run within budget with healthy pixel statistics: originals, self-contained shaders, and texture shaders measured with their channel textures bound. `tier` is the `render_height` written to the show manifest.
 
@@ -112,14 +113,20 @@ Shaders that run within budget with healthy pixel statistics: originals, self-co
 | `audio_oscilloscope` | - | Laser-style audio waveform oscilloscope beam | original18 | base | 1.6 / 1.6 (loud 1.6) | SOLID | 3.6 / 3.6 (loud 3.6) | SOLID | - | 1080p | 4.4 | ok | - |
 | `spectrum_bars` | - | 5-band audio spectrum visualizer equalizer bars | original18 | base | 1.8 / 1.8 (loud 1.8) | SOLID | 4.0 / 4.0 (loud 4.0) | SOLID | - | 1080p | 5.6 | ok | - |
 | `plasma_flow` | - | Organic fluid liquid plasma reacting to bass and | original18 | base | 1.8 / 1.9 (loud 1.9) | SOLID | 4.1 / 4.1 (loud 4.1) | SOLID | - | 1080p | 3.9 | ok | - |
+| `wcBGWc` | - | square tile fractal | selfcontained | base | 1.9 / 1.9 (loud 2.0) | SOLID | 4.3 / 4.3 (loud 4.3) | SOLID | - | 1080p | 5.8 | ok | - |
 | `spectrum_flow` | - | 32-bin spectrum comets - each bin launches a lig | original18 | base | 1.9 / 2.0 (loud 2.0) | SOLID | 4.3 / 4.3 (loud 4.3) | SOLID | - | 1080p | 9.3 | ok | - |
 | `NtSGDD` | #230 | Fractal Golfing [86 chars] | selfcontained | base | 2.0 / 2.0 (loud 2.0) | SOLID | 4.3 / 4.4 (loud 4.4) | SOLID | - | 1080p | 4.8 | ok | - |
+| `ctVfzt` | - | galois field | selfcontained | base | 2.0 / 2.0 (loud 2.0) | SOLID | 4.4 / 4.4 (loud 4.4) | SOLID | - | 1080p | 9.3 | ok | - |
+| `McBcz3` | - | Sierpiński Triangle Fractals | selfcontained | base | 2.1 / 2.1 (loud 2.1) | SOLID | 4.5 / 4.5 (loud 4.5) | SOLID | - | 1080p | 7.6 | ok | white_when_loud |
 | `neon_tunnel` | - | Audio-reactive neon speed tunnel with kick-react | original18 | base | 2.1 / 2.1 (loud 2.1) | SOLID | 4.7 / 4.7 (loud 4.7) | SOLID | - | 1080p | 5.6 | ok | white_when_loud |
 | `wc23Wc` | #529 | Grok [111] | selfcontained | base | 2.1 / 2.1 (loud 2.1) | SOLID | 4.7 / 4.7 (loud 4.7) | SOLID | - | 1080p | 5.5 | ok | - |
 | `ssBXDG` | #480 | Polar_coordinates_sample | needs_texture | base | 2.1 / 2.2 | SOLID | 4.8 / 4.8 | SOLID | - | 1080p | 12.0 | ok | 128 BPM pattern only |
 | `mlBfR3` | #359 | Perspective Demo | needs_texture | base | 2.2 / 2.2 | SOLID | 4.8 / 4.8 | SOLID | - | 1080p | 7.9 | ok | 128 BPM pattern only |
+| `WX3fWS` | - | Week 06A - Fractals 1 | selfcontained | base | 2.2 / 2.3 (loud 2.3) | SOLID | 5.0 / 5.0 (loud 5.0) | SOLID | - | 1080p | 8.4 | ok | - |
 | `dsyBDy` | #377 | Double Mod | selfcontained | base | 2.3 / 2.3 (loud 2.3) | SOLID | 5.2 / 5.2 (loud 5.2) | SOLID | - | 1080p | 8.5 | ok | - |
+| `wf3fW2` | - | Wooden Chessboard Pattern | selfcontained | base | 2.4 / 2.4 (loud 2.4) | SOLID | 5.2 / 5.2 (loud 5.2) | SOLID | - | 1080p | 10.3 | ok | - |
 | `slffRX` | #353 | Eclipse 3 [167 chars] | selfcontained | base | 2.4 / 2.4 | SOLID | 5.3 / 5.3 | SOLID | - | 1080p | 10.1 | ok | 128 BPM pattern only |
+| `slfyWs` | - | miniverse | selfcontained | base | 2.6 / 2.6 (loud 2.6) | SOLID | 5.7 / 5.7 (loud 5.7) | SOLID | - | 1080p | 10.7 | ok | - |
 | `msfSz8` | #236 | Spiral [127 Chars] | selfcontained | base | 2.6 / 2.6 (loud 2.6) | SOLID | 5.7 / 5.7 (loud 5.8) | SOLID | - | 1080p | 7.9 | ok | - |
 | `NdlfzX` | #352 | Eclipse 2 | needs_texture | base | 2.6 / 2.6 (loud 2.6) | SOLID | 5.7 / 5.7 (loud 5.7) | SOLID | - | 1080p | 8.8 | ok | - |
 | `3ssXDj` | #535 | Emissive Square | selfcontained | base | 2.6 / 2.6 | SOLID | 5.8 / 5.8 | SOLID | - | 1080p | 10.3 | ok | 128 BPM pattern only |
@@ -129,6 +136,7 @@ Shaders that run within budget with healthy pixel statistics: originals, self-co
 | `3sc3WN` | #253 | Rainbow [108 Chars] | selfcontained | base | 2.7 / 2.7 (loud 2.7) | SOLID | 6.0 / 6.0 (loud 6.0) | SOLID | - | 1080p | 6.0 | ok | - |
 | `tlGXRz` | #408 | Dth Str | selfcontained | base | 2.7 / 2.7 (loud 2.7) | SOLID | 6.0 / 6.0 (loud 6.0) | SOLID | - | 1080p | 6.5 | ok | - |
 | `tsG3WR` | - | Distance fractals | selfcontained | base | 2.7 / 2.7 | SOLID | 6.0 / 6.1 | SOLID | - | 1080p | 11.9 | ok | 128 BPM pattern only |
+| `Mtc3zn` | - | Curve Fractals? v.0.0.1 | selfcontained | base | 2.7 / 2.7 (loud 2.7) | SOLID | 6.1 / 6.1 (loud 6.1) | SOLID | - | 1080p | 9.8 | ok | white_when_loud |
 | `mlS3Rd` | #345 | GM Shaders: Lights | selfcontained | base | 2.7 / 2.7 (loud 2.7) | SOLID | 6.1 / 6.1 (loud 6.1) | SOLID | - | 1080p | 6.8 | ok | white_when_loud |
 | `wdy3WR` | - | Patterned lights | selfcontained | base | 2.7 / 2.7 | SOLID | 6.1 / 6.1 | SOLID | - | 1080p | 9.6 | ok | 128 BPM pattern only |
 | `XsBfRW` | #432 | Pretty Hip | selfcontained | base | 2.8 / 2.8 | SOLID | 6.1 / 6.2 | SOLID | - | 1080p | 21.0 | ok | 128 BPM pattern only |
@@ -140,89 +148,181 @@ Shaders that run within budget with healthy pixel statistics: originals, self-co
 | `7ldBzN` | #291 | Hurricane Twist | needs_texture | base | 2.9 / 2.9 | SOLID | 6.4 / 6.4 | SOLID | - | 1080p | 11.0 | ok | 128 BPM pattern only |
 | `mlfSzn` | #338 | GM Shaders: Shading | needs_texture | base | 2.9 / 2.9 | SOLID | 6.4 / 6.4 | SOLID | - | 1080p | 12.0 | ok | 128 BPM pattern only |
 | `kaleidoscope_mirror` | - | 8-fold kaleidoscopic mirror geometry pulsing to | original18 | base | 2.9 / 2.9 (loud 2.9) | SOLID | 6.4 / 6.4 (loud 6.4) | SOLID | - | 1080p | 6.2 | ok | - |
+| `7dfXDH` | - | fractalized Circuit Diagram2 | selfcontained | base | 2.9 / 2.9 (loud 2.9) | SOLID | 6.5 / 6.5 (loud 6.5) | SOLID | - | 1080p | 9.2 | ok | - |
+| `csd3RM` | - | FractalsExperiment | needs_texture | base | 2.9 / 2.9 (loud 2.9) | SOLID | 6.5 / 6.5 (loud 6.5) | SOLID | - | 1080p | 19.0 | ok | - |
 | `Mtj3Rh` | #289 | Xor - Triangles | selfcontained | base | 2.9 / 2.9 | SOLID | 6.5 / 6.5 | SOLID | - | 1080p | 10.6 | ok | 128 BPM pattern only |
+| `3tS3R3` | - | Falling into fractals | selfcontained | base | 3.0 / 3.0 (loud 3.0) | SOLID | 6.6 / 6.6 (loud 6.6) | SOLID | - | 1080p | 7.8 | ok | - |
 | `dtyczc` | #238 | Truchet [137] | selfcontained | base | 3.0 / 3.0 (loud 3.0) | SOLID | 6.6 / 6.6 (loud 6.6) | SOLID | - | 1080p | 8.5 | ok | - |
 | `4lXGDl` | - | baby's first go | selfcontained | base | 3.0 / 3.0 | SOLID | 6.6 / 6.6 | SOLID | - | 1080p | 9.7 | ok | 128 BPM pattern only |
 | `NlsBzM` | #371 | Sliding Spheres [239 bytes] | selfcontained | base | 3.0 / 3.0 (loud 3.0) | SOLID | 6.7 / 6.7 (loud 6.7) | SOLID | - | 1080p | 12.5 | ok | - |
 | `mtdyDs` | #245 | Gyroid Slice [158] | selfcontained | base | 3.0 / 3.1 | SOLID | 6.8 / 6.8 | SOLID | - | 1080p | 9.7 | ok | 128 BPM pattern only |
+| `WflGWS` | - | Week 06C - Fractals 3 | selfcontained | base | 3.1 / 3.1 (loud 3.1) | SOLID | 6.9 / 6.9 (loud 6.9) | SOLID | - | 1080p | 11.8 | ok | - |
+| `sssXRs` | - | KIFS Fractals Koch Snowflake | needs_texture | base | 3.1 / 3.1 (loud 3.1) | SOLID | 6.9 / 6.9 (loud 6.9) | SOLID | - | 1080p | 12.8 | ok | - |
 | `clKyWD` | #304 | Binary [128] | selfcontained | base | 3.1 / 3.1 (loud 3.1) | SOLID | 6.9 / 6.9 (loud 6.9) | SOLID | - | 1080p | 6.5 | ok | - |
+| `7tsyR2` | - | evolution | selfcontained | base | 3.1 / 3.1 (loud 3.1) | SOLID | 6.9 / 6.9 (loud 6.9) | SOLID | - | 1080p | 14.7 | ok | - |
 | `3dV3R1` | - | Bouncing ball, basic as it gets! | selfcontained | base | 3.1 / 3.1 (loud 3.1) | SOLID | 6.9 / 7.0 (loud 7.0) | SOLID | - | 1080p | 11.8 | ok | - |
 | `sXVGDc` | #648 | For Beginners | needs_texture | base | 3.2 / 3.2 | SOLID | 7.1 / 7.1 | SOLID | - | 1080p | 12.3 | ok | 128 BPM pattern only |
 | `ldfSzN` | - | WhateverThisIsâ„¢ | selfcontained | base | 3.2 / 3.2 | SOLID | 7.1 / 7.1 | SOLID | - | 1080p | 11.0 | ok | 128 BPM pattern only |
 | `WfGSRD` | #346 | Mini: Nova | selfcontained | base | 3.2 / 3.2 (loud 3.2) | SOLID | 7.2 / 7.2 (loud 7.2) | SOLID | - | 1080p | 8.4 | ok | - |
+| `XsVXWc` | - | Sine Wave Zion | selfcontained | base | 3.3 / 3.3 (loud 3.3) | SOLID | 7.2 / 7.3 (loud 7.3) | SOLID | - | 1080p | 16.5 | ok | - |
+| `4tlXWH` | - | Complex function 1 | selfcontained | base | 3.3 / 3.3 (loud 3.3) | SOLID | 7.2 / 7.3 (loud 7.3) | SOLID | - | 1080p | 13.0 | ok | - |
 | `csjfWc` | #347 | 𝕏 | needs_texture | base | 3.3 / 3.3 | SOLID | 7.3 / 7.3 | SOLID | - | 1080p | 8.7 | ok | 128 BPM pattern only |
+| `msVfWV` | - | Into the TV | selfcontained | base | 3.3 / 3.3 (loud 3.3) | SOLID | 7.3 / 7.3 (loud 7.3) | SOLID | - | 1080p | 22.7 | ok | - |
 | `ffjXzy` | #434 | coherence | selfcontained | base | 3.3 / 3.3 | SOLID | 7.3 / 7.4 | SOLID | - | 1080p | 13.2 | ok | 128 BPM pattern only |
+| `tl3fD4` | - | Rainbow snowflake | selfcontained | base | 3.3 / 3.3 (loud 3.3) | SOLID | 7.4 / 7.4 (loud 7.4) | SOLID | - | 1080p | 9.4 | ok | - |
 | `beat_tunnel` | - | Beat-Gated 2D Polar Tunnel with Ring Emission & | original18 | base | 3.3 / 3.3 (loud 3.3) | SOLID | 7.5 / 7.5 (loud 7.5) | SOLID | - | 1080p | 9.4 | ok | - |
 | `wslBRf` | - | Flickering plaid | selfcontained | base | 3.3 / 3.3 (loud 3.3) | SOLID | 7.5 / 7.5 (loud 7.5) | SOLID | - | 1080p | 10.2 | ok | - |
+| `dslczj` | - | Hello World - Shadertoy | selfcontained | base | 3.4 / 3.4 (loud 3.4) | SOLID | 7.5 / 7.5 (loud 7.5) | SOLID | - | 1080p | 11.1 | ok | - |
 | `Msc3zf` | #351 | Glowing Spheres | selfcontained | base | 3.4 / 3.5 | SOLID | 7.7 / 7.7 | SOLID | - | 1080p | 11.8 | ok | 128 BPM pattern only |
 | `cstBzn` | #316 | Semi-Circle Wave [254] | selfcontained | base | 3.5 / 3.5 (loud 3.5) | SOLID | 7.8 / 7.8 (loud 7.8) | SOLID | - | 1080p | 8.1 | ok | - |
 | `3sVGWh` | - | Paramed KIFS Fractals Example | needs_texture | base | 3.5 / 3.5 (loud 3.5) | SOLID | 7.8 / 7.8 (loud 7.8) | SOLID | - | 1080p | 10.3 | ok | - |
+| `MX3BzS` | - | Fractals II | selfcontained | base | 3.5 / 3.5 (loud 3.5) | SOLID | 7.9 / 7.9 (loud 7.9) | SOLID | - | 1080p | 12.3 | ok | - |
 | `7llBzS` | #226 | Molecules 2 [284 chars] | selfcontained | base | 3.6 / 3.6 (loud 3.6) | SOLID | 8.0 / 8.0 (loud 8.0) | SOLID | - | 1080p | 9.7 | ok | - |
 | `stfBRB` | #227 | Molecules [281 chars] | selfcontained | base | 3.6 / 3.6 | SOLID | 8.0 / 8.0 | SOLID | - | 1080p | 12.7 | ok | 128 BPM pattern only |
+| `ttVGzD` | - | Hello Wook World | needs_texture | base | 3.6 / 3.6 (loud 3.6) | SOLID | 8.0 / 8.0 (loud 8.0) | SOLID | - | 1080p | 15.6 | ok | - |
+| `McS3Dh` | - | ewdlop's KIFS Fractals | needs_texture | base | 3.6 / 3.6 (loud 3.6) | SOLID | 8.0 / 8.0 (loud 8.0) | SOLID | - | 1080p | 15.5 | ok | - |
 | `mlyyDy` | #339 | Gravity [170] | selfcontained | base | 3.6 / 3.6 | SOLID | 8.0 / 8.0 | SOLID | - | 1080p | 12.4 | ok | 128 BPM pattern only |
 | `4tlfz2` | #394 | Wire | selfcontained | base | 3.6 / 3.6 (loud 3.6) | SOLID | 8.0 / 8.0 (loud 8.0) | SOLID | - | 1080p | 7.5 | ok | - |
 | `3dVczK` | - | Koch Snowflake Kaleidoscope | needs_texture | base | 3.6 / 3.6 | SOLID | 8.0 / 8.1 | SOLID | - | 1080p | 14.5 | ok | 128 BPM pattern only |
 | `7XGGDt` | #433 | Wolfenstein-like Raytracing | needs_texture | base | 3.6 / 3.6 | SOLID | 8.0 / 8.1 | SOLID | - | 1080p | 12.8 | ok | 128 BPM pattern only |
+| `Ws2cW3` | - | Day7: Fractals 101 | needs_texture | base | 3.7 / 3.7 (loud 3.7) | SOLID | 8.2 / 8.2 (loud 8.2) | SOLID | - | 1080p | 14.3 | ok | - |
 | `WcGXRD` | #396 | Mini: Squircle | selfcontained | base | 3.7 / 3.7 | SOLID | 8.2 / 8.2 | SOLID | - | 1080p | 10.8 | ok | 128 BPM pattern only |
+| `t3fyWM` | - | koch00 | needs_texture | base | 3.7 / 3.7 (loud 3.7) | SOLID | 8.2 / 8.3 (loud 8.2) | SOLID | - | 1080p | 16.3 | ok | - |
 | `l3VcWG` | #321 | Stripy Anti-aliasing | selfcontained | base | 3.7 / 3.7 (loud 3.7) | SOLID | 8.2 / 8.3 (loud 8.3) | SOLID | - | 1080p | 7.6 | ok | - |
+| `t3yBzy` | - | Day13-ever | needs_texture | base | 3.7 / 3.7 (loud 3.7) | SOLID | 8.3 / 8.3 (loud 8.3) | SOLID | - | 1080p | 14.2 | ok | - |
 | `dlVyWG` | #214 | Gathering [177] | selfcontained | base | 3.8 / 3.8 | SOLID | 8.4 / 8.4 | SOLID | - | 1080p | 11.4 | ok | 128 BPM pattern only |
+| `Wl3fz4` | - | Fork Lyapunov rsiqueira 526 | selfcontained | base | 3.8 / 3.8 (loud 3.8) | SOLID | 8.4 / 8.5 (loud 8.5) | SOLID | - | 1080p | 9.7 | ok | - |
 | `XXyBRR` | #401 | GM Shaders: Gamma | selfcontained | base | 3.8 / 3.8 (loud 3.8) | SOLID | 8.4 / 8.5 (loud 8.5) | SOLID | - | 1080p | 10.0 | ok | - |
 | `sljGRW` | #249 | Windows 10 [160 Chars] | needs_texture | base | 3.8 / 3.8 | SOLID | 8.5 / 8.5 | SOLID | - | 1080p | 17.5 | ok | 128 BPM pattern only |
+| `3cs3DS` | - | Week 06E - Fractals 5 | selfcontained | base | 3.8 / 3.8 (loud 3.8) | SOLID | 8.5 / 8.5 (loud 8.5) | SOLID | - | 1080p | 15.0 | ok | - |
 | `3f23Rm` | #373 | Constructing SDFs | selfcontained | base | 3.9 / 3.9 | SOLID | 8.6 / 8.6 | SOLID | - | 1080p | 13.7 | ok | 128 BPM pattern only |
 | `liquid_metal` | - | Liquid Metal Domain-Warped Surface with Fake Spe | original18 | base | 3.9 / 3.9 (loud 3.9) | SOLID | 8.7 / 8.7 (loud 8.7) | SOLID | - | 1080p | 9.5 | ok | white_when_loud |
 | `3fySDD` | #342 | Mini: Hillside | selfcontained | base | 3.9 / 3.9 (loud 3.9) | SOLID | 8.7 / 8.7 (loud 8.7) | SOLID | - | 1080p | 7.6 | ok | - |
 | `audio_wave_rings` | - | Concentric wave rings that expand on transients, | original18 | base | 3.9 / 3.9 (loud 3.9) | SOLID | 8.8 / 8.8 (loud 8.8) | SOLID | - | 1080p | 10.9 | ok | - |
 | `lXXXzS` | #520 | Cheap Turbulence | selfcontained | base | 4.0 / 4.0 | SOLID | 8.8 / 8.8 | SOLID | - | 1080p | 12.2 | ok | 128 BPM pattern only |
+| `333fDS` | - | Week 06D - Fractals 4 | selfcontained | base | 4.0 / 4.1 (loud 4.0) | SOLID | 8.8 / 8.9 (loud 8.9) | SOLID | - | 1080p | 13.7 | ok | - |
 | `ddVfzd` | #328 | GM Shaders: Tonemaps | selfcontained | base | 3.7 / 4.0 (loud 4.0) | SOLID | 8.2 / 8.9 (loud 8.9) | SOLID | - | 1080p | 15.9 | ok | - |
+| `MX3fzX` | - | Week 06B - Fractals 2 | selfcontained | base | 4.0 / 4.0 (loud 4.0) | SOLID | 8.9 / 9.0 (loud 9.0) | SOLID | - | 1080p | 14.5 | ok | - |
 | `dlVGzh` | #213 | The Entry | selfcontained | base | 4.0 / 4.0 | SOLID | 9.0 / 9.0 | SOLID | - | 1080p | 11.3 | ok | 128 BPM pattern only |
+| `DdjfRV` | - | Dreamscapes | selfcontained | base | 4.0 / 4.0 (loud 4.0) | SOLID | 9.0 / 9.0 (loud 9.0) | SOLID | - | 1080p | 12.5 | ok | - |
+| `flSXD1` | - | Trianglotron | selfcontained | base | 4.0 / 4.1 (loud 4.1) | SOLID | 9.0 / 9.0 (loud 9.0) | SOLID | - | 1080p | 13.2 | ok | - |
 | `3ttSzr` | #566 | crumpledWave | selfcontained | base | 4.0 / 4.0 (loud 4.0) | SOLID | 9.0 / 9.0 (loud 9.0) | SOLID | - | 1080p | 7.9 | ok | - |
 | `slsfRB` | #379 | Shuffling Mosaic [337 chars] | selfcontained | base | 4.1 / 4.1 | SOLID | 9.2 / 9.2 | SOLID | - | 1080p | 15.7 | ok | 128 BPM pattern only |
 | `wtSyRc` | #348 | Photon Transmission | selfcontained | base | 4.2 / 4.2 (loud 4.2) | SOLID | 9.4 / 9.4 (loud 9.4) | SOLID | - | 1080p | 9.4 | ok | - |
+| `sddSDf` | - | amateur attempt at julia set | selfcontained | base | 4.2 / 4.3 (loud 4.3) | SOLID | 9.3 / 9.5 (loud 9.5) | SOLID | - | 1080p | 12.4 | ok | - |
 | `multiband_rings` | - | Five concentric ring zones, each driven by its o | original18 | base | 4.3 / 4.3 (loud 4.3) | SOLID | 9.5 / 9.6 (loud 9.6) | SOLID | - | 1080p | 19.2 | ok | - |
 | `mlfcRM` | #524 | Breaking Repetition | selfcontained | base | 4.3 / 4.3 (loud 4.3) | SOLID | 9.6 / 9.6 (loud 9.6) | SOLID | - | 1080p | 15.4 | ok | - |
 | `W33GRX` | #344 | Mini: Mosaic | selfcontained | base | 4.3 / 4.3 | SOLID | 9.6 / 9.6 | SOLID | - | 1080p | 11.4 | ok | 128 BPM pattern only |
 | `deep_drift` | - | Ambient drift field. Calm, but visible - luminos | original18 | base | 4.3 / 4.3 (loud 4.3) | SOLID | 9.6 / 9.6 (loud 9.6) | SOLID | - | 1080p | 13.9 | ok | - |
+| `XfKGDm` | - | Trying to learn shaders properly | selfcontained | base | 4.3 / 4.3 (loud 4.3) | SOLID | 9.6 / 9.6 (loud 9.6) | SOLID | - | 1080p | 17.4 | ok | - |
+| `dldfWH` | - | rainbow wavessss | selfcontained | base | 4.3 / 4.3 (loud 4.3) | SOLID | 9.6 / 9.7 (loud 9.7) | SOLID | - | 1080p | 15.0 | ok | - |
 | `WfySDD` | #301 | Mini: Squircle 2 | selfcontained | base | 4.4 / 4.4 | SOLID | 9.9 / 9.9 | SOLID | - | 1080p | 11.0 | ok | 128 BPM pattern only |
+| `ws3fRl` | - | ps_SierpinskisCarpet | selfcontained | base | 3.6 / 4.4 (loud 4.4) | SOLID | 8.1 / 9.9 (loud 9.9) | SOLID | - | 1080p | 14.2 | ok | - |
 | `ll2GD3` | #653 | Palettes | selfcontained | base | 4.4 / 4.5 (loud 4.4) | SOLID | 9.9 / 10.0 (loud 10.0) | SOLID | - | 1080p | 11.1 | ok | - |
+| `MctcR2` | - | Cool fractals | selfcontained | base | 4.4 / 4.5 (loud 4.6) | SOLID | 9.8 / 10.0 (loud 10.2) | OK | - | 1080p | 15.7 | ok | white_when_loud |
 | `wdtBWX` | - | coolFractals | selfcontained | base | 4.4 / 4.6 (loud 4.5) | SOLID | 9.7 / 10.2 (loud 10.2) | OK | - | 1080p | 9.3 | ok | - |
 | `tcXfW8` | - | Neon Chill | selfcontained | base | 4.5 / 4.6 (loud 4.6) | SOLID | 10.2 / 10.2 (loud 10.2) | OK | - | 1080p | 8.6 | ok | - |
 | `vs_cyber_wormhole` | - | 3D Relativistic Cyber Wormhole with Audio-Reacti | original18 | base | 4.7 / 4.7 (loud 4.7) | SOLID | 10.4 / 10.4 (loud 10.5) | OK | - | 1080p | 13.2 | ok | - |
 | `f33Xz8` | #630 | Rounded Box - CSS-like | selfcontained | base | 4.7 / 4.7 (loud 4.7) | SOLID | 10.5 / 10.5 (loud 10.5) | OK | - | 1080p | 14.1 | ok | - |
+| `cdXyWs` | - | Stackathon | selfcontained | base | 4.7 / 4.7 (loud 4.7) | SOLID | 10.5 / 10.5 (loud 10.5) | OK | - | 1080p | 18.0 | ok | - |
+| `WXc3Rn` | - | fun with fractals | selfcontained | base | 4.7 / 4.7 (loud 4.7) | SOLID | 10.5 / 10.5 (loud 10.5) | OK | - | 1080p | 16.1 | ok | - |
+| `dlBBzw` | - | Kuroki Fractal | selfcontained | base | 4.8 / 4.9 (loud 4.9) | SOLID | 10.8 / 10.8 (loud 10.8) | OK | - | 1080p | 17.3 | ok | - |
+| `wflXzB` | - | Infinite Loop Spiral Sierpinski | needs_texture | base | 5.0 / 5.0 (loud 5.0) | SOLID | 11.1 / 11.1 (loud 11.1) | OK | - | 1080p | 22.9 | ok | - |
+| `ds2fzG` | - | Fractals - Silviu | selfcontained | base | 5.0 / 5.0 (loud 5.0) | SOLID | 11.2 / 11.2 (loud 11.2) | OK | - | 1080p | 10.9 | ok | - |
+| `3t3fzM` | - | Animated Lyapunov Flames | selfcontained | base | 5.1 / 5.1 (loud 5.1) | SOLID | 11.4 / 11.4 (loud 11.4) | OK | - | 1080p | 15.2 | ok | - |
+| `DtGXR1` | - | Basic shader helper functions | selfcontained | base | 5.0 / 5.2 (loud 5.1) | SOLID | 11.3 / 11.5 (loud 11.5) | OK | - | 1080p | 15.5 | ok | - |
 | `XfKfWd` | #623 | CRT Beam Simulator (60fps 240Hz) | needs_texture | base | 5.1 / 5.2 | SOLID | 11.5 / 11.6 | OK | - | 1080p | 34.8 | ok | 128 BPM pattern only |
+| `mdVfDK` | - | Bridge to Infinity \|\| ft DoMa | selfcontained | base | 5.2 / 5.2 (loud 5.2) | SOLID | 11.6 / 11.6 (loud 11.7) | OK | - | 1080p | 26.5 | ok | - |
+| `XfcyWN` | - | Fractal Spiral Pulse | selfcontained | base | 5.3 / 5.3 (loud 5.3) | SOLID | 11.8 / 11.9 (loud 11.9) | OK | - | 1080p | 20.3 | ok | - |
+| `DsffWl` | - | fractals 00 | selfcontained | base | 5.3 / 5.4 (loud 5.4) | SOLID | 11.9 / 12.0 (loud 12.0) | OK | - | 1080p | 15.1 | ok | - |
 | `ftyfzh` | #367 | 2D Rotation Demo | selfcontained | base | 5.4 / 5.4 (loud 5.4) | SOLID | 12.1 / 12.2 (loud 12.2) | OK | - | 1080p | 15.8 | ok | - |
 | `WclSWn` | #491 | Turbulent Dark | selfcontained | base | 5.4 / 5.4 (loud 5.4) | SOLID | 12.2 / 12.2 (loud 12.2) | OK | - | 1080p | 15.4 | ok | - |
+| `wtKfW3` | - | kifs 2d _5 | selfcontained | base | 5.6 / 5.6 (loud 5.6) | SOLID | 12.5 / 12.6 (loud 12.6) | OK | - | 1080p | 30.3 | ok | white_when_loud |
 | `WtdXR8` | #573 | glowingMarblingBlack | selfcontained | base | 5.7 / 5.7 (loud 5.7) | SOLID | 12.7 / 12.7 (loud 12.7) | OK | - | 1080p | 8.1 | ok | - |
+| `MtKyRR` | - | Escape Time Sierpinski Triangle | selfcontained | base | 5.1 / 5.7 (loud 6.1) | SOLID | 11.2 / 12.7 (loud 13.2) | MARGINAL | - | 720p | 8.2 | ok | - |
+| `DlfBW2` | - | Shader Art Template | selfcontained | base | 5.8 / 5.9 (loud 5.9) | SOLID | 13.1 / 13.1 (loud 13.1) | MARGINAL | - | 720p | 16.3 | ok | - |
+| `4X33RB` | - | Neon fractals6502 | selfcontained | base | 5.9 / 5.9 (loud 5.9) | SOLID | 13.1 / 13.1 (loud 13.1) | MARGINAL | - | 720p | 17.4 | ok | - |
 | `mtyGWy` | #601 | Shader Art Coding Introduction | selfcontained | base | 5.9 / 5.9 (loud 5.9) | SOLID | 13.2 / 13.2 (loud 13.2) | MARGINAL | - | 720p | 11.1 | ok | - |
 | `XXGyWR` | - | Red Blue Plasma Noise | selfcontained | base | 5.9 / 5.9 | SOLID | 13.1 / 13.2 | MARGINAL | - | 720p | 22.7 | ok | 128 BPM pattern only |
 | `Wt33Wf` | #605 | Cyber Fuji 2020 | selfcontained | base | 5.8 / 5.9 (loud 6.0) | SOLID | 13.0 / 13.2 (loud 13.5) | MARGINAL | - | 720p | 36.6 | ok | - |
+| `DsjyRR` | - | InitiationShader | selfcontained | base | 5.9 / 5.9 (loud 5.9) | SOLID | 13.2 / 13.2 (loud 13.2) | MARGINAL | - | 720p | 12.1 | ok | - |
+| `clycWW` | - | learning shaders youtube | selfcontained | base | 5.9 / 5.9 (loud 5.9) | SOLID | 13.2 / 13.3 (loud 13.2) | MARGINAL | - | 720p | 20.6 | ok | - |
+| `3cyGRd` | - | Fork First-Shad PetraRall 807 | selfcontained | base | 5.9 / 6.0 (loud 6.0) | SOLID | 13.2 / 13.3 (loud 13.3) | MARGINAL | - | 720p | 17.4 | ok | - |
+| `clGSzw` | - | kaleidoscope6678 | selfcontained | base | 5.9 / 6.0 (loud 6.0) | SOLID | 13.3 / 13.3 (loud 13.3) | MARGINAL | - | 720p | 20.0 | ok | - |
+| `tfdGDX` | - | First-Shader | selfcontained | base | 5.9 / 6.0 (loud 6.0) | SOLID | 13.2 / 13.3 (loud 13.3) | MARGINAL | - | 720p | 18.7 | ok | - |
+| `DlGXRw` | - | Fractals, sweet fractals X | selfcontained | base | 6.0 / 6.0 (loud 6.0) | SOLID | 13.3 / 13.4 (loud 13.4) | MARGINAL | - | 720p | 19.5 | ok | - |
 | `wffXDr` | #506 | Turbulent Flame | needs_texture | base | 6.0 / 6.0 | SOLID | 13.3 / 13.4 | MARGINAL | - | 720p | 20.0 | ok | 128 BPM pattern only |
 | `tf2SWc` | #514 | One-Pass Fire | needs_texture | base | 6.0 / 6.0 (loud 6.0) | SOLID | 13.4 / 13.4 (loud 13.4) | MARGINAL | - | 720p | 22.0 | ok | - |
+| `lcSSWc` | - | Week 06F - Fractals 6 | selfcontained | base | 6.0 / 6.0 (loud 6.0) | SOLID | 13.4 / 13.4 (loud 13.4) | MARGINAL | - | 720p | 17.0 | ok | - |
 | `tlf3zn` | #244 | Simple Worley | selfcontained | base | 6.2 / 6.2 | SOLID | 13.8 / 13.8 | MARGINAL | - | 720p | 17.9 | ok | 128 BPM pattern only |
 | `DdBGDh` | #511 | GM Shaders: Noise Example | selfcontained | base | 6.2 / 6.2 (loud 6.2) | SOLID | 13.9 / 13.9 (loud 13.9) | MARGINAL | - | 720p | 112.0 | ok | - |
+| `l3tBRS` | - | Colorful fractals | selfcontained | base | 6.2 / 6.2 (loud 6.2) | SOLID | 13.9 / 14.0 (loud 14.0) | MARGINAL | - | 720p | 21.1 | ok | - |
+| `lltSzB` | - | Fun with Fractals | selfcontained | base | 6.3 / 6.3 (loud 6.3) | SOLID | 14.0 / 14.0 (loud 14.0) | MARGINAL | - | 720p | 17.9 | ok | - |
 | `4l2GzW` | #495 | Xor - Infinite Worley Noise | selfcontained | base | 6.3 / 6.3 | SOLID | 14.1 / 14.2 | MARGINAL | - | 720p | 17.5 | ok | 128 BPM pattern only |
+| `DlVSDm` | - | fractals_center | selfcontained | base | 6.3 / 6.4 (loud 6.4) | SOLID | 14.1 / 14.2 (loud 14.2) | MARGINAL | - | 720p | 18.0 | ok | - |
+| `7dtczX` | - | Julia - Dendrite | selfcontained | base | 5.8 / 6.4 (loud 6.7) | SOLID | 12.9 / 14.1 (loud 14.8) | MARGINAL | - | 720p | 11.4 | ok | - |
+| `3cfGzn` | - | Optical Pulse | selfcontained | base | 6.4 / 6.4 (loud 6.4) | SOLID | 14.2 / 14.3 (loud 14.3) | MARGINAL | - | 720p | 15.9 | ok | - |
+| `W33Gzn` | - | more fun with fractals | selfcontained | base | 6.4 / 6.5 (loud 6.5) | SOLID | 14.4 / 14.4 (loud 14.4) | MARGINAL | - | 720p | 18.1 | ok | - |
+| `DsSyzc` | - | Fork Initiation sklbz 497 | selfcontained | base | 6.2 / 6.5 (loud 6.5) | SOLID | 13.8 / 14.1 (loud 14.2) | MARGINAL | - | 720p | 18.0 | ok | - |
 | `llfXRl` | - | Perlin Texture Blending | needs_texture | base | 6.5 / 6.5 | SOLID | 14.6 / 14.6 | MARGINAL | - | 720p | 48.6 | ok | 128 BPM pattern only |
+| `fcGSDh` | - | quasiflower | selfcontained | base | 6.2 / 6.6 (loud 6.6) | SOLID | 13.9 / 14.8 (loud 14.8) | MARGINAL | - | 720p | 31.4 | ok | - |
+| `WlsfWS` | - | circle in circle | selfcontained | base | 6.6 / 6.6 (loud 6.6) | SOLID | 14.8 / 14.8 (loud 14.8) | MARGINAL | - | 720p | 18.0 | ok | - |
+| `33S3D1` | - | Banach-Tarski Paradox! | needs_texture | base | 5.2 / 6.7 (loud 6.7) | SOLID | 11.6 / 14.9 (loud 14.9) | MARGINAL | - | 720p | 14.1 | ok | - |
 | `s3V3Wd` | #578 | Oil spill. | selfcontained | base | 6.6 / 6.7 (loud 6.6) | SOLID | 14.8 / 14.8 (loud 14.9) | MARGINAL | - | 720p | 13.8 | ok | - |
 | `3lByRd` | #274 | Final Storm | needs_texture | base | 6.7 / 6.7 | SOLID | 14.8 / 14.9 | MARGINAL | - | 720p | 25.9 | ok | 128 BPM pattern only |
+| `ttsfRr` | - | Mediterranean tiles | needs_texture | base | 6.7 / 6.7 (loud 6.7) | SOLID | 15.0 / 15.0 (loud 15.0) | MARGINAL | - | 720p | 15.1 | ok | - |
+| `W3SSDG` | - | sphere fractals | selfcontained | base | 6.7 / 6.8 (loud 6.8) | SOLID | 15.0 / 15.1 (loud 15.1) | MARGINAL | - | 720p | 17.3 | ok | - |
+| `33d3zr` | - | more fun with fractals (colored) | selfcontained | base | 6.8 / 6.8 (loud 6.8) | SOLID | 15.2 / 15.2 (loud 15.2) | MARGINAL | - | 720p | 19.0 | ok | - |
+| `333GzH` | - | even more fun with fractals | selfcontained | base | 6.8 / 6.8 (loud 6.9) | SOLID | 15.1 / 15.2 (loud 15.3) | MARGINAL | - | 720p | 89.9 | ok | - |
+| `wcccDf` | - | fractals without name | selfcontained | base | 6.9 / 6.9 (loud 6.9) | SOLID | 15.4 / 15.5 (loud 15.5) | MARGINAL | - | 720p | 31.6 | ok | - |
 | `stKBzt` | - | Fork Fractal An NikolaErce 712 | selfcontained | base | 6.9 / 7.0 (loud 7.0) | SOLID | 15.6 / 15.6 (loud 15.6) | MARGINAL | - | 720p | 54.1 | ok | - |
+| `wcyGR1` | - | teeeeeeeeeeeest1 | selfcontained | base | 7.0 / 7.0 (loud 7.0) | SOLID | 15.6 / 15.7 (loud 15.7) | MARGINAL | - | 720p | 13.2 | ok | - |
 | `ldXXDj` | #435 | Music - Pirates | needs_texture | base | 7.1 / 7.1 | SOLID | 15.5 / 15.5 | MARGINAL | - | 720p | 37.5 | ok | 128 BPM pattern only |
+| `dtyXDW` | - | Una wea Azul | selfcontained | base | 7.2 / 7.2 (loud 7.2) | SOLID | 16.1 / 16.1 (loud 16.1) | FAIL | - | 720p | 19.4 | ok | - |
 | `3tBGRm` | #645 | UI noise halo | selfcontained | base | 7.2 / 7.2 | SOLID | 16.1 / 16.2 | FAIL | - | 720p | 66.6 | ok | 128 BPM pattern only |
+| `scS3Rd` | - | Reuleaux triangle fractal | selfcontained | base | 6.7 / 7.2 (loud 7.6) | SOLID | 14.8 / 15.9 (loud 16.8) | FAIL | - | 720p | 14.9 | ok | - |
+| `XtBBzw` | - | The Beauty of Fractals | selfcontained | base | 6.6 / 7.5 (loud 7.8) | SOLID | 14.3 / 16.4 (loud 16.6) | FAIL | - | 720p | 13.8 | ok | - |
 | `md3fDX` | - | Electric fields | selfcontained | base | 7.5 / 7.5 (loud 7.5) | SOLID | 16.8 / 16.9 (loud 16.9) | FAIL | - | 720p | 18.8 | ok | - |
+| `msSyR3` | - | some nonsense | selfcontained | base | 7.5 / 7.5 (loud 7.5) | SOLID | 16.8 / 16.8 (loud 16.8) | FAIL | - | 720p | 24.7 | ok | - |
+| `3dKGDd` | - | bit fractals | selfcontained | base | 7.3 / 7.6 (loud 7.7) | SOLID | 17.2 / 17.8 (loud 17.9) | FAIL | - | 720p | 30.1 | ok | - |
+| `lsdBWs` | - | Julia Set Rotator | selfcontained | base | 5.4 / 7.6 (loud 11.1) | OK | 11.7 / 16.8 (loud 24.6) | FAIL | - | 720p | 9.8 | ok | - |
+| `lXyXDy` | - | Dancing patterns | selfcontained | base | 7.6 / 7.6 (loud 7.6) | SOLID | 16.9 / 17.0 (loud 17.0) | FAIL | - | 720p | 23.3 | ok | white_when_loud |
+| `dscXRj` | - | Mandelbrot and other fractals | selfcontained | base | 6.5 / 7.7 (loud 8.8) | SOLID | 14.4 / 17.0 (loud 19.7) | FAIL | - | 720p | 15.7 | ok | - |
 | `M3KcRy` | - | FBM Plasma Outlines | selfcontained | base | 7.8 / 7.9 | SOLID | 17.5 / 17.5 | FAIL | - | 720p | 41.2 | ok | 128 BPM pattern only |
+| `cdKcz1` | - | First Fractal Shader | selfcontained | base | 7.8 / 7.9 (loud 7.9) | SOLID | 17.5 / 17.6 (loud 17.6) | FAIL | - | 720p | 25.8 | ok | - |
+| `NctXRn` | - | Tie-Dye Squares | selfcontained | base | 7.9 / 7.9 (loud 7.9) | SOLID | 17.6 / 17.6 (loud 17.6) | FAIL | - | 720p | 31.1 | ok | - |
+| `NdByRG` | - | KIFS Fractals Koch curve | needs_texture | base | 7.9 / 7.9 (loud 7.9) | SOLID | 17.7 / 17.7 (loud 17.7) | FAIL | - | 720p | 13.2 | ok | - |
+| `sfVXzG` | - | mezzanesque | selfcontained | base | 7.2 / 8.0 (loud 8.0) | SOLID | 15.9 / 17.3 (loud 17.6) | FAIL | - | 720p | 14.8 | ok | - |
 | `XXtBRr` | #628 | Balatro Background Shaders | selfcontained | base | 8.0 / 8.0 (loud 8.0) | SOLID | 17.9 / 18.0 (loud 17.9) | FAIL | - | 720p | 20.2 | ok | - |
 | `4XyyDc` | - | Color oil | selfcontained | base | 8.1 / 8.1 | SOLID | 18.0 / 18.0 | FAIL | - | 720p | 38.5 | ok | 128 BPM pattern only |
 | `ftVcWh` | - | Simple Fractal for All | selfcontained | base | 8.1 / 8.1 (loud 8.1) | SOLID | 18.1 / 18.1 (loud 18.1) | FAIL | - | 720p | 8.4 | ok | - |
 | `Ds3fDX` | - | Sacred geometries | selfcontained | base | 8.2 / 8.2 | SOLID | 18.4 / 18.4 | FAIL | - | 720p | 26.7 | ok | 128 BPM pattern only |
+| `DsscDn` | - | SDF Fractals | selfcontained | base | 8.4 / 8.5 (loud 8.5) | SOLID | 19.0 / 19.0 (loud 19.0) | FAIL | - | 720p | 58.1 | ok | - |
+| `ds3yRN` | - | fractlee | selfcontained | base | 8.5 / 8.6 (loud 8.6) | SOLID | 18.9 / 19.0 (loud 19.0) | FAIL | - | 720p | 7.8 | ok | white_when_loud |
 | `7djyWc` | #341 | Quadicube in 456 chars | selfcontained | base | 8.2 / 8.8 (loud 9.1) | SOLID | 18.4 / 19.7 (loud 20.4) | FAIL | - | 720p | 13.7 | ok | white_when_loud |
+| `fd3cRs` | - | 10 Line Tricorn | selfcontained | base | 7.7 / 8.9 (loud 9.7) | SOLID | 16.9 / 19.5 (loud 21.2) | FAIL | - | 720p | 11.6 | ok | - |
 | `tscSDM` | - | Base fractal with smooth count | selfcontained | base | 4.5 / 9.3 | SOLID | 10.0 / 20.1 | FAIL | - | 720p | 11.9 | ok | 128 BPM pattern only |
+| `ssXyzN` | - | Fractal Idea e | selfcontained | base | 9.5 / 9.5 (loud 9.5) | SOLID | 21.2 / 21.2 (loud 21.2) | FAIL | - | 720p | 29.7 | ok | - |
 | `mdXGzs` | #325 | Chromatic Aberration [229 chars] | needs_texture | base | 9.7 / 9.7 (loud 9.7) | SOLID | 21.7 / 21.7 (loud 21.7) | FAIL | - | 720p | 8.3 | ok | - |
 | `4tBXRh` | - | Fractal Anxiety | selfcontained | base | 9.7 / 9.8 (loud 9.7) | SOLID | 21.8 / 21.9 (loud 21.9) | FAIL | - | 720p | 19.6 | ok | - |
 | `lt23RK` | - | Fractalsq | selfcontained | base | 8.2 / 9.9 (loud 10.6) | OK | 17.8 / 21.7 (loud 22.9) | FAIL | - | 720p | 9.0 | ok | - |
+| `3Xc3zl` | - | Use IFS to Construct Fractals | selfcontained | base | 7.4 / 10.1 (loud 10.3) | OK | 16.5 / 22.4 (loud 23.0) | FAIL | - | 720p | 27.3 | ok | - |
+| `lddSDl` | - | Acid fractal stuff | selfcontained | base | 7.1 / 10.4 (loud 10.4) | OK | 15.7 / 22.8 (loud 22.8) | FAIL | - | 720p | 14.3 | ok | - |
+| `fdtcD2` | - | Julia of Tricorn | selfcontained | base | 9.0 / 10.4 (loud 11.2) | OK | 19.8 / 23.0 (loud 24.6) | FAIL | - | 720p | 16.3 | ok | - |
 | `ltXyD7` | - | Geode | selfcontained | base | 10.5 / 10.5 | OK | 23.6 / 23.6 | FAIL | - | 720p | 52.9 | ok | 128 BPM pattern only |
 | `WXX3RH` | #538 | Fire [326] | needs_texture | base | 11.1 / 11.1 | OK | 24.8 / 24.9 | FAIL | - | 720p | 12.7 | ok | 128 BPM pattern only |
+| `tlfcRn` | - | Trees of Circles II | selfcontained | base | 10.7 / 11.3 (loud 10.8) | OK | 24.7 / 25.9 (loud 24.7) | FAIL | - | 720p | 13.8 | ok | - |
 | `tX3GW2` | #357 | Efficient Chaos | selfcontained | base | 11.3 / 11.4 (loud 11.3) | OK | 25.5 / 25.5 (loud 25.5) | FAIL | - | 720p | 28.5 | ok | - |
+| `4s2BWw` | - | Pinwheel Fractals | selfcontained | base | 11.4 / 11.4 (loud 11.5) | OK | 25.5 / 25.6 (loud 25.7) | FAIL | - | 720p | 54.5 | ok | - |
+| `scs3Wf` | - | Hyperdimensional fractions | selfcontained | base | 7.5 / 11.5 (loud 11.3) | OK | 16.2 / 25.5 (loud 25.2) | FAIL | - | 720p | 26.6 | ok | - |
+| `7Xy3WW` | #635 | Fractal Bang | selfcontained | base | 11.5 / 11.5 (loud 11.5) | OK | 25.8 / 25.8 (loud 25.8) | FAIL | - | 720p | 38.3 | ok | - |
+| `ctsyW8` | - | GrayFractals | selfcontained | base | 11.5 / 11.5 (loud 11.5) | OK | 25.9 / 25.9 (loud 25.9) | FAIL | - | 720p | 9.9 | ok | - |
 | `dtj3Wy` | - | -1+i  base  &  twindragon figure | selfcontained | base | 11.7 / 11.7 (loud 11.3) | OK | 27.5 / 27.6 (loud 26.5) | FAIL | - | 720p | 8.1 | ok | white_when_loud |
+| `NfS3Rz` | - | Hypersymmetrical Fractions | selfcontained | base | 9.6 / 11.8 (loud 11.8) | OK | 21.2 / 26.4 (loud 26.4) | FAIL | - | 720p | 28.0 | ok | - |
+| `43d3zr` | - | Fractal Hallways | selfcontained | base | 9.2 / 12.1 (loud 12.3) | OK | 20.6 / 27.1 (loud 27.5) | FAIL | - | 720p | 52.6 | ok | - |
 | `73cSRr` | #594 | It's Verity (listen to sound) | selfcontained | base | 12.1 / 12.2 (loud 12.2) | OK | 27.2 / 27.4 (loud 27.3) | FAIL | - | 720p | 5876.0 | ok | - |
 | `ldXyDS` | - | mature crew sux fractals | selfcontained | base | 12.6 / 12.7 (loud 12.7) | OK | 28.3 / 28.5 (loud 28.5) | FAIL | - | 720p | 12.0 | ok | - |
+| `McjGDD` | - | Newton fractals | selfcontained | base | 12.8 / 12.8 (loud 12.8) | OK | 28.6 / 28.6 (loud 28.6) | FAIL | - | 720p | 23.4 | ok | - |
 | `4lSSRy` | - | Fractals: MRS | selfcontained | base | 12.9 / 12.9 (loud 12.9) | OK | 28.9 / 28.9 (loud 28.9) | FAIL | - | 720p | 8.6 | ok | - |
 | `t3lfDl` | #170 | Fluidous [155] | selfcontained | base | 13.5 / 13.5 | MARGINAL | 30.2 / 30.3 | FAIL | 540p 7.6 / 7.6 SOLID; 360p 3.4 / 3.4 SOLID | 540p | 9.9 | ok | 128 BPM pattern only |
 | `WdXfRX` | - | rare bull | selfcontained | base | 13.7 / 13.8 | MARGINAL | 30.8 / 30.8 | FAIL | 540p 7.8 / 7.8 SOLID; 360p 3.5 / 3.5 SOLID | 540p | 29.7 | ok | 128 BPM pattern only |
@@ -304,7 +404,7 @@ Shaders that run within budget with healthy pixel statistics: originals, self-co
 | `3ssfRj` | - | the handshake | selfcontained | base | 51.4 / 51.4 | FAIL | 115.5 / 115.6 | FAIL | 540p 28.9 / 29.0 FAIL; 360p 12.9 / 13.0 OK | 360p | 13.9 | ok | 128 BPM pattern only |
 | `wcBSW1` | - | Splatter Paint | selfcontained | base | 42.6 / 51.0 | FAIL | 95.6 / 113.5 | FAIL | 540p 23.9 / 29.0 FAIL; 360p 10.7 / 13.0 OK | 360p | 114.8 | ok | 128 BPM pattern only |
 
-## Renders but suspect (30)
+## Renders but suspect (44)
 
 Within budget, but the readback looks near-black, flat or static (or has no statistics). Check the thumbnail before using; not in the show manifest.
 
@@ -316,11 +416,15 @@ Within budget, but the readback looks near-black, flat or static (or has no stat
 | `3XyXzm` | #231 | Textured Microtorus [231] | selfcontained | base | 0.6 / 0.6 | SOLID | 1.2 / 1.2 | SOLID | - | 1080p | 7.9 | black, flat, static | pixel statistics: black, flat, static; 128 BPM pattern only |
 | `ffsSRH` | - | Feeeeed Meeeee | selfcontained | base | 0.6 / 0.6 | SOLID | 1.2 / 1.2 | SOLID | - | 1080p | 7.7 | black, flat, static | pixel statistics: black, flat, static; 128 BPM pattern only |
 | `3csSWB` | #546 | Singularity [381] | selfcontained | base | 0.6 / 0.6 | SOLID | 1.2 / 1.2 | SOLID | - | 1080p | 9.1 | black, flat, static | pixel statistics: black, flat, static; 128 BPM pattern only |
+| `wtVcDt` | - | Yet Another Julia Set | selfcontained | base | 0.6 / 0.6 (loud 0.6) | SOLID | 1.2 / 1.2 (loud 1.2) | SOLID | - | 1080p | 7.7 | black, flat, static | pixel statistics: black, flat, static; black_when_loud |
 | `XstBR8` | - | A beautiful fractal loop | selfcontained | base | 0.6 / 0.6 | SOLID | 1.2 / 1.2 | SOLID | - | 1080p | 6.6 | black, flat, static | pixel statistics: black, flat, static; 128 BPM pattern only |
 | `MXKXDG` | - | fractals and circle | selfcontained | base | 0.6 / 0.6 | SOLID | 1.2 / 1.2 | SOLID | - | 1080p | 17.7 | black, flat, static | pixel statistics: black, flat, static; 128 BPM pattern only |
+| `WsVBz1` | - | KIFS Fractalss | selfcontained | base | 0.6 / 0.6 (loud 0.6) | SOLID | 1.2 / 1.2 (loud 1.2) | SOLID | - | 1080p | 7.0 | black, flat, static | pixel statistics: black, flat, static; black_when_loud |
 | `3sGyDy` | - | Yoda fractal | selfcontained | base | 0.6 / 0.6 | SOLID | 1.2 / 1.2 | SOLID | - | 1080p | 7.4 | black, flat, static | pixel statistics: black, flat, static; 128 BPM pattern only |
 | `3cBXRK` | - | Sketch Train | selfcontained | base | 0.6 / 0.6 | SOLID | 1.2 / 1.2 | SOLID | - | 1080p | 8.8 | black, flat, static | pixel statistics: black, flat, static; 128 BPM pattern only |
 | `4fsXRf` | - | Mandelbox 2D | selfcontained | lite | 0.6 / 0.6 | SOLID | 1.2 / 1.2 | SOLID | - | 1080p | 10.8 | black, flat, static | pixel statistics: black, flat, static; 128 BPM pattern only |
+| `3dKXzV` | - | Fractals by Bending 2D Space | selfcontained | base | 0.6 / 0.6 (loud 0.6) | SOLID | 1.2 / 1.2 (loud 1.2) | SOLID | - | 1080p | 10.6 | black, flat, static | pixel statistics: black, flat, static; black_when_loud |
+| `w3XyR2` | - | Holey Plane | selfcontained | base | 0.6 / 0.6 (loud 0.6) | SOLID | 1.2 / 1.2 (loud 1.2) | SOLID | - | 1080p | 16.8 | black, flat, static | pixel statistics: black, flat, static; black_when_loud |
 | `4d2fzw` | #502 | [SH17A] Eclipse | needs_texture | base | 0.6 / 0.6 | SOLID | 1.2 / 1.2 | SOLID | - | 1080p | 5.3 | black, flat, static | pixel statistics: black, flat, static; 128 BPM pattern only |
 | `N3dGRM` | #543 | Cyclone [369] | selfcontained | base | 0.6 / 0.6 | SOLID | 1.2 / 1.2 | SOLID | - | 1080p | 7.5 | black, flat, static | pixel statistics: black, flat, static; 128 BPM pattern only |
 | `33cGDj` | #571 | Clearly a bug | selfcontained | base | 0.6 / 0.6 | SOLID | 1.2 / 1.2 | SOLID | - | 1080p | 7.3 | black, flat, static | pixel statistics: black, flat, static; 128 BPM pattern only |
@@ -330,9 +434,19 @@ Within budget, but the readback looks near-black, flat or static (or has no stat
 | `fcXGRN` | - | Some Day | selfcontained | base | 0.6 / 0.6 | SOLID | 1.2 / 1.2 | SOLID | - | 1080p | 4.7 | black, flat, static | pixel statistics: black, flat, static; 128 BPM pattern only |
 | `WfS3Dd` | #487 | Plasma [238] | selfcontained | base | 0.6 / 0.6 | SOLID | 1.2 / 1.2 | SOLID | - | 1080p | 6.1 | black, flat, static | pixel statistics: black, flat, static; 128 BPM pattern only |
 | `XXyGzh` | #547 | Zippy Zaps [394 Chars] | selfcontained | base | 2.2 / 2.2 | SOLID | 4.9 / 4.9 | SOLID | - | 1080p | 11.9 | flat | pixel statistics: flat; 128 BPM pattern only |
+| `XdSXzR` | - | Julia Set. | selfcontained | base | 3.0 / 3.0 (loud 3.0) | SOLID | 6.6 / 6.6 (loud 6.6) | SOLID | - | 1080p | 9.9 | black, flat, static | pixel statistics: black, flat, static; black_when_loud |
+| `wcVSzm` | - | Fractals by nidu42 with mouse | selfcontained | base | 3.1 / 3.1 (loud 3.1) | SOLID | 6.7 / 6.7 (loud 6.7) | SOLID | - | 1080p | 13.7 | black | pixel statistics: black; black_when_loud |
+| `WX33WB` | - | golf f(z) = i^z + c | selfcontained | base | 3.2 / 3.2 (loud 3.2) | SOLID | 7.2 / 7.2 (loud 7.2) | SOLID | - | 1080p | 13.9 | flat | pixel statistics: flat |
+| `DsjSz3` | - | Snowflake Fractal | selfcontained | base | 3.1 / 3.9 (loud 3.9) | SOLID | 7.0 / 8.7 (loud 8.7) | SOLID | - | 1080p | 9.8 | black | pixel statistics: black; black_when_loud |
+| `lcBczm` | - | ccbFractalShadertest | selfcontained | base | 2.8 / 4.0 (loud 4.0) | SOLID | 6.2 / 8.9 (loud 8.9) | SOLID | - | 1080p | 10.6 | black, flat | pixel statistics: black, flat |
+| `3scfzs` | - | ps_Koch'sCurve | selfcontained | base | 3.7 / 4.4 (loud 4.4) | SOLID | 8.2 / 9.8 (loud 9.8) | SOLID | - | 1080p | 13.7 | black | pixel statistics: black; black_when_loud |
 | `cdKBDy` | #292 | Bricks [300] | selfcontained | base | 4.5 / 4.5 | SOLID | 10.0 / 10.0 | SOLID | - | 1080p | 15.7 | black, flat, static | pixel statistics: black, flat, static; 128 BPM pattern only |
+| `ttVyWy` | - | Little Julia Set Fractal Thing | selfcontained | base | 3.9 / 5.2 (loud 5.3) | SOLID | 8.7 / 11.5 (loud 11.7) | OK | - | 1080p | 7.5 | flat | pixel statistics: flat |
+| `sldXW8` | - | blinky christmas ornament | selfcontained | base | 5.3 / 5.4 (loud 5.3) | SOLID | 12.0 / 12.0 (loud 12.0) | OK | - | 1080p | 23.3 | flat | pixel statistics: flat |
 | `particle_warp` | - | Hyperspace particle warp field with kick transie | original18 | base | 5.9 / 5.9 (loud 5.9) | SOLID | 13.2 / 13.2 (loud 13.2) | MARGINAL | - | 720p | 15.1 | black | pixel statistics: black |
+| `llXcRs` | - | Mandelbrot (w/ zoom) + Julia | selfcontained | base | 5.8 / 5.9 (loud 5.9) | SOLID | 13.0 / 13.3 (loud 13.2) | MARGINAL | - | 720p | 10.7 | flat, static | pixel statistics: flat, static; white_when_loud |
 | `t3BBzm` | - | Skyshard | selfcontained | base | 8.9 / 8.9 | SOLID | 19.9 / 19.9 | FAIL | - | 720p | 16.4 | flat | pixel statistics: flat; 128 BPM pattern only |
+| `43dfD2` | - | gosper curve | selfcontained | base | 3.8 / 9.4 (loud 5.5) | SOLID | 8.4 / 14.4 (loud 8.4) | MARGINAL | - | 720p | 12.3 | black, flat, static | pixel statistics: black, flat, static; black_when_loud |
 | `ctGyWK` | #490 | Origami [318] | selfcontained | base | 14.6 / 14.7 | MARGINAL | 32.8 / 32.8 | FAIL | 540p 8.2 / 8.2 SOLID; 360p 3.7 / 3.7 SOLID | 540p | 9.5 | black, flat, static | pixel statistics: black, flat, static; 128 BPM pattern only |
 | `WfSSRR` | - | Little Dark Tunnel | selfcontained | base | 17.7 / 17.9 | FAIL | 39.7 / 40.3 | FAIL | 540p 10.0 / 10.1 OK; 360p 4.5 / 4.5 SOLID | 540p | 20.6 | black, flat, static | pixel statistics: black, flat, static; 128 BPM pattern only |
 | `7cfGzn` | #627 | Disco Sun Vortex | selfcontained | base | 26.8 / 26.8 | FAIL | 60.2 / 60.2 | FAIL | 540p 15.1 / 15.1 MARGINAL; 360p 6.7 / 6.8 SOLID | 360p | 21.8 | black, flat, static | pixel statistics: black, flat, static; 128 BPM pattern only |
@@ -341,33 +455,166 @@ Within budget, but the readback looks near-black, flat or static (or has no stat
 | `73y3zV` | #610 | Abstract Instinct | selfcontained | lite | 40.6 / 40.6 | FAIL | 91.2 / 91.2 | FAIL | 540p 22.8 / 22.9 FAIL; 360p 10.2 / 10.2 OK | 360p | 33.5 | black, flat, static | pixel statistics: black, flat, static; 128 BPM pattern only |
 | `ffXXWB` | #011 | Apollo Ritual | selfcontained | base | 49.4 / 49.4 | FAIL | 111.1 / 111.1 | FAIL | 540p 28.1 / 28.1 FAIL; 360p 12.5 / 12.5 OK | 360p | 55.8 | black, flat, static | pixel statistics: black, flat, static; 128 BPM pattern only |
 
-## Too heavy at the measured tiers (755)
+## Too heavy at the measured tiers (1101)
 
 Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an adapted variant (see `followup-lower-tiers` list).
 
 | id | # | name | class | variant | 720p p50/p95 ms | 720p | 1080p p50/p95 ms | 1080p | other tiers | tier | compile ms | pixels | note |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `4cdBD8` | - | Fractals by nidu42 | selfcontained | base | 4.5 / 10.1 (loud 13.3) | MARGINAL | 8.8 / 14.4 (loud 17.6) | FAIL | - | - | 13.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `l3GGRd` | - | Fractals Explorer | selfcontained | base | 9.5 / 11.7 (loud 13.2) | MARGINAL | 20.9 / 25.8 (loud 28.6) | FAIL | - | - | 17.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
 | `WcSGRm` | - | ALice Fractals | selfcontained | base | 10.6 / 12.3 (loud 14.1) | MARGINAL | 23.7 / 27.5 (loud 31.5) | FAIL | - | - | 13.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `l3GSRG` | - | A Fractal Tile-Generator 2D | selfcontained | base | 11.3 / 13.0 (loud 13.2) | MARGINAL | 25.4 / 29.1 (loud 29.7) | FAIL | - | - | 21.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `Ndcczj` | - | 9 Line Julia | selfcontained | base | 5.2 / 13.1 (loud 18.5) | FAIL | 11.6 / 28.8 (loud 41.0) | FAIL | - | - | 10.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `M3ySzV` | - | A Fractal Tile-Generator 2D U.1 | selfcontained | base | 12.4 / 13.2 (loud 13.4) | MARGINAL | 27.9 / 29.6 (loud 30.2) | FAIL | - | - | 53.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `lXj3zt` | - | Very Basic Fractals | selfcontained | base | 9.6 / 13.2 (loud 16.6) | FAIL | 21.5 / 29.6 (loud 37.5) | FAIL | - | - | 9.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `4fcXz2` | - | Glilia Julitchy | selfcontained | base | 12.8 / 13.2 (loud 13.3) | MARGINAL | 28.8 / 29.6 (loud 29.8) | FAIL | - | - | 14.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ldd3WX` | - | quick fractals | selfcontained | base | 6.4 / 13.7 (loud 20.4) | FAIL | 14.2 / 30.7 (loud 45.3) | FAIL | - | - | 14.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `l3KSRy` | - | A Fractal Tile-Generator 2D b | selfcontained | base | 12.9 / 13.8 (loud 14.0) | MARGINAL | 29.1 / 31.0 (loud 31.5) | FAIL | - | - | 56.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `llX3Dn` | - | Hello Mandelbrot Shader | selfcontained | base | 10.6 / 13.8 (loud 15.7) | MARGINAL | 23.5 / 30.7 (loud 34.6) | FAIL | - | - | 10.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `sXXSDH` | - | Experimental Harmonic Frac | selfcontained | base | 8.6 / 13.9 (loud 13.8) | MARGINAL | 19.1 / 31.1 (loud 31.3) | FAIL | - | - | 13.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3ff3R8` | - | sleeplessm Psychedelic automaton | selfcontained | base | 14.0 / 14.0 (loud 14.0) | MARGINAL | 31.4 / 31.4 (loud 31.4) | FAIL | - | - | 28.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `4d2yDG` | - | Newton-Raphson Fractal | selfcontained | base | 13.0 / 14.3 (loud 13.7) | MARGINAL | 28.9 / 31.8 (loud 30.4) | FAIL | - | - | 25.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
+| `NlVcWh` | - | Colorized Simple Fractal For All | selfcontained | base | 14.4 / 14.4 (loud 14.4) | MARGINAL | 32.2 / 32.3 (loud 32.2) | FAIL | - | - | 11.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `s3s3D2` | - | Complex Fractal Generator VB | selfcontained | base | 9.6 / 14.5 (loud 14.0) | MARGINAL | 21.4 / 32.5 (loud 31.4) | FAIL | - | - | 25.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `XltBzl` | - | nomdemonshader | selfcontained | base | 14.4 / 14.5 (loud 14.5) | MARGINAL | 32.4 / 32.5 (loud 32.5) | FAIL | - | - | 11.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ffd3DM` | - | Mandelbrot Sunset | selfcontained | base | 11.2 / 14.7 (loud 16.7) | FAIL | 24.8 / 32.6 (loud 36.9) | FAIL | - | - | 12.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3l2Xzc` | - | Julia Art | needs_texture | base | 14.3 / 14.9 (loud 16.6) | FAIL | 30.9 / 32.2 (loud 35.4) | FAIL | - | - | 10.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
+| `NdtSWX` | - | newtons fractals | selfcontained | base | 12.9 / 14.9 (loud 14.6) | MARGINAL | 28.7 / 33.2 (loud 32.4) | FAIL | - | - | 21.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `tcyGRc` | - | Prismatic Noise Ripple V2 | selfcontained | base | 14.9 / 14.9 (loud 14.9) | MARGINAL | 33.4 / 33.4 (loud 33.4) | FAIL | - | - | 71.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7tBSRm` | - | Fractals practice v01 | selfcontained | base | 15.1 / 15.2 (loud 15.2) | MARGINAL | 34.0 / 34.0 (loud 34.0) | FAIL | - | - | 16.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `43V3RG` | - | Pink Panther Cell Division | selfcontained | base | 15.3 / 15.4 (loud 15.6) | MARGINAL | 34.6 / 34.7 (loud 34.9) | FAIL | - | - | 70.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ftKyDh` | - | Simple Fractal 4 All (02) | selfcontained | base | 15.4 / 15.5 (loud 15.5) | MARGINAL | 34.6 / 34.6 (loud 34.6) | FAIL | - | - | 11.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `t3jGRy` | - | symmetry + repetition in 3D | selfcontained | base | 14.6 / 15.5 (loud 16.1) | FAIL | 32.8 / 34.7 (loud 35.9) | FAIL | - | - | 38.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
+| `W3XGDf` | - | fractal tiled tunnel [319] | selfcontained | base | 15.5 / 15.5 (loud 15.5) | MARGINAL | 34.8 / 34.8 (loud 34.8) | FAIL | - | - | 15.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `4sVBWh` | - | Mandlebrot Fractal | selfcontained | base | 11.5 / 15.6 (loud 15.6) | MARGINAL | 25.8 / 35.0 (loud 35.0) | FAIL | - | - | 10.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `mlK3z3` | - | Para Pipe | selfcontained | base | 15.7 / 15.7 (loud 15.7) | MARGINAL | 35.3 / 35.3 (loud 35.3) | FAIL | - | - | 86.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `tcy3DG` | - | KuKo #35 | selfcontained | base | 8.2 / 16.0 (loud 16.0) | MARGINAL | 18.3 / 35.9 (loud 35.9) | FAIL | - | - | 123.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `sstcz2` | - | 9 Line Burning Julia | selfcontained | base | 5.5 / 16.0 (loud 24.1) | FAIL | 12.4 / 35.7 (loud 53.7) | FAIL | - | - | 9.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `Xf2yRD` | - | hw6 | selfcontained | base | 16.2 / 16.3 (loud 16.4) | FAIL | 36.4 / 36.7 (loud 36.6) | FAIL | - | - | 10.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `MdSyW3` | - | Newton Fractal - Smooth Color | selfcontained | base | 13.5 / 16.4 (loud 19.0) | FAIL | 30.1 / 36.1 (loud 34.8) | FAIL | - | - | 25.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7ddczX` | - | Julia - Douady Rabbit | selfcontained | base | 12.5 / 16.4 (loud 18.6) | FAIL | 27.6 / 35.6 (loud 40.7) | FAIL | - | - | 10.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `WsXGRl` | - | Simple Sierpinski | selfcontained | base | 16.2 / 16.4 (loud 16.7) | FAIL | 36.2 / 36.7 (loud 37.4) | FAIL | - | - | 30.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ttlSRj` | - | FractalSmerityCircles | selfcontained | base | 16.5 / 16.5 (loud 16.5) | FAIL | 37.0 / 37.0 (loud 37.0) | FAIL | - | - | 12.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3ftXR8` | - | Gingerbreadman map | selfcontained | base | 10.0 / 16.6 (loud 16.5) | FAIL | 22.4 / 37.3 (loud 37.0) | FAIL | - | - | 12.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
+| `dd3Sz8` | - | e3 Learning Fractals 001 | selfcontained | base | 6.7 / 16.7 (loud 23.4) | FAIL | 14.6 / 36.6 (loud 52.3) | FAIL | - | - | 14.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ssdyRf` | - | Julia of Mandelbrot | selfcontained | base | 13.5 / 16.9 (loud 18.7) | FAIL | 29.8 / 37.5 (loud 41.6) | FAIL | - | - | 14.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ttsGz4` | - | Yet another Mandelbrot Set | selfcontained | base | 13.0 / 16.9 (loud 18.9) | FAIL | 28.9 / 37.6 (loud 41.9) | FAIL | - | - | 11.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `fsBGzR` | - | avoodoocado_mandelbrot | selfcontained | base | 10.9 / 17.3 (loud 16.1) | FAIL | 24.4 / 38.6 (loud 35.9) | FAIL | - | - | 11.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `fdcyR2` | - | Small Newton Set | selfcontained | base | 17.0 / 17.5 (loud 18.6) | FAIL | 37.4 / 38.8 (loud 40.6) | FAIL | - | - | 17.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `flKyDh` | - | Simple Fractal 4 All (03) | selfcontained | base | 17.7 / 17.7 (loud 17.7) | FAIL | 39.7 / 39.7 (loud 39.7) | FAIL | - | - | 8.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `N3XSDN` | - | özbek fractals | selfcontained | base | 17.8 / 17.8 (loud 17.8) | FAIL | 40.0 / 40.0 (loud 40.0) | FAIL | - | - | 164.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `sXK3Dd` | #649 | Wolfenstein Raytracing Torus | needs_texture | base | 16.2 / 18.4 | FAIL | 35.5 / 40.5 | FAIL | - | - | 21.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `NfXSRf` | - | Night Bloom | selfcontained | base | 18.4 / 18.4 (loud 18.4) | FAIL | 41.3 / 41.3 (loud 41.3) | FAIL | - | - | 178.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `tclSW4` | - | Parametric Mandelbrot Fractal | selfcontained | base | 14.5 / 18.4 (loud 20.8) | FAIL | 32.1 / 41.0 (loud 46.0) | FAIL | - | - | 15.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `sdtcz2` | - | Smooth iterations | selfcontained | base | 14.3 / 18.7 (loud 21.1) | FAIL | 31.8 / 41.3 (loud 46.6) | FAIL | - | - | 12.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `NdfBWS` | - | Julia set simulation | selfcontained | base | 14.2 / 18.7 (loud 33.2) | FAIL | 26.9 / 37.5 (loud 59.3) | FAIL | - | - | 12.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `NstBDN` | - | 10 Line Crown | selfcontained | base | 14.3 / 18.9 (loud 21.7) | FAIL | 31.8 / 42.0 (loud 48.5) | FAIL | - | - | 11.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tlSXzG` | - | Amber Mote in the Black Vault | needs_texture | base | 18.9 / 18.9 | FAIL | 42.2 / 42.3 | FAIL | - | - | 80.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `f3jXzK` | - | Radial Fractal | selfcontained | base | 19.7 / 19.8 (loud 19.8) | FAIL | 44.3 / 44.4 (loud 44.3) | FAIL | - | - | 28.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `NcXSRf` | - | Radiant Furnace | selfcontained | base | 19.5 / 19.8 (loud 19.8) | FAIL | 43.7 / 44.2 (loud 44.5) | FAIL | - | - | 274.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `cdfXRX` | - | Secant Sea | selfcontained | base | 19.7 / 20.0 (loud 20.4) | FAIL | 44.2 / 44.9 (loud 45.8) | FAIL | - | - | 7.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `tttfW7` | - | Mandelbrot time iterations | selfcontained | base | 13.0 / 20.3 (loud 27.5) | FAIL | 29.0 / 45.0 (loud 61.9) | FAIL | - | - | 11.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `fsXGzB` | - | Mandelbrot Set (all hues) | selfcontained | base | 15.6 / 20.3 (loud 22.6) | FAIL | 34.7 / 45.1 (loud 50.0) | FAIL | - | - | 13.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3lSGzD` | - | MandelBrotSet | selfcontained | base | 18.2 / 20.6 (loud 21.6) | FAIL | 40.6 / 46.1 (loud 48.2) | FAIL | - | - | 11.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `slBcRK` | #232 | Tubes [287 chars] | needs_texture | base | 20.7 / 20.7 | FAIL | 46.5 / 46.5 | FAIL | - | - | 21.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `wX3fD8` | - | Mandelbrot - Colorised | selfcontained | base | 15.5 / 20.7 (loud 23.9) | FAIL | 34.4 / 46.1 (loud 52.8) | FAIL | - | - | 10.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7ddcz2` | - | 10 Line Burning Ship | selfcontained | base | 15.7 / 20.8 (loud 23.5) | FAIL | 35.0 / 46.1 (loud 52.1) | FAIL | - | - | 11.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `ftjczG` | #235 | Tiles [340 chars] | needs_texture | base | 20.8 / 20.8 | FAIL | 46.6 / 46.6 | FAIL | - | - | 15.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ssdczX` | - | Julia - San Marco | selfcontained | base | 15.6 / 20.9 (loud 24.2) | FAIL | 34.7 / 46.4 (loud 52.9) | FAIL | - | - | 10.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `fffSRf` | - | Glyph Cascade | selfcontained | base | 21.1 / 21.1 (loud 21.1) | FAIL | 47.3 / 47.4 (loud 47.4) | FAIL | - | - | 244.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `tlXcz7` | - | Dodecahedralis III | selfcontained | base | 21.1 / 21.2 (loud 21.1) | FAIL | 47.5 / 47.5 (loud 47.5) | FAIL | - | - | 30.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
+| `7s23zD` | - | Mandelbrot Set (smooth coloring) | selfcontained | base | 16.7 / 21.2 (loud 23.5) | FAIL | 37.0 / 47.2 (loud 52.0) | FAIL | - | - | 13.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `t33XWX` | - | Lambda of Lambdabrot | selfcontained | base | 17.6 / 21.3 (loud 23.3) | FAIL | 38.7 / 47.3 (loud 51.6) | FAIL | - | - | 18.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `lXlcD4` | - | Spirals of Chaos - Dynamic Chaos | selfcontained | base | 19.3 / 21.4 (loud 22.4) | FAIL | 43.5 / 48.2 (loud 52.3) | FAIL | - | - | 96.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `DlSczc` | - | Red Mandelbrot Set | selfcontained | base | 16.6 / 21.7 (loud 24.3) | FAIL | 36.9 / 48.3 (loud 53.7) | FAIL | - | - | 10.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `dtKyDG` | - | angle fractals | selfcontained | base | 21.7 / 21.8 (loud 21.8) | FAIL | 48.8 / 48.8 (loud 48.9) | FAIL | - | - | 11.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
 | `WftXD2` | #540 | Apple Liquid Glass | needs_texture | base | 21.7 / 21.8 | FAIL | 47.9 / 48.0 | FAIL | - | - | 76.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `dtGfWw` | - | POV: You're in the Menger Sponge | selfcontained | base | 17.9 / 22.2 (loud 21.8) | FAIL | 39.9 / 49.8 (loud 47.0) | FAIL | - | - | 24.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `tXcfD8` | - | Julia Set - Colorised | selfcontained | base | 16.7 / 22.7 (loud 26.3) | FAIL | 36.6 / 49.7 (loud 57.1) | FAIL | - | - | 11.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7tGGzV` | - | Mandelbrot Point Traps | selfcontained | base | 17.9 / 22.7 (loud 25.2) | FAIL | 40.0 / 51.1 (loud 56.5) | FAIL | - | - | 15.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ddlfWl` | - | Escape Time Box | selfcontained | base | 19.4 / 23.0 (loud 23.3) | FAIL | 43.2 / 50.8 (loud 51.3) | FAIL | - | - | 21.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `ldl3W8` | #658 | Voronoi - distances | needs_texture | base | 23.7 / 23.7 | FAIL | 53.2 / 53.3 | FAIL | - | - | 71.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `tcGcWR` | - | ___newton's fractal | selfcontained | base | 24.2 / 24.3 (loud 24.3) | FAIL | 54.5 / 54.5 (loud 54.5) | FAIL | - | - | 14.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
+| `M3VSDV` | - | The emergence and extinction of | selfcontained | base | 12.2 / 24.3 (loud 26.9) | FAIL | 27.6 / 51.1 (loud 61.2) | FAIL | - | - | 15.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `tftXzS` | - | Leyes esculpidas 1.25e6 | selfcontained | base | 24.4 / 24.4 (loud 24.5) | FAIL | 54.7 / 54.8 (loud 54.9) | FAIL | - | - | 17.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
+| `ct33Wj` | - | Fork Fork Anima goooo 015 | selfcontained | base | 24.4 / 24.4 (loud 24.4) | FAIL | 54.7 / 54.8 (loud 54.8) | FAIL | - | - | 25.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `4tjSRw` | - | Mandelbrot Set & Julia Set | selfcontained | base | 24.8 / 24.8 (loud 24.8) | FAIL | 55.7 / 55.7 (loud 55.8) | FAIL | - | - | 9.4 | black | over budget at 720p/1080p; not yet measured at 540p/360p; black_when_loud |
+| `fstBDN` | - | 10 Line Forest | selfcontained | base | 18.7 / 25.0 (loud 28.8) | FAIL | 41.6 / 56.4 (loud 63.5) | FAIL | - | - | 10.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `XcdGWf` | - | AK FYP14: Basic Fractal | selfcontained | base | 25.0 / 25.1 (loud 25.0) | FAIL | 56.2 / 56.3 (loud 56.3) | FAIL | - | - | 8.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `dtjyDc` | - | 10 Line Tippett Mandelbrot | selfcontained | base | 18.6 / 25.1 (loud 28.8) | FAIL | 41.4 / 56.1 (loud 63.3) | FAIL | - | - | 11.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `dsKfDh` | - | Quasicrystal Exploration | selfcontained | base | 25.5 / 25.5 (loud 25.5) | FAIL | 57.3 / 57.3 (loud 57.3) | FAIL | - | - | 79.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `ltffzl` | #642 | Heartfelt | needs_texture | base | 25.6 / 25.6 | FAIL | 57.5 / 57.5 | FAIL | - | - | 265.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
-| `flfyWH` | #512 | Minecraft in 340 characters | needs_texture | tex | 22.1 / 26.8 | FAIL | 50.8 / 59.6 | FAIL | - | - | 15.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `M3y3Rw` | - | Fractalsimple | selfcontained | base | 25.9 / 26.0 (loud 26.0) | FAIL | 58.3 / 58.3 (loud 58.3) | FAIL | - | - | 11.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `fs3yRs` | - | Better Multibrot (c^n) | selfcontained | base | 20.6 / 26.1 (loud 33.0) | FAIL | 46.5 / 58.5 (loud 73.3) | FAIL | - | - | 10.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `wXcGRX` | - | Fractal test, mouse sets power | selfcontained | base | 19.3 / 26.1 (loud 29.9) | FAIL | 43.1 / 58.8 (loud 66.8) | FAIL | - | - | 11.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `X3dSzs` | - | fractals made easy | selfcontained | base | 26.2 / 26.3 (loud 26.3) | FAIL | 58.9 / 59.0 (loud 59.0) | FAIL | - | - | 11.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
+| `flfyWH` | #512 | Minecraft in 340 characters | needs_texture | base | 21.9 / 26.6 (loud 29.8) | FAIL | 50.7 / 59.4 (loud 65.7) | FAIL | - | - | 14.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `tcXBW8` | - | inside colors | selfcontained | base | 19.8 / 26.8 (loud 30.4) | FAIL | 44.0 / 60.0 (loud 66.9) | FAIL | - | - | 11.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `mdjSDW` | - | "Loading screen" fractals | selfcontained | base | 26.8 / 26.8 (loud 26.8) | FAIL | 60.2 / 60.2 (loud 60.2) | FAIL | - | - | 16.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `WfSfz1` | - | Procedural Fire Glow | selfcontained | base | 27.0 / 27.0 (loud 27.0) | FAIL | 60.7 / 60.7 (loud 60.7) | FAIL | - | - | 209.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ltBfWR` | - | Seahorse Valley | selfcontained | base | 19.7 / 27.5 (loud 36.2) | FAIL | 43.3 / 60.1 (loud 79.9) | FAIL | - | - | 12.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `MsVSDK` | - | Nice carpet, bro | selfcontained | base | 28.0 / 28.0 (loud 28.0) | FAIL | 62.9 / 62.9 (loud 62.9) | FAIL | - | - | 18.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `flXyz7` | - | In, out and around the Sevenfold | selfcontained | base | 28.1 / 28.2 (loud 28.2) | FAIL | 63.3 / 63.3 (loud 63.3) | FAIL | - | - | 17.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `DdtfzH` | - | Alive Fractals | selfcontained | base | 20.5 / 28.5 (loud 32.9) | FAIL | 45.6 / 64.1 (loud 73.1) | FAIL | - | - | 10.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `sdXGDN` | - | Fractal spheres | selfcontained | base | 28.4 / 28.6 (loud 28.6) | FAIL | 63.9 / 64.1 (loud 64.1) | FAIL | - | - | 11.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `33KGzG` | - | cool fractal animation | selfcontained | base | 28.9 / 29.0 (loud 29.0) | FAIL | 65.0 / 65.1 (loud 65.1) | FAIL | - | - | 17.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `NtjBRG` | - | Sir Isaac's fractal | selfcontained | base | 25.2 / 29.5 (loud 32.3) | FAIL | 55.9 / 64.7 (loud 72.3) | FAIL | - | - | 19.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `fffXRf` | - | Orbit Trap Circle | selfcontained | base | 30.5 / 30.5 (loud 30.5) | FAIL | 68.5 / 68.5 (loud 68.5) | FAIL | - | - | 90.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7fVXWw` | - | amyloid rings | selfcontained | base | 8.0 / 31.4 (loud 31.4) | FAIL | 17.9 / 70.4 (loud 70.4) | FAIL | - | - | 15.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7c23Rd` | - | z^4 Julia Gasket | selfcontained | base | 26.9 / 31.9 (loud 34.4) | FAIL | 59.2 / 70.0 (loud 74.4) | FAIL | - | - | 14.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
+| `l3VcD3` | - | Elliptic inversion fractal | selfcontained | base | 28.1 / 32.3 (loud 34.9) | FAIL | 62.8 / 70.2 (loud 78.1) | FAIL | - | - | 68.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `33KXz1` | - | Sierpinski tetrahedron | selfcontained | base | 32.1 / 32.6 (loud 32.4) | FAIL | 71.3 / 72.9 (loud 73.0) | FAIL | - | - | 18.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `lXKcWw` | - | symmetrically fractalline | selfcontained | base | 32.3 / 33.3 (loud 33.8) | FAIL | 72.0 / 74.8 (loud 75.8) | FAIL | - | - | 37.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `ldfyzl` | #405 | Rainier mood | needs_texture | base | 34.5 / 34.6 | FAIL | 77.7 / 77.7 | FAIL | - | - | 75.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `WcjGzy` | - | 03R01 | selfcontained | base | 12.7 / 34.7 (loud 52.1) | FAIL | 28.2 / 77.5 (loud 112.5) | FAIL | - | - | 16.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3dc3DB` | - | FractalShader-Mandelbrot | selfcontained | base | 26.2 / 34.7 (loud 39.3) | FAIL | 58.6 / 77.4 (loud 87.6) | FAIL | - | - | 13.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `DlGyRy` | - | Mandalabrot | selfcontained | base | 16.1 / 34.7 (loud 34.8) | FAIL | 35.8 / 75.3 (loud 76.0) | FAIL | - | - | 13.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ffXSRf` | - | Perihelion Vault | selfcontained | base | 34.4 / 34.9 (loud 34.9) | FAIL | 77.7 / 78.4 (loud 78.4) | FAIL | - | - | 74.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `w3tGWH` | - | UV-mapped Julia Fractal | needs_texture | base | 26.0 / 35.6 (loud 47.7) | FAIL | 56.9 / 87.0 (loud 101.5) | FAIL | - | - | 14.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `4df3D7` | - | Mandelbrot zoom | selfcontained | base | 32.9 / 35.8 (loud 36.3) | FAIL | 73.0 / 80.3 (loud 81.1) | FAIL | - | - | 11.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `WXcGWs` | - | Before the Tempest | selfcontained | base | 9.1 / 38.2 (loud 54.1) | FAIL | 20.6 / 81.8 (loud 133.9) | FAIL | - | - | 16.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `XlcfRN` | - | Another mandelbrot | selfcontained | base | 36.3 / 38.9 (loud 39.0) | FAIL | 81.2 / 86.9 (loud 87.2) | FAIL | - | - | 20.0 | flat | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
+| `csSXWm` | - | Simple mandelbrot 01 | selfcontained | base | 29.1 / 39.7 (loud 45.5) | FAIL | 64.8 / 88.9 (loud 101.0) | FAIL | - | - | 10.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `4Xt3Ds` | - | Dark Fractal | selfcontained | base | 38.4 / 40.6 (loud 41.3) | FAIL | 84.4 / 88.9 (loud 89.6) | FAIL | - | - | 14.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `tXBBWd` | - | Stereographic Inverse Circles | selfcontained | base | 38.0 / 40.8 (loud 36.1) | FAIL | 80.6 / 86.6 (loud 77.8) | FAIL | - | - | 73.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `4dlyRN` | - | Mandelbrot with Distance Est | selfcontained | base | 6.9 / 40.8 (loud 126.7) | FAIL | 270.0 / 303.2 (loud 355.6) | FAIL | - | - | 19.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ffXSzf` | - | Julia Mirror | selfcontained | base | 41.1 / 41.1 (loud 41.1) | FAIL | 92.4 / 92.4 (loud 92.4) | FAIL | - | - | 89.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wXS3WG` | #038 | DDA Testing Tomb | needs_texture | base | 24.4 / 42.1 | FAIL | 56.0 / 88.3 | FAIL | - | - | 59.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `lfdBW4` | - | Frikadellenbrot | selfcontained | base | 19.6 / 42.3 (loud 45.7) | FAIL | 43.3 / 98.4 (loud 102.9) | FAIL | - | - | 16.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `4ljSzD` | - | Mandelbrot scratch | selfcontained | base | 42.9 / 43.0 (loud 43.0) | FAIL | 96.5 / 96.6 (loud 96.5) | FAIL | - | - | 12.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `4cfSDB` | - | Phoenix Julia (Paul Bourke) | selfcontained | base | 26.4 / 43.2 (loud 61.1) | FAIL | 66.4 / 99.4 (loud 135.6) | FAIL | - | - | 9.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `clXXz4` | - | Weird Fractal Thing | selfcontained | base | 31.2 / 44.0 (loud 51.8) | FAIL | 68.7 / 97.0 (loud 114.7) | FAIL | - | - | 20.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WfdBWj` | - | Dungeon Phun | needs_texture | base | 44.2 / 44.3 | FAIL | 99.5 / 99.5 | FAIL | - | - | 64.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `slfXRS` | - | Fork Alien Skies animated | selfcontained | base | 44.6 / 44.7 (loud 44.7) | FAIL | 100.2 / 100.3 (loud 100.5) | FAIL | - | - | 14.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `dlGfDD` | - | Raymarching with fractals | selfcontained | base | 38.6 / 45.5 (loud 58.3) | FAIL | 84.0 / 106.9 (loud 114.1) | FAIL | - | - | 90.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `Ns3yRs` | - | Burning Ship Multibrot | selfcontained | base | 32.7 / 45.5 (loud 54.1) | FAIL | 72.1 / 101.8 (loud 118.1) | FAIL | - | - | 13.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `4XKfzd` | - | Wormhole Tunnel | needs_texture | base | 38.5 / 45.6 | FAIL | 87.4 / 102.5 | FAIL | - | - | 106.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7dd3Wj` | - | Fractals 1 | selfcontained | base | 27.5 / 46.1 (loud 48.0) | FAIL | 68.8 / 118.0 (loud 120.3) | FAIL | - | - | 12.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `sccXR8` | - | julia set (infinite fractals) | selfcontained | base | 36.4 / 46.4 (loud 52.0) | FAIL | 81.5 / 104.3 (loud 115.4) | FAIL | - | - | 8.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7dG3WD` | - | My balls | selfcontained | base | 45.5 / 47.9 (loud 49.6) | FAIL | 98.4 / 104.2 (loud 102.8) | FAIL | - | - | 30.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7tV3RR` | - | Julia-Sets Danny | selfcontained | base | 4.2 / 48.4 (loud 79.1) | FAIL | 9.4 / 107.0 (loud 180.5) | FAIL | - | - | 12.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tftfWX` | - | Lycanthropic Night Terror | needs_texture | base | 48.1 / 48.8 | FAIL | 108.1 / 109.8 | FAIL | - | - | 84.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `McBSzK` | - | Mandelbrot JBK | selfcontained | base | 36.0 / 49.1 (loud 48.7) | FAIL | 79.2 / 109.4 (loud 108.8) | FAIL | - | - | 18.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3l3cR8` | - | Morphing Sakura Fractal | selfcontained | base | 44.0 / 49.4 (loud 52.8) | FAIL | 95.0 / 111.1 (loud 118.6) | FAIL | - | - | 162.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
+| `Ddc3Ws` | - | Basic Learn Sphere Repetition | selfcontained | base | 49.0 / 49.5 (loud 49.3) | FAIL | 107.5 / 108.3 (loud 108.6) | FAIL | - | - | 11.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `ssffRf` | - | Colored Infinite Spheres | selfcontained | base | 48.0 / 49.5 | FAIL | 104.7 / 109.1 | FAIL | 540p 27.6 / 28.5 FAIL; 360p 12.7 / 13.1 MARGINAL | - | 24.7 | ok | over budget at 360p/540p/720p/1080p |
+| `wcBGWt` | - | Fractal 80s Disco Shader | selfcontained | base | 44.0 / 49.7 (loud 58.1) | FAIL | 97.3 / 110.0 (loud 129.3) | FAIL | - | - | 1567.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `mtX3W7` | - | Just waves | selfcontained | base | 50.4 / 50.5 (loud 50.6) | FAIL | 113.1 / 113.4 (loud 114.5) | FAIL | - | - | 1142.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `lcVXRy` | #242 | GM Shaders: DDA Clean | selfcontained | base | 20.8 / 51.5 | FAIL | 46.8 / 115.8 | FAIL | 540p 11.7 / 29.1 FAIL; 360p 5.2 / 13.0 MARGINAL | - | 38.1 | ok | over budget at 360p/540p/720p/1080p |
 | `tcsXWs` | - | Little Dream Cave | selfcontained | base | 45.0 / 51.7 | FAIL | 100.1 / 111.7 | FAIL | 540p 25.6 / 30.2 FAIL; 360p 11.6 / 13.7 MARGINAL | - | 29.2 | ok | over budget at 360p/540p/720p/1080p |
-| `sdcXzH` | #313 | Nether | needs_texture | tex | 43.9 / 52.7 | FAIL | 100.0 / 116.2 | FAIL | - | - | 16.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `Mfd3zS` | - | Silly Tree | selfcontained | base | 52.5 / 52.5 (loud 52.5) | FAIL | 118.0 / 118.0 (loud 118.0) | FAIL | - | - | 24.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `sdcXzH` | #313 | Nether | needs_texture | base | 43.8 / 52.5 (loud 55.3) | FAIL | 99.7 / 116.0 (loud 129.7) | FAIL | - | - | 13.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `llVXz1` | - | duck fractal | selfcontained | base | 52.5 / 52.7 (loud 52.6) | FAIL | 117.9 / 118.2 (loud 118.2) | FAIL | - | - | 15.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
+| `ldBSDy` | - | Newton Fractals | selfcontained | base | 51.9 / 52.8 (loud 53.0) | FAIL | 116.5 / 118.6 (loud 119.1) | FAIL | - | - | 16.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `7ldfzj` | #303 | Xor's Basic Raymarcher | selfcontained | base | 49.9 / 52.9 | FAIL | 109.9 / 115.7 | FAIL | 540p 28.5 / 30.4 FAIL; 360p 13.1 / 14.0 MARGINAL | - | 34.0 | ok | over budget at 360p/540p/720p/1080p |
+| `mdXcDj` | - | radialFractalHex | selfcontained | base | 53.2 / 53.2 (loud 53.3) | FAIL | 119.6 / 119.7 (loud 119.7) | FAIL | - | - | 22.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `DlfcWN` | - | Cloth Fractal | selfcontained | base | 38.8 / 53.7 (loud 66.8) | FAIL | 82.2 / 124.7 (loud 150.4) | FAIL | - | - | 359.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7fGSRG` | - | A not normal animation | selfcontained | base | 53.7 / 53.8 (loud 53.8) | FAIL | 120.9 / 121.0 (loud 121.0) | FAIL | - | - | 1131.0 | flat | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3sVGRV` | - | Brainy looking kaliset fractal | selfcontained | base | 24.8 / 54.0 (loud 49.8) | FAIL | 54.3 / 118.8 (loud 107.8) | FAIL | - | - | 12.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wcfGW7` | #093 | Disco Ducts | selfcontained | base | 43.9 / 54.3 | FAIL | 97.7 / 120.5 | FAIL | 540p 25.6 / 31.2 FAIL; 360p 11.7 / 14.6 MARGINAL | - | 17.1 | ok | over budget at 360p/540p/720p/1080p |
 | `stVczd` | #240 | One Cube Challenge [199 Chars] | selfcontained | base | 54.3 / 54.6 | FAIL | 122.0 / 122.4 | FAIL | 540p 30.6 / 30.7 FAIL; 360p 13.6 / 13.7 MARGINAL | - | 7.7 | ok | over budget at 360p/540p/720p/1080p |
+| `sslfW2` | - | complex_fractal | selfcontained | base | 54.6 / 55.0 (loud 55.3) | FAIL | 122.1 / 122.6 (loud 123.7) | FAIL | - | - | 13.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wfyfR1` | - | Until the Light Takes Us | needs_texture | base | 54.8 / 55.1 | FAIL | 122.9 / 123.6 | FAIL | - | - | 86.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `Md3XRM` | #504 | Double Helix | selfcontained | base | 54.1 / 55.4 | FAIL | 119.0 / 121.9 | FAIL | 540p 31.1 / 31.8 FAIL; 360p 14.4 / 14.8 MARGINAL | - | 89.2 | ok | over budget at 360p/540p/720p/1080p |
 | `3XlyDf` | - | Lyfe | selfcontained | base | 55.1 / 55.4 | FAIL | 124.0 / 124.1 | FAIL | 540p 31.0 / 31.2 FAIL; 360p 13.8 / 13.9 MARGINAL | - | 9.2 | ok | over budget at 360p/540p/720p/1080p |
@@ -375,77 +622,119 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `wXcBRX` | - | Alien Apollo Tun | needs_texture | base | 54.0 / 56.4 | FAIL | 120.9 / 126.8 | FAIL | - | - | 205.6 | black, flat | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tXtSz8` | - | Menger Drift | needs_texture | base | 45.7 / 56.6 | FAIL | 101.1 / 124.0 | FAIL | - | - | 149.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `W3G3zh` | #372 | Muons [315] | selfcontained | base | 56.8 / 56.9 | FAIL | 127.8 / 127.8 | FAIL | 540p 32.0 / 32.0 FAIL; 360p 14.2 / 14.3 MARGINAL | - | 15.6 | black, flat, static | over budget at 360p/540p/720p/1080p |
+| `wlXBzN` | - | fun fractals sounds | selfcontained | base | 40.8 / 57.2 (loud 56.8) | FAIL | 93.8 / 127.6 (loud 129.0) | FAIL | - | - | 16.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `sd3Szs` | - | Fire_shader_sidps | selfcontained | base | 56.9 / 57.3 (loud 57.2) | FAIL | 127.9 / 129.3 (loud 131.9) | FAIL | - | - | 921.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `XddyRX` | - | keep making fractals | selfcontained | base | 57.7 / 57.7 (loud 57.7) | FAIL | 129.8 / 129.8 (loud 129.9) | FAIL | - | - | 10.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `dlXcDj` | - | GLSL Fractals | selfcontained | base | 41.4 / 58.7 (loud 66.1) | FAIL | 92.0 / 129.4 (loud 148.6) | FAIL | - | - | 12.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `73VGRc` | - | Fractal Hamsa | selfcontained | base | 59.2 / 59.2 (loud 59.2) | FAIL | 133.2 / 133.2 (loud 133.2) | FAIL | - | - | 332.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `Xt3fWH` | - | Mandelbrot Set Rainbow | selfcontained | base | 53.7 / 59.3 | FAIL | 118.2 / 132.1 | FAIL | 540p 30.4 / 33.4 FAIL; 360p 13.7 / 15.0 MARGINAL | - | 18.5 | ok | over budget at 360p/540p/720p/1080p |
 | `7ldGD2` | - | Stained Glass Window | selfcontained | base | 59.4 / 59.4 | FAIL | 133.6 / 133.6 | FAIL | 540p 33.5 / 33.5 FAIL; 360p 14.9 / 14.9 MARGINAL | - | 31.2 | ok | over budget at 360p/540p/720p/1080p |
+| `DlcGWj` | - | Fork Animated L goooo 997 | selfcontained | base | 59.4 / 59.4 (loud 59.4) | FAIL | 133.5 / 133.5 (loud 133.5) | FAIL | - | - | 16.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
+| `mtdGDM` | - | Animated Lappronov Fractal Shade | selfcontained | base | 59.4 / 59.4 (loud 59.4) | FAIL | 133.5 / 133.5 (loud 133.5) | FAIL | - | - | 19.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `XfVSDD` | #369 | Triangle DDA | needs_texture | base | 51.4 / 59.8 | FAIL | 116.5 / 137.3 | FAIL | - | - | 32.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
-| `7dKXWR` | #522 | Tiny Planet [425 Chars] | needs_texture | tex | 58.1 / 60.3 | FAIL | 127.8 / 133.9 | FAIL | - | - | 19.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `sdy3RW` | #402 | Voxels in 428 chars | selfcontained | base | 45.8 / 60.4 | FAIL | 101.3 / 133.9 | FAIL | 540p 25.7 / 34.4 FAIL; 360p 11.7 / 15.8 MARGINAL | - | 13.8 | ok | over budget at 360p/540p/720p/1080p |
+| `7dKXWR` | #522 | Tiny Planet [425 Chars] | needs_texture | base | 58.2 / 60.6 (loud 59.2) | FAIL | 128.2 / 134.4 (loud 130.1) | FAIL | - | - | 21.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `McyyRm` | - | Pulsating alien orb | needs_texture | base | 54.6 / 60.8 (loud 62.3) | FAIL | 121.6 / 132.8 (loud 135.6) | FAIL | - | - | 175.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `7XcSzn` | #561 | hand colorful | selfcontained | base | 56.5 / 60.8 | FAIL | 124.2 / 136.6 | FAIL | 540p 32.3 / 34.8 FAIL; 360p 14.8 / 16.0 FAIL | - | 662.0 | ok | over budget at 360p/540p/720p/1080p |
 | `wctGz8` | #528 | Simplex [214] | selfcontained | base | 61.0 / 61.2 | FAIL | 137.1 / 137.3 | FAIL | 540p 34.4 / 34.5 FAIL; 360p 15.3 / 15.4 MARGINAL | - | 12.1 | black, flat, static | over budget at 360p/540p/720p/1080p |
+| `4f2Sz1` | - | Extended Newton Experiments | selfcontained | base | 61.5 / 61.7 (loud 61.7) | FAIL | 138.4 / 138.7 (loud 138.6) | FAIL | - | - | 24.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `DdSczc` | - | fractals-fun | selfcontained | base | 48.1 / 62.7 (loud 72.2) | FAIL | 106.2 / 139.1 (loud 141.0) | FAIL | - | - | 13.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `XtXGWX` | - | Burning Mandelbrot | needs_texture | base | 60.1 / 62.9 | FAIL | 132.0 / 138.6 | FAIL | - | - | 16.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tcdfW2` | - | Keep View | needs_texture | base | 62.7 / 63.0 | FAIL | 140.8 / 141.4 | FAIL | - | - | 70.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `N3tXRn` | #548 | Lorenzo Navarro | selfcontained | base | 56.4 / 63.0 | FAIL | 123.5 / 141.5 | FAIL | 540p 31.6 / 35.5 FAIL; 360p 14.2 / 15.8 MARGINAL | - | 25.6 | ok | over budget at 360p/540p/720p/1080p |
 | `7lyBRR` | #521 | Stars [173 Chars] | selfcontained | base | 62.7 / 63.1 | FAIL | 141.1 / 142.0 | FAIL | 540p 35.3 / 35.4 FAIL; 360p 15.7 / 15.8 MARGINAL | - | 8.4 | ok | over budget at 360p/540p/720p/1080p |
+| `NlVXWR` | - | MadelbrotFractal | selfcontained | base | 54.5 / 63.4 (loud 61.8) | FAIL | 122.6 / 139.1 (loud 135.8) | FAIL | - | - | 10.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `Wdcfzs` | - | ps_JuliaSet | selfcontained | base | 48.6 / 64.5 (loud 73.4) | FAIL | 103.0 / 139.2 (loud 153.7) | FAIL | - | - | 12.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tfcyRS` | #087 | Gibson Tunnel | selfcontained | base | 61.9 / 65.4 | FAIL | 138.7 / 147.0 | FAIL | 540p 34.6 / 36.9 FAIL; 360p 15.5 / 16.4 FAIL | - | 19.6 | ok | over budget at 360p/540p/720p/1080p |
 | `3lsfz7` | #481 | many circles | selfcontained | base | 63.4 / 65.6 | FAIL | 140.2 / 145.7 | FAIL | 540p 36.4 / 37.5 FAIL; 360p 16.8 / 17.2 FAIL | - | 128.0 | ok | over budget at 360p/540p/720p/1080p |
+| `X3tfRX` | - | (mouse) Infinite Koch snowflake | selfcontained | base | 15.3 / 67.1 (loud 82.3) | FAIL | 184.9 / 184.9 (loud 184.9) | FAIL | - | - | 25.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
+| `4cScR3` | - | simple mandelbrot set zoom | selfcontained | base | 34.9 / 67.8 (loud 81.4) | FAIL | 77.0 / 166.7 (loud 178.6) | FAIL | - | - | 8.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
 | `MXyfWm` | - | Dragon City Chase | selfcontained | base | 59.0 / 67.9 | FAIL | 128.2 / 146.1 | FAIL | 540p 33.3 / 38.5 FAIL; 360p 15.3 / 17.7 FAIL | - | 35.5 | ok | over budget at 360p/540p/720p/1080p |
+| `X3jyRK` | - | Iridescent snowflakes | selfcontained | base | 68.0 / 68.0 (loud 68.0) | FAIL | 152.9 / 152.9 (loud 152.9) | FAIL | - | - | 58.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3fsXWM` | - | Frunnel 4: Splat | selfcontained | base | 63.9 / 68.3 | FAIL | 144.0 / 155.8 | FAIL | 540p 35.8 / 38.4 FAIL; 360p 15.9 / 17.1 FAIL | - | 128.1 | ok | over budget at 360p/540p/720p/1080p |
 | `tlcBWH` | - | Tunneling through apollian frac | selfcontained | base | 55.1 / 68.4 | FAIL | 118.9 / 149.7 | FAIL | 540p 31.3 / 38.8 FAIL; 360p 14.2 / 17.7 FAIL | - | 351.0 | ok | over budget at 360p/540p/720p/1080p |
 | `slB3WR` | - | Bounding Volume for SDF | selfcontained | base | 40.0 / 68.5 | FAIL | 91.4 / 140.1 | FAIL | 540p 22.6 / 38.1 FAIL; 360p 9.8 / 16.9 FAIL | - | 147.5 | ok | over budget at 360p/540p/720p/1080p |
-| `N3VGRd` | #417 | Floating Rings Illusion | needs_texture | tex | 59.2 / 68.7 | FAIL | 123.2 / 137.9 | FAIL | - | - | 160.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `N3VGRd` | #417 | Floating Rings Illusion | needs_texture | base | 59.0 / 68.8 (loud 78.7) | FAIL | 123.0 / 137.3 (loud 154.3) | FAIL | - | - | 165.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3tfyWN` | - | Fractals! - a simple demo | selfcontained | base | 68.3 / 69.0 (loud 68.5) | FAIL | 153.7 / 154.2 (loud 154.9) | FAIL | - | - | 9.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `lX3BD4` | #322 | Collapse [288] | needs_texture | base | 69.0 / 69.0 | FAIL | 155.2 / 155.3 | FAIL | - | - | 13.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7lVGDw` | - | Mandelbrot x4 Animated | selfcontained | base | 60.9 / 69.5 (loud 91.4) | FAIL | 140.2 / 167.5 (loud 202.8) | FAIL | - | - | 32.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tfBSWh` | - | Deep Wound | selfcontained | base | 59.7 / 69.7 | FAIL | 133.9 / 168.3 | FAIL | 540p 32.9 / 40.7 FAIL; 360p 14.6 / 17.6 FAIL | - | 125.6 | ok | over budget at 360p/540p/720p/1080p |
 | `3ftGDX` | #217 | Ascend [317] | selfcontained | base | 70.5 / 70.6 | FAIL | 158.5 / 158.7 | FAIL | - | - | 15.8 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `MdfBRX` | #584 | The Drive Home | selfcontained | base | 71.2 / 71.2 | FAIL | 160.0 / 160.1 | FAIL | - | - | 319.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `ls23RG` | - | Burning Ship | selfcontained | base | 71.2 / 71.3 | FAIL | 160.2 / 160.3 | FAIL | - | - | 11.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3Xy3z1` | - | 10 Step Test | selfcontained | base | 63.9 / 71.6 | FAIL | 143.0 / 161.3 | FAIL | - | - | 18.1 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `DtBGD3` | - | Mandelbrot Julia Correlation | selfcontained | base | 71.2 / 72.0 (loud 72.2) | FAIL | 159.9 / 171.6 (loud 171.6) | FAIL | - | - | 14.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `DtGSWK` | - | primitive_fractal | selfcontained | base | 56.7 / 72.8 (loud 94.6) | FAIL | 131.9 / 211.2 (loud 213.4) | FAIL | - | - | 12.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `NlGfzz` | #272 | Rainbow Road [249 Chars] | selfcontained | base | 72.6 / 72.8 | FAIL | 160.7 / 163.8 | FAIL | - | - | 16.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `4sfGWX` | #656 | Wolfenstein 3D | selfcontained | base | 62.1 / 73.5 | FAIL | 141.8 / 167.4 | FAIL | - | - | 2605.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `WldSR2` | - | mandelbrot - test | selfcontained | base | 37.9 / 73.8 (loud 77.0) | FAIL | 97.7 / 154.5 (loud 164.2) | FAIL | - | - | 17.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `tcXSzX` | - | Frunnel 7: Manic Flight | selfcontained | base | 66.6 / 74.1 (loud 77.4) | FAIL | 150.9 / 166.9 (loud 175.1) | FAIL | - | - | 179.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `M32GW1` | - | PI Fractals | selfcontained | base | 58.6 / 74.3 (loud 74.3) | FAIL | 131.0 / 166.8 (loud 166.9) | FAIL | - | - | 11.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `WtsyR8` | - | Octahedralis III | selfcontained | base | 74.4 / 74.9 (loud 74.9) | FAIL | 167.6 / 168.5 (loud 168.1) | FAIL | - | - | 27.5 | flat | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
 | `WffGRl` | - | Coffee Planes | selfcontained | base | 46.4 / 75.0 | FAIL | 106.0 / 157.6 | FAIL | - | - | 25.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WcdczB` | #565 | Dark Transit | selfcontained | base | 65.4 / 75.9 | FAIL | 146.5 / 169.8 | FAIL | - | - | 26.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tXfSzj` | - | Orange Chill | selfcontained | base | 60.0 / 76.7 | FAIL | 126.7 / 166.0 | FAIL | - | - | 50.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `Ns23zm` | - | Mandelbrot party | selfcontained | base | 63.1 / 76.7 (loud 78.6) | FAIL | 139.7 / 170.2 (loud 176.7) | FAIL | - | - | 14.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `DtjGDK` | - | Base -1+i  Twindragon Loop | selfcontained | base | 68.8 / 76.7 (loud 74.4) | FAIL | 157.2 / 178.6 (loud 174.4) | FAIL | - | - | 13.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `XsXGz2` | - | Mandelbrot Evolution | selfcontained | base | 76.8 / 76.9 | FAIL | 172.7 / 173.0 | FAIL | - | - | 21.6 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `XcKyDW` | - | Pulsating alien cube | needs_texture | base | 70.8 / 79.2 (loud 85.4) | FAIL | 157.5 / 170.9 (loud 190.5) | FAIL | - | - | 470.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `sdtXzS` | - | pohl's fractals | selfcontained | base | 35.0 / 79.2 | FAIL | 75.6 / 199.2 | FAIL | - | - | 16.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `Ds2BRD` | - | dead easy spong | selfcontained | base | 79.4 / 79.5 (loud 79.5) | FAIL | 178.5 / 178.7 (loud 178.6) | FAIL | - | - | 23.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tf33Wf` | #297 | Corridor [334] | selfcontained | base | 79.7 / 79.8 | FAIL | 179.2 / 179.5 | FAIL | - | - | 17.4 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `cltfRf` | #503 | Shield [284] | selfcontained | base | 79.9 / 80.0 | FAIL | 179.6 / 179.9 | FAIL | - | - | 11.9 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `l3cfW4` | #568 | Starship [320] | needs_texture | base | 80.4 / 80.5 | FAIL | 180.9 / 180.9 | FAIL | - | - | 16.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `Wl2GWy` | - | f(z) = i^z + c | selfcontained | base | 77.7 / 80.9 | FAIL | 173.1 / 183.1 | FAIL | - | - | 11.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
-| `msB3Wm` | #311 | LED [280 Chars] | needs_texture | tex | 81.6 / 81.6 | FAIL | 183.5 / 183.5 | FAIL | - | - | 12.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `msB3Wm` | #311 | LED [280 Chars] | needs_texture | base | 81.4 / 81.4 (loud 81.4) | FAIL | 182.9 / 183.0 (loud 183.0) | FAIL | - | - | 14.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `4tdSWr` | #418 | 2D Clouds | selfcontained | base | 82.5 / 82.5 | FAIL | 185.5 / 185.6 | FAIL | - | - | 79.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `Ml2XRD` | #665 | Raymarching Basic | selfcontained | base | 73.7 / 82.5 | FAIL | 167.2 / 198.6 | FAIL | - | - | 20.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3dSyRV` | #467 | Gaming cube:234chars | selfcontained | base | 83.8 / 83.9 | FAIL | 188.3 / 188.4 | FAIL | - | - | 12.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `4s3GRl` | #314 | 2D Soft Shadows | needs_texture | base | 60.4 / 84.4 | FAIL | 141.1 / 207.4 | FAIL | - | - | 24.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `DsjSzt` | #310 | Wormholes [218 Chars] | selfcontained | base | 85.4 / 85.8 | FAIL | 192.0 / 192.6 | FAIL | - | - | 10.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `MddcRN` | - | Julia folder | selfcontained | base | 80.0 / 86.0 (loud 86.0) | FAIL | 180.8 / 193.5 (loud 192.2) | FAIL | - | - | 36.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
 | `W3tSR4` | #536 | Volumetric: Glow | selfcontained | base | 87.1 / 87.3 | FAIL | 195.9 / 196.3 | FAIL | - | - | 15.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `4sycRW` | #499 | Solar Flare | needs_texture | base | 87.6 / 87.7 | FAIL | 196.9 / 197.0 | FAIL | - | - | 10.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wffXzX` | - | Frunnel 8: Plasma Lightning | needs_texture | base | 77.5 / 87.8 | FAIL | 158.0 / 198.2 | FAIL | - | - | 208.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
-| `NdcXR8` | #002 | Voxels in 249 chars | needs_texture | tex | 69.5 / 87.8 | FAIL | 154.5 / 191.4 | FAIL | - | - | 16.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `NdcXR8` | #002 | Voxels in 249 chars | needs_texture | base | 69.5 / 87.9 (loud 88.1) | FAIL | 154.7 / 191.8 (loud 200.4) | FAIL | - | - | 16.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `dtVSDy` | - | Do you like fractals? I have one | selfcontained | base | 82.2 / 88.1 (loud 88.2) | FAIL | 186.0 / 198.2 (loud 198.3) | FAIL | - | - | 16.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3cc3DN` | #355 | Rollin [278] | selfcontained | base | 88.2 / 88.3 | FAIL | 198.2 / 198.6 | FAIL | - | - | 15.5 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `tcd3zf` | - | Fractalus | selfcontained | base | 89.4 / 89.5 (loud 89.6) | FAIL | 188.6 / 188.7 (loud 188.8) | FAIL | - | - | 30.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `t33Bz8` | - | julia! | selfcontained | base | 88.3 / 89.9 (loud 86.0) | FAIL | 194.9 / 198.1 (loud 188.7) | FAIL | - | - | 13.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wXsXWM` | #172 | Get Out | needs_texture | base | 84.8 / 90.0 | FAIL | 190.1 / 197.5 | FAIL | - | - | 235.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `733Xzn` | #603 | waves in cube | selfcontained | base | 74.9 / 92.0 | FAIL | 164.9 / 209.0 | FAIL | - | - | 16.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `mdf3Wn` | #211 | Checkerboard [364 Chars] | needs_texture | base | 92.6 / 92.8 | FAIL | 208.2 / 208.3 | FAIL | - | - | 12.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wXB3Wy` | #071 | Color Grime Light | needs_texture | base | 85.9 / 92.9 | FAIL | 191.8 / 208.2 | FAIL | - | - | 70.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `Xsd3z7` | #501 | Cave Pillars | needs_texture | base | 79.4 / 93.0 | FAIL | 170.2 / 221.5 | FAIL | - | - | 90.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `lX2cWW` | - | Some kind of alien life | selfcontained | base | 93.1 / 93.1 (loud 93.1) | FAIL | 209.3 / 209.4 (loud 209.4) | FAIL | - | - | 12.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
 | `tlcyRH` | - | Generalized Newton's Method | selfcontained | base | 93.1 / 93.2 | FAIL | 209.5 / 209.6 | FAIL | - | - | 19.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tcyXDh` | #370 | Facility [324] | selfcontained | base | 93.7 / 93.9 | FAIL | 210.6 / 211.2 | FAIL | - | - | 17.7 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3fcBD8` | #150 | Trizm | selfcontained | base | 93.6 / 93.9 | FAIL | 210.8 / 211.7 | FAIL | - | - | 30.5 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `4sB3z1` | - | 2DKifs interactive remix | needs_texture | base | 94.5 / 94.5 | FAIL | 212.4 / 212.4 | FAIL | - | - | 16.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `XlfGRj` | #415 | Star Nest | selfcontained | base | 94.4 / 94.8 | FAIL | 211.3 / 212.8 | FAIL | - | - | 32.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WfVfzw` | - | Desert Market | needs_texture | base | 94.9 / 95.0 | FAIL | 213.4 / 213.4 | FAIL | - | - | 90.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `XfGcDz` | - | Pulsating alien tetrahedron | needs_texture | base | 88.7 / 95.3 (loud 115.2) | FAIL | 195.6 / 212.0 (loud 241.7) | FAIL | - | - | 507.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ltsfRf` | - | Fractal Vine Thing - hhhzzzsss | selfcontained | base | 82.0 / 95.3 (loud 98.6) | FAIL | 182.8 / 213.2 (loud 215.7) | FAIL | - | - | 13.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `7dffWf` | #223 | Voxel Cavern [292 chars] | needs_texture | base | 91.8 / 95.9 | FAIL | 208.7 / 217.5 | FAIL | - | - | 13.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `Wd3BzB` | - | Julia set distance Lissajous | selfcontained | base | 8.1 / 96.0 (loud 147.1) | FAIL | 17.2 / 217.2 (loud 332.3) | FAIL | - | - | 20.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `Wfj3DV` | - | 6 Paths Large | selfcontained | base | 70.9 / 96.6 | FAIL | 155.8 / 209.7 | FAIL | - | - | 40.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `scKXWR` | - | pair-ity | selfcontained | base | 92.7 / 98.1 (loud 98.0) | FAIL | 208.6 / 220.3 (loud 220.3) | FAIL | - | - | 45.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3ljXWy` | - | Planet Broccoli | selfcontained | base | 85.1 / 98.3 | FAIL | 182.9 / 209.1 | FAIL | - | - | 299.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `4XG3Rc` | - | Raymarching Free Fractals V2 | selfcontained | base | 88.7 / 99.0 (loud 81.6) | FAIL | 194.4 / 208.6 (loud 174.6) | FAIL | - | - | 58.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wXKSDW` | #368 | HOME [300] | selfcontained | base | 99.3 / 99.5 | FAIL | 223.6 / 223.8 | FAIL | - | - | 15.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
-| `XlfyD7` | #496 | Nimbostratus | needs_texture | tex | 98.1 / 99.6 | FAIL | 220.3 / 224.0 | FAIL | - | - | 18.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `XlfyD7` | #496 | Nimbostratus | needs_texture | base | 98.1 / 99.6 (loud 99.6) | FAIL | 220.3 / 224.0 (loud 224.0) | FAIL | - | - | 18.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
 | `33tSWr` | #083 | Industrial Drift | needs_texture | base | 86.1 / 99.8 | FAIL | 175.8 / 213.7 | FAIL | - | - | 290.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `t3GXDK` | #246 | Deathbeam [339] | selfcontained | base | 99.4 / 99.8 | FAIL | 223.4 / 224.9 | FAIL | - | - | 17.4 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `sXcSR8` | #611 | waves in cube 2 | selfcontained | base | 81.8 / 100.1 | FAIL | 183.9 / 234.8 | FAIL | - | - | 19.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `33jGWV` | #050 | DDA Test Ruins | needs_texture | base | 78.1 / 100.7 | FAIL | 173.2 / 225.6 | FAIL | - | - | 76.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `WsS3W1` | - | MCG: fractals | selfcontained | base | 59.2 / 100.7 (loud 100.6) | FAIL | 124.5 / 230.0 (loud 227.9) | FAIL | - | - | 13.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `4XyGz3` | - | Raymarching Free Fractals V1 | selfcontained | base | 89.3 / 101.0 (loud 106.2) | FAIL | 189.6 / 213.3 (loud 229.4) | FAIL | - | - | 50.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wcdGWX` | - | DDA Living Tunnel | needs_texture | base | 84.8 / 101.9 | FAIL | 190.9 / 229.0 | FAIL | - | - | 103.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `XtSSWD` | - | Spiral Fractal (?) | selfcontained | base | 101.8 / 102.1 | FAIL | 199.7 / 229.5 | FAIL | - | - | 18.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WfSSRG` | - | Friday Frunnel of Doom | selfcontained | base | 85.3 / 102.7 | FAIL | 193.1 / 230.0 | FAIL | - | - | 228.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `Xdj3Wh` | - | Xmas Fractal 2Tweets | selfcontained | base | 102.7 / 102.7 | FAIL | 230.9 / 230.9 | FAIL | - | - | 11.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wXcBzX` | - | Gyroid Tunnel Example | selfcontained | base | 82.0 / 102.7 | FAIL | 174.2 / 229.7 | FAIL | - | - | 19.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `wscfRl` | - | ps_Sierpinski'sTetraheadron | selfcontained | base | 93.2 / 102.7 (loud 111.0) | FAIL | 203.7 / 216.6 (loud 237.2) | FAIL | - | - | 39.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ddKGWR` | - | SierpinskiTetrahedron | selfcontained | base | 93.3 / 102.8 (loud 111.0) | FAIL | 203.7 / 216.6 (loud 237.3) | FAIL | - | - | 48.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `clscDn` | - | Escape Time Box 3 | selfcontained | base | 98.1 / 102.9 (loud 103.2) | FAIL | 216.0 / 226.0 (loud 227.2) | FAIL | - | - | 24.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3cXBWB` | #115 | Light Medley [353] | selfcontained | base | 103.8 / 103.8 | FAIL | 233.3 / 233.4 | FAIL | - | - | 16.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `XcBBRz` | #285 | Irregular Gyroids | selfcontained | base | 102.9 / 104.4 | FAIL | 231.4 / 234.2 | FAIL | - | - | 21.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wfSGRR` | - | Biocore Plasma | selfcontained | base | 95.7 / 105.6 | FAIL | 205.5 / 232.3 | FAIL | - | - | 44.7 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -455,20 +744,30 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `t3t3RB` | - | Super Sphere Rush | selfcontained | base | 106.2 / 106.8 | FAIL | 238.5 / 239.2 | FAIL | - | - | 19.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `msKfRR` | #295 | Inferno [294] | selfcontained | base | 107.2 / 107.3 | FAIL | 241.0 / 241.3 | FAIL | - | - | 12.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wtGfWw` | #478 | shader challenge 20210227 | selfcontained | base | 62.9 / 108.2 | FAIL | 141.5 / 243.5 | FAIL | - | - | 110.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `DdB3zR` | - | Menger sponge (Silice impl ref) | selfcontained | base | 39.5 / 112.4 (loud 104.5) | FAIL | 96.3 / 248.6 (loud 273.9) | FAIL | - | - | 29.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wfGXDh` | #388 | Runner [318] | selfcontained | base | 112.5 / 112.6 | FAIL | 252.9 / 253.1 | FAIL | - | - | 17.8 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WXyXzw` | #393 | Microtorus [253] | selfcontained | base | 113.5 / 113.7 | FAIL | 255.0 / 255.4 | FAIL | - | - | 14.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3fVfDc` | - | Lil' Gyroid Flight | selfcontained | base | 113.5 / 113.7 | FAIL | 255.4 / 255.7 | FAIL | - | - | 14.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ffKXRt` | - | pon bour | selfcontained | base | 92.8 / 114.0 (loud 125.1) | FAIL | 205.6 / 246.9 (loud 275.1) | FAIL | - | - | 171.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tXGfR1` | - | Fractal Garden March | selfcontained | base | 113.8 / 114.0 | FAIL | 256.1 / 256.4 | FAIL | - | - | 16.1 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `Mdf3z7` | - | Menger Journey | selfcontained | base | 99.3 / 114.3 | FAIL | 219.2 / 253.1 | FAIL | - | - | 218.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `fXfXWj` | - | mindstorm | selfcontained | base | 114.4 / 114.4 | FAIL | 257.3 / 257.3 | FAIL | - | - | 49.0 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `s3KGWc` | #003 | My seascape | selfcontained | base | 103.2 / 114.7 | FAIL | 224.7 / 260.7 | FAIL | - | - | 6115.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `W3dXW2` | - | FractalSquare-Cube | selfcontained | base | 114.8 / 114.8 (loud 114.8) | FAIL | 258.2 / 258.2 (loud 258.2) | FAIL | - | - | 5345.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
+| `MsjcDz` | - | Mandelbrot and Julia relations | selfcontained | base | 73.5 / 114.8 (loud 145.4) | FAIL | 168.5 / 279.3 (loud 320.3) | FAIL | - | - | 16.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3f23RK` | - | Plasma Cathederal | selfcontained | base | 76.2 / 116.4 | FAIL | 176.5 / 254.0 | FAIL | - | - | 25.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `Nl3GDj` | - | Mandelbrot-Set Danny | selfcontained | base | 92.1 / 116.7 (loud 125.8) | FAIL | 200.1 / 250.2 (loud 266.1) | FAIL | - | - | 15.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `lstXRr` | #539 | Gold Frame | selfcontained | base | 108.1 / 117.3 | FAIL | 231.2 / 251.2 | FAIL | - | - | 422.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `43VfRG` | - | Lethe | needs_texture | base | 105.7 / 117.3 | FAIL | 227.5 / 255.8 | FAIL | - | - | 131.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `sdcGWr` | - | Fractal test - how many arms? | selfcontained | base | 115.9 / 118.2 (loud 118.2) | FAIL | 259.8 / 267.3 (loud 262.9) | FAIL | - | - | 10.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `mdfGRs` | #294 | Gltch [291 Chars] | needs_texture | base | 118.5 / 118.6 | FAIL | 266.6 / 266.7 | FAIL | - | - | 11.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `NsXGzj` | - | Mandelbrot Iterations | selfcontained | base | 67.4 / 119.1 (loud 120.5) | FAIL | 141.5 / 261.1 (loud 262.9) | FAIL | - | - | 13.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `w3f3W2` | - | Wall Lights | selfcontained | base | 102.2 / 119.7 | FAIL | 225.5 / 267.0 | FAIL | - | - | 43.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
-| `flKyzG` | #519 | HellCarting Golf [538 Chars] | needs_texture | tex | 99.0 / 121.4 | FAIL | 206.1 / 250.5 | FAIL | - | - | 23.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `flKyzG` | #519 | HellCarting Golf [538 Chars] | needs_texture | base | 98.1 / 120.6 (loud 134.4) | FAIL | 204.4 / 248.7 (loud 269.5) | FAIL | - | - | 21.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `Nd33DH` | - | [Julia Sets] | selfcontained | base | 84.7 / 121.8 (loud 139.3) | FAIL | 188.8 / 296.6 (loud 313.5) | FAIL | - | - | 14.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `DtXGDn` | #250 | Reactor [244 Chars] | selfcontained | base | 120.9 / 121.8 | FAIL | 271.9 / 274.6 | FAIL | - | - | 10.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `sdsSWB` | - | Fractalis Kaleidoscopus | selfcontained | base | 108.4 / 122.0 (loud 134.2) | FAIL | 233.0 / 270.3 (loud 298.2) | FAIL | - | - | 266.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
+| `tdj3zG` | - | Raymarch Sierpinski | selfcontained | base | 108.0 / 122.1 (loud 129.8) | FAIL | 237.7 / 264.8 (loud 282.8) | FAIL | - | - | 360.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WcKXDV` | #441 | Accretion [312] | selfcontained | base | 122.1 / 122.1 | FAIL | 274.6 / 274.7 | FAIL | - | - | 34.9 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wXlSWM` | #156 | Goldmenger | needs_texture | base | 108.0 / 122.2 | FAIL | 240.4 / 273.0 | FAIL | - | - | 805.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `33tGzN` | #517 | Firewall [320] | selfcontained | base | 122.3 / 122.4 | FAIL | 275.1 / 275.2 | FAIL | - | - | 41.7 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -476,11 +775,15 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `sstyDX` | #275 | Rings [324 chars] | needs_texture | base | 122.6 / 122.7 | FAIL | 275.7 / 275.8 | FAIL | - | - | 12.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `MlXGWf` | #444 | Xor - Cool Lake | needs_texture | base | 122.0 / 124.2 | FAIL | 275.9 / 279.0 | FAIL | - | - | 1034.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `cdf3R4` | #239 | Sierpinski 2 [193 Chars] | selfcontained | base | 111.6 / 126.3 | FAIL | 241.2 / 284.9 | FAIL | - | - | 11.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3ctyRX` | - | fractals test 2 | selfcontained | base | 127.6 / 127.6 (loud 127.6) | FAIL | 287.0 / 287.0 (loud 287.0) | FAIL | - | - | 13.8 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p; black_when_loud |
+| `wd3BDM` | - | Mandelbrot distance | selfcontained | base | 89.6 / 128.0 (loud 153.0) | FAIL | 193.5 / 272.1 (loud 334.9) | FAIL | - | - | 13.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tdfBWs` | - | Trippier Menger Journey | selfcontained | base | 118.7 / 128.4 | FAIL | 260.6 / 287.8 | FAIL | - | - | 379.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
-| `ctlSRS` | - | 4D Sphere | needs_texture | base | 127.0 / 128.4 | FAIL | 279.3 / 284.9 | FAIL | - | - | 98.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ctlSRS` | - | 4D Sphere | needs_texture | base | 127.0 / 128.7 (loud 126.5) | FAIL | 280.6 / 283.3 (loud 276.9) | FAIL | - | - | 69.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wtl3D2` | #382 | Mandelbrot [112 Chars] | selfcontained | base | 110.7 / 130.2 | FAIL | 241.3 / 288.2 | FAIL | - | - | 9.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `M32czh` | - | Weird Fractals | selfcontained | base | 114.2 / 131.2 (loud 150.4) | FAIL | 245.5 / 291.6 (loud 326.6) | FAIL | - | - | 12.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WcfXRs` | #533 | Milky Explained | selfcontained | base | 131.2 / 131.3 | FAIL | 295.0 / 295.3 | FAIL | - | - | 11.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `mandelbrot-setting-sail` | - | Mandelbrot Infinity Dive | selfcontained | base | 108.2 / 131.7 | FAIL | 226.0 / 294.9 | FAIL | - | - | 28.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `lfXBWf` | - | Mandelbrot fractal neon | selfcontained | base | 102.4 / 132.1 (loud 132.6) | FAIL | 227.1 / 295.8 (loud 297.1) | FAIL | - | - | 9.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `mandelbrot-rainbow-strings` | - | Mandelbrot Infinity Dive | selfcontained | base | 109.8 / 132.7 | FAIL | 228.6 / 297.1 | FAIL | - | - | 48.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `mandelbrot-infinite-spiral` | - | Mandelbrot Infinity Dive | selfcontained | base | 109.3 / 132.8 | FAIL | 228.6 / 297.4 | FAIL | - | - | 30.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `mandelbrot-pastel-waves` | - | Mandelbrot Infinity Dive | selfcontained | base | 109.3 / 132.8 | FAIL | 228.6 / 297.4 | FAIL | - | - | 33.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -488,76 +791,124 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `mandelbrot-fire-crab` | - | Mandelbrot Infinity Dive | selfcontained | base | 110.3 / 134.4 | FAIL | 230.4 / 301.0 | FAIL | - | - | 30.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `mandelbrot-infinity-dive` | - | Mandelbrot Infinity Dive | selfcontained | base | 110.3 / 134.5 | FAIL | 230.5 / 301.2 | FAIL | - | - | 28.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `mandelbrot-easter-eggs` | - | Mandelbrot Infinity Dive | selfcontained | base | 110.6 / 134.7 | FAIL | 231.0 / 301.6 | FAIL | - | - | 29.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `wdcfRl` | - | ps_Menger'sSponge | selfcontained | base | 118.9 / 134.8 (loud 148.3) | FAIL | 255.0 / 276.8 (loud 292.6) | FAIL | - | - | 37.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tXjXDy` | #448 | Water [237] | selfcontained | base | 132.4 / 134.8 | FAIL | 291.4 / 295.3 | FAIL | - | - | 14.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3X2cDc` | - | Digital Downpour | selfcontained | base | 134.9 / 135.0 | FAIL | 303.5 / 303.6 | FAIL | - | - | 15.1 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `WtfGDn` | - | Mandelbrot (The Green Beast) | needs_texture | base | 94.8 / 135.3 (loud 163.1) | FAIL | 205.2 / 290.3 (loud 353.6) | FAIL | - | - | 12.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3tyyz3` | - | Mandelbrot + Julia sets | selfcontained | base | 87.0 / 135.4 (loud 169.1) | FAIL | 182.0 / 245.8 (loud 278.3) | FAIL | - | - | 16.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wXVGRW` | #088 | Light Swirl [263] | selfcontained | base | 136.0 / 136.3 | FAIL | 305.3 / 305.6 | FAIL | - | - | 19.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `mandelbrot-zebrafish` | - | Mandelbrot Infinity Dive | selfcontained | base | 113.0 / 136.5 | FAIL | 235.6 / 305.7 | FAIL | - | - | 48.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `mandelbrot-lacework` | - | Mandelbrot Infinity Dive | selfcontained | base | 113.4 / 137.0 | FAIL | 236.6 / 306.7 | FAIL | - | - | 48.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WXt3Dn` | - | Tail of the Dragon | selfcontained | base | 136.8 / 137.1 | FAIL | 307.8 / 307.8 | FAIL | - | - | 16.0 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3XjSzw` | - | Menger & Chill | selfcontained | base | 124.4 / 138.6 | FAIL | 273.6 / 299.8 | FAIL | - | - | 143.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `fsSGRw` | - | Mandelbrot Iterations (smoothed) | selfcontained | base | 71.9 / 139.2 (loud 142.0) | FAIL | 159.8 / 307.4 (loud 311.9) | FAIL | - | - | 15.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3cScWy` | #527 | Fragments [286] | selfcontained | base | 140.3 / 140.3 | FAIL | 315.1 / 315.8 | FAIL | - | - | 19.9 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3ftBWr` | #058 | 👁️⃤ Tri Wave Light Trip 👁️⃤ | selfcontained | base | 140.5 / 140.9 | FAIL | 315.5 / 315.9 | FAIL | - | - | 25.7 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `mdcyDH` | - | Mandelbrot_V1 | selfcontained | base | 115.2 / 141.0 (loud 152.4) | FAIL | 271.3 / 333.9 (loud 336.8) | FAIL | - | - | 14.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `4cBBDy` | - | Museum of morphing fractals | selfcontained | base | 126.9 / 141.5 (loud 147.4) | FAIL | 257.6 / 287.7 (loud 315.3) | FAIL | - | - | 1921.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
 | `WXfSWn` | #163 | Turn a Corner | needs_texture | base | 126.4 / 142.0 | FAIL | 282.9 / 328.2 | FAIL | - | - | 522.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `MdSyWK` | - | Holy hell, lots of 3D cubessss | selfcontained | base | 133.9 / 142.4 (loud 134.8) | FAIL | 272.6 / 276.6 (loud 276.5) | FAIL | - | - | 37.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `33Bczw` | - | Rooted | needs_texture | base | 143.6 / 143.7 | FAIL | 323.0 / 323.1 | FAIL | - | - | 105.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `sfKSDz` | - | æmœba | selfcontained | base | 133.4 / 143.7 (loud 148.2) | FAIL | 306.9 / 324.3 (loud 332.8) | FAIL | - | - | 74.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `w33XRr` | - | fast cosmic scars 🪐 | selfcontained | base | 144.4 / 144.4 (loud 144.4) | FAIL | 324.7 / 324.7 (loud 324.7) | FAIL | - | - | 61.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `4fcczf` | - | trippy newtons method fractals | selfcontained | base | 144.1 / 144.5 (loud 144.3) | FAIL | 323.7 / 324.7 (loud 324.0) | FAIL | - | - | 12.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
 | `l3cXR7` | - | IFS demystified | selfcontained | base | 145.5 / 146.1 | FAIL | 327.1 / 328.0 | FAIL | - | - | 15.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `sdSyDW` | #288 | Sploosh [256 chars] | needs_texture | base | 146.3 / 146.3 | FAIL | 329.0 / 329.1 | FAIL | - | - | 19.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tt3XDn` | #596 | FWA logo | selfcontained | base | 134.2 / 146.4 | FAIL | 292.0 / 316.8 | FAIL | - | - | 326.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WflXWN` | - | Frunnel 1 | selfcontained | base | 131.1 / 146.5 | FAIL | 286.3 / 319.1 | FAIL | - | - | 33.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3sSGRV` | - | Raymarching sphere/shadow/normal | selfcontained | base | 142.5 / 147.3 | FAIL | 309.6 / 312.9 | FAIL | - | - | 46.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3XGcW3` | - | Turbulence Ball | selfcontained | base | 148.0 / 148.5 | FAIL | 332.5 / 332.9 | FAIL | - | - | 9.9 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7dlSD2` | - | koch fractal | selfcontained | base | 147.9 / 148.6 (loud 148.9) | FAIL | 332.8 / 334.4 (loud 333.8) | FAIL | - | - | 21.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `4fSGD1` | - | Julia_test | selfcontained | base | 137.8 / 149.4 (loud 154.0) | FAIL | 307.6 / 335.0 (loud 340.2) | FAIL | - | - | 13.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3XSSD1` | - | Cool Menger | selfcontained | base | 133.7 / 149.8 | FAIL | 293.9 / 327.8 | FAIL | - | - | 148.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `Wfcfzj` | - | Office Space | needs_texture | base | 151.3 / 151.4 | FAIL | 339.8 / 339.9 | FAIL | - | - | 23.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `7d2BWm` | - | Chez | selfcontained | base | 140.8 / 151.5 | FAIL | 316.6 / 332.1 | FAIL | - | - | 106.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `4djczR` | - | 3x3x3 fractals | selfcontained | base | 138.9 / 151.7 | FAIL | 301.4 / 318.2 | FAIL | - | - | 59.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `W3SSRw` | - | Little Color Adventure  [256] | selfcontained | base | 151.3 / 151.8 | FAIL | 339.5 / 341.0 | FAIL | - | - | 14.4 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `w3t3R2` | - | golf fork mdl TIA | selfcontained | base | 149.3 / 151.9 (loud 163.8) | FAIL | 320.4 / 328.6 (loud 353.0) | FAIL | - | - | 17.6 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p; black_when_loud |
 | `3ctfDS` | - | Gyroid Bump Plasma | needs_texture | base | 125.1 / 152.1 | FAIL | 282.0 / 346.4 | FAIL | - | - | 83.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `fttfWH` | - | Rational rings | selfcontained | base | 62.1 / 152.4 (loud 151.0) | FAIL | 126.7 / 336.9 (loud 329.6) | FAIL | - | - | 13.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `33SyWm` | - | Mandelbrottttt | selfcontained | base | 152.4 / 152.5 (loud 152.4) | FAIL | 342.7 / 342.8 (loud 342.7) | FAIL | - | - | 9.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WccfDN` | - | Tri Noise Tunnel | selfcontained | base | 134.5 / 153.3 | FAIL | 301.4 / 343.9 | FAIL | - | - | 67.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `lsX3W4` | - | Mandelbrot - distance | selfcontained | base | 132.1 / 154.2 | FAIL | 268.4 / 338.6 | FAIL | - | - | 11.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `NctXDs` | - | Fractal Series-v2 | selfcontained | base | 144.0 / 154.2 (loud 158.9) | FAIL | 313.5 / 329.3 (loud 341.3) | FAIL | - | - | 634.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `4sVXzK` | - | Space Monolith | selfcontained | base | 117.5 / 154.3 | FAIL | 295.1 / 342.3 | FAIL | - | - | 324.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `fsVczm` | - | Distance estimated fractals | selfcontained | base | 150.1 / 154.4 (loud 162.0) | FAIL | 332.6 / 339.0 (loud 351.1) | FAIL | - | - | 748.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `s33Xzn` | #422 | Liquid Bloom | selfcontained | base | 154.7 / 154.7 | FAIL | 348.0 / 348.1 | FAIL | - | - | 582.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WffczH` | - | Another Spiral | selfcontained | base | 155.2 / 155.2 | FAIL | 349.0 / 349.1 | FAIL | - | - | 13.7 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wfdSR2` | #082 | Nox Ethereal | selfcontained | base | 155.0 / 155.3 | FAIL | 348.2 / 348.9 | FAIL | - | - | 14.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `fXy3zz` | - | Rollercoaster into Fractals | selfcontained | base | 139.7 / 155.5 (loud 163.9) | FAIL | 303.6 / 342.4 (loud 369.5) | FAIL | - | - | 698.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tctyWn` | #062 | Water Again [264] | selfcontained | base | 155.9 / 156.1 | FAIL | 350.6 / 351.0 | FAIL | - | - | 14.1 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `stlBD4` | #336 | Mushroom [322 bytes] | selfcontained | base | 148.5 / 156.3 | FAIL | 333.4 / 354.7 | FAIL | - | - | 9.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7cKXWw` | - | oscillating grid pair | selfcontained | base | 155.8 / 156.8 (loud 157.4) | FAIL | 349.5 / 352.5 (loud 352.6) | FAIL | - | - | 42.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WcGGDd` | #287 | Fluorescent [292] | selfcontained | base | 156.6 / 156.9 | FAIL | 352.5 / 353.0 | FAIL | - | - | 18.4 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
-| `XsX3z7` | - | Kaleidoscopic Journey | needs_texture | base | 134.6 / 158.0 | FAIL | 296.4 / 349.8 | FAIL | - | - | 499.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wXfXWS` | #219 | Pulsar Explained | selfcontained | base | 157.0 / 158.1 | FAIL | 353.7 / 357.1 | FAIL | - | - | 13.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `33jfRz` | - | star shining 0211 | selfcontained | base | 158.0 / 158.2 (loud 158.3) | FAIL | 354.7 / 355.9 (loud 355.9) | FAIL | - | - | 68.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `XsX3z7` | - | Kaleidoscopic Journey | needs_texture | base | 134.8 / 158.3 (loud 159.1) | FAIL | 296.7 / 350.3 (loud 352.7) | FAIL | - | - | 506.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `fl2fDK` | - | Feather Fractal recreated | selfcontained | base | 129.3 / 158.7 | FAIL | 286.4 / 331.1 | FAIL | - | - | 11.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `WXyyzz` | - | spherical ball with sparkles | selfcontained | base | 157.5 / 159.0 (loud 158.9) | FAIL | 354.1 / 358.7 (loud 358.1) | FAIL | - | - | 21.4 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p; black_when_loud |
 | `wftfDM` | #086 | 3 in 1 Tri Experiments | selfcontained | base | 51.0 / 159.7 | FAIL | 114.8 / 359.3 | FAIL | - | - | 35.5 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3c2cRG` | #180 | Sphwarp | selfcontained | base | 159.3 / 159.8 | FAIL | 358.6 / 359.1 | FAIL | - | - | 14.4 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7ctSWl` | - | Fractal Series-v4 | selfcontained | base | 151.1 / 160.3 (loud 159.2) | FAIL | 329.8 / 351.8 (loud 336.7) | FAIL | - | - | 438.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3f3cDN` | - | One Life | selfcontained | base | 161.2 / 161.3 | FAIL | 362.8 / 363.0 | FAIL | - | - | 14.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WX23Dz` | #128 | Cloud Frame | selfcontained | base | 113.6 / 164.1 | FAIL | 316.9 / 357.6 | FAIL | - | - | 15.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `dsyczD` | - | Spiraling Tree 2 | selfcontained | base | 133.4 / 164.2 (loud 163.4) | FAIL | 295.5 / 347.6 (loud 364.7) | FAIL | - | - | 12.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
+| `WcsXWM` | - | Frunnel 3: Flora | selfcontained | base | 149.1 / 166.1 (loud 173.4) | FAIL | 333.1 / 372.0 (loud 371.4) | FAIL | - | - | 41.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ssVGRw` | - | Mandlebrot set with Perturbation | selfcontained | base | 164.4 / 166.3 (loud 167.7) | FAIL | 359.0 / 362.6 (loud 366.7) | FAIL | - | - | 20.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ldKGRm` | - | mandelballs | needs_texture | base | 13.4 / 166.5 (loud 167.8) | FAIL | 31.8 / 372.6 (loud 374.3) | FAIL | - | - | 84.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wc3yzM` | #099 | Na Na Na Na Bat Clouds | selfcontained | base | 166.6 / 166.7 | FAIL | 374.9 / 375.1 | FAIL | - | - | 17.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `mlBcz1` | #329 | Big Brain [304 Chars] | selfcontained | base | 166.0 / 166.7 | FAIL | 372.9 / 375.6 | FAIL | - | - | 10.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tfB3Ww` | - | MEGARCADE 🕹️ | selfcontained | base | 129.0 / 166.8 | FAIL | 284.9 / 405.3 | FAIL | - | - | 29.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WXsXzf` | #381 | Cubic Explained | selfcontained | base | 166.5 / 167.0 | FAIL | 375.5 / 376.8 | FAIL | - | - | 12.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `NdKGDt` | - | Random fractals | selfcontained | base | 162.9 / 167.3 (loud 168.4) | FAIL | 347.8 / 363.6 (loud 359.8) | FAIL | - | - | 53.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `NscXWf` | - | Newton_Fractals | selfcontained | base | 168.2 / 168.5 (loud 168.2) | FAIL | 378.1 / 378.2 (loud 378.1) | FAIL | - | - | 26.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `W33GD4` | - | Spherrain 2 | selfcontained | base | 163.5 / 170.2 (loud 163.1) | FAIL | 363.9 / 379.2 (loud 362.0) | FAIL | - | - | 194.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `33VyDm` | - | Ethereal Emerald | selfcontained | base | 170.2 / 170.4 (loud 170.4) | FAIL | 382.9 / 383.2 (loud 383.1) | FAIL | - | - | 12.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `7dVGRW` | #222 | Voxel LOD in 490 chars | selfcontained | base | 121.5 / 170.5 | FAIL | 281.1 / 379.7 | FAIL | - | - | 20.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WXtGWr` | #218 | Crystal 2 [307] | selfcontained | base | 170.6 / 170.8 | FAIL | 383.2 / 383.6 | FAIL | - | - | 16.3 | flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `NcdXDs` | - | Fractal Series-v3 | selfcontained | base | 132.0 / 171.2 (loud 158.5) | FAIL | 289.5 / 348.4 (loud 296.4) | FAIL | - | - | 375.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `NclXR4` | - | Insidious | needs_texture | base | 156.0 / 171.6 | FAIL | 334.2 / 381.9 | FAIL | - | - | 135.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `MffGRX` | - | Mandlebrot <-> Julia | selfcontained | base | 171.0 / 172.6 (loud 172.1) | FAIL | 383.6 / 384.0 (loud 384.2) | FAIL | - | - | 16.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WXd3Dn` | #237 | Crystal [289] | selfcontained | base | 172.4 / 172.7 | FAIL | 387.5 / 387.9 | FAIL | - | - | 15.7 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7s2fDD` | - | Fractal 2398129312 | selfcontained | base | 132.6 / 173.2 (loud 164.7) | FAIL | 288.7 / 305.5 (loud 358.9) | FAIL | - | - | 674.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3XGSR3` | - | Smooth Tubes & Bubble Dude | selfcontained | base | 154.4 / 173.3 | FAIL | 348.8 / 390.4 | FAIL | - | - | 22.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `MdXyzX` | #622 | Very fast procedural ocean | selfcontained | base | 160.3 / 173.9 | FAIL | 355.6 / 379.1 | FAIL | - | - | 335.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wccfzr` | - | Forever Hall | selfcontained | base | 139.2 / 174.5 | FAIL | 296.9 / 386.0 | FAIL | - | - | 27.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tslfRj` | #475 | Diving Gold | selfcontained | base | 131.0 / 174.8 | FAIL | 281.9 / 380.8 | FAIL | - | - | 67.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `lclcRj` | - | Endless museum of fractals | selfcontained | base | 151.3 / 175.4 (loud 170.4) | FAIL | 312.9 / 344.2 (loud 378.4) | FAIL | - | - | 1790.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
 | `wcSXRK` | #267 | Kelp Sea | selfcontained | base | 169.7 / 176.3 | FAIL | 381.8 / 396.6 | FAIL | - | - | 22.8 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `fdXfR2` | #395 | Calming Cube | selfcontained | base | 176.9 / 177.0 | FAIL | 398.0 / 398.1 | FAIL | - | - | 15.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tsXBzS` | #668 | fractal pyramid | selfcontained | base | 175.3 / 177.2 | FAIL | 396.5 / 397.4 | FAIL | - | - | 23.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WcVyDw` | - | Noise Racer | selfcontained | base | 176.7 / 177.3 | FAIL | 397.6 / 399.3 | FAIL | - | - | 60.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7cdSWl` | - | Fractal Series-v5 | selfcontained | base | 168.8 / 180.0 (loud 185.9) | FAIL | 372.8 / 393.6 (loud 412.2) | FAIL | - | - | 696.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7ljcWd` | - | Mand Jul Blend | selfcontained | base | 177.3 / 180.1 (loud 180.0) | FAIL | 398.3 / 405.0 (loud 406.2) | FAIL | - | - | 25.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `ffX3Dn` | - | Crystal Cube Cage | selfcontained | base | 178.8 / 180.2 | FAIL | 402.1 / 402.4 | FAIL | - | - | 19.0 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `dslGz8` | #358 | Sierpinski [155 Chars] | selfcontained | base | 178.5 / 180.7 | FAIL | 358.5 / 366.0 | FAIL | - | - | 10.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ts2GDD` | - | Infinite Tetration | selfcontained | base | 116.1 / 181.9 (loud 217.8) | FAIL | 246.4 / 433.2 (loud 488.9) | FAIL | - | - | 12.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `sXVGW3` | #570 | Staky night 2 | selfcontained | base | 181.6 / 181.9 | FAIL | 408.7 / 409.2 | FAIL | - | - | 908.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `mlVSWy` | - | fractal raymarching | selfcontained | base | 122.4 / 182.3 (loud 188.7) | FAIL | 258.6 / 342.2 (loud 406.0) | FAIL | - | - | 60.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
 | `cttyzf` | #307 | Waves [221] | needs_texture | base | 182.3 / 182.4 | FAIL | 408.9 / 409.1 | FAIL | - | - | 11.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tcjXDW` | - | Graffiti Fractal Tunnel | selfcontained | base | 181.1 / 182.6 | FAIL | 407.3 / 409.8 | FAIL | - | - | 51.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `t3dyWB` | - | trip with fractals | selfcontained | base | 158.4 / 183.2 (loud 177.2) | FAIL | 314.6 / 387.1 (loud 360.9) | FAIL | - | - | 94.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wttXz8` | #423 | Domain warped FBM noise | needs_texture | base | 177.0 / 183.3 | FAIL | 372.2 / 382.8 | FAIL | - | - | 3609.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `ltBGDK` | - | Very decomposed Sphere on curved | selfcontained | base | 172.0 / 183.6 | FAIL | 378.4 / 398.2 | FAIL | - | - | 1092.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `tctcWj` | - | mandelbrot experiment 001 | selfcontained | base | 181.2 / 183.6 (loud 176.6) | FAIL | 392.8 / 396.5 (loud 377.0) | FAIL | - | - | 15.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3XGczz` | - | other combination of fractals | selfcontained | base | 183.5 / 183.6 (loud 183.6) | FAIL | 412.8 / 413.0 (loud 413.0) | FAIL | - | - | 23.8 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p; black_when_loud |
+| `XfsXz2` | - | 10 Line Lambda | selfcontained | base | 71.6 / 184.4 (loud 225.2) | FAIL | 33.5 / 411.2 (loud 500.3) | FAIL | - | - | 16.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wccBD7` | - | Tri Powa | selfcontained | base | 183.7 / 184.7 | FAIL | 412.3 / 412.7 | FAIL | - | - | 47.0 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `MtccR4` | - | Burning ship | selfcontained | base | 148.5 / 184.9 | FAIL | 328.3 / 401.4 | FAIL | - | - | 26.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `33ffD2` | - | Vox 1.5 | selfcontained | base | 139.4 / 185.0 (loud 213.6) | FAIL | 293.5 / 358.6 (loud 450.9) | FAIL | - | - | 104.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
 | `M3S3WV` | - | Apollonian Geometree | selfcontained | base | 183.0 / 185.2 | FAIL | 411.5 / 413.3 | FAIL | - | - | 17.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `sXfSR2` | - | Falling through Fractal Snow | selfcontained | base | 167.5 / 185.7 (loud 177.4) | FAIL | 366.7 / 375.6 (loud 378.5) | FAIL | - | - | 593.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `sttXDB` | - | Mandelbrot set plotting | selfcontained | base | 124.4 / 185.8 (loud 198.2) | FAIL | 272.5 / 367.3 (loud 438.5) | FAIL | - | - | 10.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `ttcBWH` | #468 | Explore Sierpinski gasket | selfcontained | base | 144.9 / 186.4 | FAIL | 290.1 / 391.7 | FAIL | - | - | 37.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `WXVSDK` | - | Ray Marching Fractal | selfcontained | base | 154.4 / 186.8 (loud 191.5) | FAIL | 333.8 / 386.5 (loud 410.4) | FAIL | - | - | 355.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `W3GfRR` | #146 | No loop noise clouds | selfcontained | base | 167.5 / 187.4 | FAIL | 376.5 / 421.8 | FAIL | - | - | 14.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3XsXzf` | #385 | Whirl Explained | selfcontained | base | 188.8 / 189.0 | FAIL | 424.0 / 424.2 | FAIL | - | - | 13.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `wff3WH` | - | Mandelbrot and Julia fractals | selfcontained | base | 177.8 / 189.1 (loud 188.0) | FAIL | 405.6 / 424.8 (loud 424.4) | FAIL | - | - | 13.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WXyfDD` | - | Fractal Stroll | selfcontained | base | 187.9 / 189.5 | FAIL | 421.9 / 426.9 | FAIL | - | - | 27.7 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tcyfz3` | - | Faded | selfcontained | base | 189.5 / 189.6 | FAIL | 426.3 / 426.4 | FAIL | - | - | 31.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `4tSSz3` | - | Ray Marched Fractals | selfcontained | base | 156.4 / 189.9 (loud 200.0) | FAIL | 336.7 / 406.7 (loud 429.7) | FAIL | - | - | 274.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wXj3Wt` | #133 | DDA Gem Cruise | needs_texture | base | 88.3 / 190.8 | FAIL | 198.7 / 425.1 | FAIL | - | - | 114.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WldSRn` | #419 | 002-Blue | selfcontained | base | 173.5 / 190.8 | FAIL | 399.9 / 417.7 | FAIL | - | - | 20.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `XctSz8` | #279 | GM Shaders: Voxels | selfcontained | base | 181.5 / 192.3 | FAIL | 412.3 / 430.2 | FAIL | - | - | 26.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -571,10 +922,17 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `tXyGWV` | - | Scale Swirl | selfcontained | base | 195.7 / 196.1 | FAIL | 440.1 / 440.7 | FAIL | - | - | 15.8 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `w3jGDy` | - | Glitchy Thoughts | needs_texture | base | 62.5 / 196.4 | FAIL | 159.7 / 439.5 | FAIL | - | - | 104.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tct3Rf` | #530 | Laser Dance [272] | selfcontained | base | 196.6 / 197.1 | FAIL | 442.7 / 443.6 | FAIL | - | - | 15.7 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `wd3fzl` | - | ps_Menger'sBrocolli | selfcontained | base | 174.0 / 197.9 (loud 201.7) | FAIL | 371.9 / 376.8 (loud 435.4) | FAIL | - | - | 45.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `Ntt3z7` | - | Fractal flash | selfcontained | base | 187.2 / 198.0 (loud 206.0) | FAIL | 416.7 / 440.0 (loud 442.6) | FAIL | - | - | 11.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `llj3Rz` | #431 | [NV15] Space Curvature | needs_texture | base | 195.5 / 198.1 | FAIL | 430.4 / 437.6 | FAIL | - | - | 816.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ltGSWz` | - | Menger Sponge Distort-hhhzzzsss | selfcontained | base | 137.5 / 198.1 (loud 224.0) | FAIL | 289.2 / 377.9 (loud 430.2) | FAIL | - | - | 1071.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
+| `lsVSRR` | - | Barnsley's fractal | selfcontained | base | 25.6 / 198.3 (loud 198.5) | FAIL | 51.2 / 441.1 (loud 437.3) | FAIL | - | - | 11.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `sfVXDz` | - | tcial tiktaalik | selfcontained | base | 196.9 / 198.9 (loud 198.8) | FAIL | 441.5 / 448.0 (loud 441.5) | FAIL | - | - | 109.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tX2SR1` | - | Little Dark Wave [211] | selfcontained | base | 197.0 / 198.9 | FAIL | 449.3 / 449.8 | FAIL | - | - | 13.9 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `t3GXDz` | #256 | Bokeh 3 [288] | selfcontained | base | 199.8 / 202.4 | FAIL | 447.0 / 455.5 | FAIL | - | - | 14.0 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `sXy3Ww` | - | Explode! | selfcontained | base | 202.1 / 202.4 (loud 202.3) | FAIL | 454.2 / 454.9 (loud 454.5) | FAIL | - | - | 42.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wttXDl` | #451 | Palace of Mind | selfcontained | base | 177.7 / 203.1 | FAIL | 338.3 / 423.2 | FAIL | - | - | 171.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `l32BWW` | - | Raymarched Mandelbulb 3D Fractal | selfcontained | base | 168.8 / 204.8 (loud 218.9) | FAIL | 362.6 / 429.2 (loud 463.8) | FAIL | - | - | 118.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3XXGRB` | #143 | Nightmare Hall | selfcontained | base | 181.5 / 205.5 | FAIL | 412.3 / 444.2 | FAIL | - | - | 31.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `33sXW8` | #160 | Mengled | needs_texture | base | 190.0 / 205.7 | FAIL | 423.2 / 441.1 | FAIL | - | - | 880.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `ttXXzN` | #473 | nPrism | selfcontained | base | 204.5 / 205.8 | FAIL | 460.6 / 464.0 | FAIL | - | - | 81.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -583,10 +941,17 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `mlVcW1` | #400 | Truch [333] | selfcontained | base | 207.3 / 208.0 | FAIL | 467.0 / 467.7 | FAIL | - | - | 20.7 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `sd3czM` | #493 | The Typist | needs_texture | base | 209.6 / 209.8 | FAIL | 471.3 / 471.5 | FAIL | - | - | 21.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wXjBRy` | #131 | 🦇 Nocturnal Flight 🦇 [349] | selfcontained | base | 209.4 / 209.9 | FAIL | 470.8 / 471.5 | FAIL | - | - | 15.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `l3GBD1` | - | Prismatic Fractals | selfcontained | base | 210.4 / 210.6 (loud 210.5) | FAIL | 473.4 / 474.0 (loud 473.9) | FAIL | - | - | 53.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3d3BWH` | - | Mandelbrot experiment | selfcontained | base | 109.5 / 211.3 (loud 272.9) | FAIL | 209.4 / 613.0 (loud 356.4) | FAIL | - | - | 21.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7cGGDh` | - | Aurora Julia | selfcontained | base | 139.7 / 211.5 (loud 221.2) | FAIL | 295.9 / 402.5 (loud 502.3) | FAIL | - | - | 72.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tX3GRB` | #063 | Super Sphere Structure | selfcontained | base | 212.7 / 213.1 | FAIL | 478.2 / 479.0 | FAIL | - | - | 19.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `msyyzw` | - | fractal croissant | selfcontained | base | 178.2 / 213.7 (loud 230.6) | FAIL | 389.3 / 474.5 (loud 519.0) | FAIL | - | - | 458.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `33KBRG` | - | Day14-ever | selfcontained | base | 198.6 / 215.2 (loud 201.0) | FAIL | 395.7 / 426.1 (loud 408.8) | FAIL | - | - | 52.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
 | `tcccDs` | - | Cylinder Terrain | selfcontained | base | 216.7 / 217.2 | FAIL | 487.4 / 487.5 | FAIL | - | - | 20.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WtKSzt` | #450 | MONSTER | selfcontained | base | 217.0 / 217.6 | FAIL | 489.1 / 489.4 | FAIL | - | - | 29.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `lsfGWr` | - | tet | selfcontained | base | 206.6 / 218.2 | FAIL | 456.8 / 475.5 | FAIL | - | - | 110.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `73BSzc` | - | Dhanurasana | selfcontained | base | 186.9 / 219.1 (loud 260.0) | FAIL | 416.0 / 494.7 (loud 567.5) | FAIL | - | - | 171.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `wssyDs` | - | Kaleidoscopic Fractal | selfcontained | base | 195.6 / 219.6 (loud 228.6) | FAIL | 415.9 / 476.0 (loud 491.5) | FAIL | - | - | 658.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WcdSz2` | #284 | Volumetric: Clouds | selfcontained | base | 218.9 / 220.5 | FAIL | 492.4 / 494.2 | FAIL | - | - | 20.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tXtGDN` | - | Super Sphere Bore | selfcontained | base | 219.7 / 220.6 | FAIL | 494.4 / 494.7 | FAIL | - | - | 20.0 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `mlKyRK` | #296 | Passage [320] | selfcontained | base | 220.3 / 220.8 | FAIL | 494.6 / 497.0 | FAIL | - | - | 21.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -595,35 +960,40 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `wfcSDn` | #387 | Amorphis Flight | needs_texture | base | 221.4 / 222.2 | FAIL | 496.9 / 497.2 | FAIL | - | - | 309.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `fdcyR7` | #225 | Orbital [311 chars] | selfcontained | base | 222.6 / 223.8 | FAIL | 500.1 / 500.6 | FAIL | - | - | 8.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `t32BRw` | #035 | Gem Pool | selfcontained | base | 223.6 / 223.9 | FAIL | 503.0 / 503.9 | FAIL | - | - | 17.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
-| `XslGRr` | #617 | Clouds | needs_texture | base | 219.0 / 224.9 | FAIL | 482.9 / 494.7 | FAIL | - | - | 319.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wflGWj` | - | Crystal Cave 🔮 | selfcontained | base | 200.5 / 225.4 | FAIL | 458.3 / 492.9 | FAIL | - | - | 63.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `XslGRr` | #617 | Clouds | needs_texture | base | 220.5 / 226.5 (loud 227.7) | FAIL | 485.1 / 497.4 (loud 497.8) | FAIL | - | - | 305.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
 | `tfc3DX` | #021 | Glass Fractal Flight | selfcontained | base | 226.2 / 226.6 | FAIL | 505.6 / 508.5 | FAIL | - | - | 18.5 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `sdSSzz` | - | Crystal skull | selfcontained | base | 226.0 / 228.7 | FAIL | 509.5 / 514.5 | FAIL | - | - | 292.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `332XRK` | #033 | Color Swirl [265]->[253] | selfcontained | base | 228.5 / 228.7 | FAIL | 513.5 / 514.2 | FAIL | - | - | 13.6 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `4tjSDt` | #670 | Warp Speed 2 | selfcontained | base | 228.9 / 229.0 | FAIL | 514.8 / 515.1 | FAIL | - | - | 23.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `Wf3GzS` | #383 | Bitwise [256] | selfcontained | base | 229.1 / 229.2 | FAIL | 515.8 / 516.1 | FAIL | - | - | 15.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `XfcyDn` | - | Interaktive Mandelbulb3D Fractal | selfcontained | base | 191.4 / 229.6 (loud 256.7) | FAIL | 406.2 / 492.8 (loud 544.7) | FAIL | - | - | 194.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `W3SXWy` | #197 | Clouds [266] | selfcontained | base | 229.8 / 229.9 | FAIL | 516.8 / 516.9 | FAIL | - | - | 14.6 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wfVczW` | #264 | Chill Runes Cave | selfcontained | base | 230.0 / 230.1 | FAIL | 517.7 / 517.9 | FAIL | - | - | 28.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
-| `Dl23zV` | #337 | Corruption [197 Chars] | needs_texture | tex | 228.5 / 230.2 | FAIL | 513.4 / 515.5 | FAIL | - | - | 12.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WXfXWr` | #167 | Metal Fractal Flight | needs_texture | base | 195.7 / 230.8 | FAIL | 430.2 / 499.1 | FAIL | - | - | 504.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `Dl23zV` | #337 | Corruption [197 Chars] | needs_texture | base | 228.7 / 230.9 (loud 229.0) | FAIL | 516.2 / 521.8 (loud 516.4) | FAIL | - | - | 12.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `X32Xzd` | - | Exploring Depths of Mandelbrot | selfcontained | base | 214.8 / 231.0 (loud 230.1) | FAIL | 481.1 / 519.6 (loud 507.5) | FAIL | - | - | 14.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3XXSWS` | #485 | 3D Fire [340] | selfcontained | base | 230.7 / 231.1 | FAIL | 519.2 / 519.3 | FAIL | - | - | 19.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `w3BSzR` | - | XRO 240 | selfcontained | base | 229.5 / 231.2 | FAIL | 513.4 / 516.8 | FAIL | - | - | 17.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `fflXWH` | - | Wand | selfcontained | base | 231.5 / 231.7 | FAIL | 520.6 / 521.1 | FAIL | - | - | 15.8 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tlVGDt` | #607 | Octagrams | selfcontained | base | 228.0 / 232.3 | FAIL | 516.6 / 535.9 | FAIL | - | - | 22.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WXB3zR` | - | Neuronix Mainframe v1.337 | selfcontained | base | 214.1 / 234.5 | FAIL | 475.2 / 529.2 | FAIL | - | - | 57.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3XtBDj` | - | angels | selfcontained | base | 219.4 / 234.7 (loud 233.0) | FAIL | 486.1 / 519.8 (loud 515.0) | FAIL | - | - | 612.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `XfyXRV` | #621 | Let's self reflect | selfcontained | base | 185.7 / 235.8 | FAIL | 394.7 / 510.4 | FAIL | - | - | 1000.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `4tjGRh` | #564 | Planet Shadertoy | selfcontained | base | 117.5 / 237.2 | FAIL | 267.2 / 533.1 | FAIL | - | - | 12634.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `w3XSDS` | #399 | Fusion Explained | selfcontained | base | 235.7 / 237.4 | FAIL | 529.8 / 530.8 | FAIL | - | - | 19.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WXVGRG` | #201 | Apollo Spiral | selfcontained | base | 237.6 / 238.7 | FAIL | 532.2 / 534.7 | FAIL | - | - | 22.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wc3fzl` | - | Coffee Gyroid | selfcontained | base | 238.4 / 238.9 | FAIL | 537.1 / 538.2 | FAIL | - | - | 29.4 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3ft3DS` | - | Star Field Flight [351] | selfcontained | base | 238.6 / 239.1 | FAIL | 536.9 / 537.1 | FAIL | - | - | 15.6 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `wdXcWH` | - | simple mandelbr0t | selfcontained | base | 228.1 / 239.6 (loud 251.4) | FAIL | 510.0 / 539.2 (loud 564.4) | FAIL | - | - | 12.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wXVyWc` | #056 | Painted Gyroid (mouse look) | selfcontained | base | 239.7 / 240.0 | FAIL | 539.2 / 539.4 | FAIL | - | - | 24.5 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `t33czn` | #224 | Stairs [214] | selfcontained | base | 240.5 / 240.9 | FAIL | 540.6 / 541.3 | FAIL | - | - | 18.8 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3XyBWt` | - | smol menger [385] | selfcontained | base | 241.7 / 241.8 | FAIL | 543.7 / 543.9 | FAIL | - | - | 16.1 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `7cX3zS` | - | Schwarz Reflect | selfcontained | base | 242.3 / 242.3 | FAIL | 545.2 / 545.2 | FAIL | - | - | 30.1 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3Xd3RX` | - | Bubble Float | needs_texture | base | 244.7 / 244.7 | FAIL | 549.1 / 549.1 | FAIL | - | - | 17.7 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `l3GcWR` | - | [phreax] genuary 2025 #3 | selfcontained | base | 244.9 / 245.1 (loud 245.1) | FAIL | 550.7 / 551.0 (loud 551.0) | FAIL | - | - | 25.4 | black, flat | over budget at 720p/1080p; not yet measured at 540p/360p; black_when_loud |
 | `wXyyD3` | - | Reflecterizer | selfcontained | base | 245.5 / 245.8 | FAIL | 552.2 / 552.8 | FAIL | - | - | 23.0 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
-| `7dGSDy` | #330 | Blackhole Golf 2 | needs_texture | tex | 247.2 / 247.3 | FAIL | 555.9 / 556.0 | FAIL | - | - | 18.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7dGSDy` | #330 | Blackhole Golf 2 | needs_texture | base | 247.1 / 247.3 (loud 247.4) | FAIL | 555.7 / 555.9 (loud 556.0) | FAIL | - | - | 23.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `33VyzR` | - | Node 38347 | selfcontained | base | 247.3 / 248.4 | FAIL | 556.8 / 560.6 | FAIL | - | - | 30.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `Xs2GDK` | - | Kali3d2 | selfcontained | base | 227.2 / 250.1 | FAIL | 493.6 / 545.9 | FAIL | - | - | 340.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WX3SD7` | #048 | Light Hall | selfcontained | base | 249.8 / 250.3 | FAIL | 562.8 / 562.9 | FAIL | - | - | 25.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -631,13 +1001,14 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `3XsXRX` | - | Looking Back | needs_texture | base | 228.5 / 251.5 | FAIL | 515.0 / 564.4 | FAIL | - | - | 499.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wffXz8` | #029 | The Projector | selfcontained | base | 241.4 / 255.4 | FAIL | 541.5 / 553.3 | FAIL | - | - | 32.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wXyGDR` | #241 | Droplets [313] | selfcontained | base | 255.2 / 255.4 | FAIL | 573.6 / 574.0 | FAIL | - | - | 25.0 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `WclSDH` | - | Sp00ky Fractal Bone | selfcontained | base | 240.5 / 255.7 (loud 277.8) | FAIL | 533.0 / 562.7 (loud 592.7) | FAIL | - | - | 51.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `MtcfWf` | - | Mandelbrot Zoom (512 Iterations) | selfcontained | base | 212.0 / 258.3 | FAIL | 457.4 / 579.1 | FAIL | - | - | 10.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wfGSz3` | #026 | Funky Gyroid Color Field | needs_texture | base | 258.8 / 259.1 | FAIL | 581.0 / 581.1 | FAIL | - | - | 20.1 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `W3Gyzm` | #151 | Gyroid+Turbulence Comments | selfcontained | base | 259.3 / 259.5 | FAIL | 583.7 / 584.1 | FAIL | - | - | 16.1 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `4l23zc` | - | Heartwing Angel | selfcontained | base | 258.4 / 259.6 | FAIL | 580.3 / 582.4 | FAIL | - | - | 50.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tclfW7` | - | Nil | selfcontained | base | 259.5 / 260.4 | FAIL | 583.5 / 585.3 | FAIL | - | - | 22.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
-| `fsKSzc` | #283 | Blackhole Golf | needs_texture | tex | 260.0 / 260.5 | FAIL | 584.7 / 585.3 | FAIL | - | - | 16.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tXySzR` | - | Cellular Tile Cave | needs_texture | base | 259.4 / 260.7 | FAIL | 583.2 / 587.4 | FAIL | - | - | 490.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `fsKSzc` | #283 | Blackhole Golf | needs_texture | base | 261.7 / 262.0 (loud 262.0) | FAIL | 588.5 / 589.1 (loud 589.1) | FAIL | - | - | 15.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3XtGzN` | #390 | Gamma [312] | selfcontained | base | 263.4 / 263.4 | FAIL | 592.5 / 592.6 | FAIL | - | - | 37.5 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tfyfzW` | - | Chill Hell Cruise | needs_texture | base | 263.4 / 263.5 | FAIL | 592.8 / 592.9 | FAIL | - | - | 125.1 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `Ds2GWd` | #220 | 1-Loop Fractal [210 Chars] | selfcontained | base | 265.1 / 265.5 | FAIL | 596.4 / 596.6 | FAIL | - | - | 11.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -646,17 +1017,26 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `tcdyRN` | - | Menger Soup | needs_texture | base | 266.8 / 266.9 | FAIL | 598.9 / 598.9 | FAIL | - | - | 30.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `X3Vfz3` | - | star way 2 | selfcontained | base | 268.9 / 268.9 | FAIL | 605.0 / 605.1 | FAIL | - | - | 261.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `lllGR2` | - | Orbit Fractals | selfcontained | base | 251.3 / 269.1 | FAIL | 569.5 / 610.8 | FAIL | - | - | 83.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `tfVXWh` | - | stars search | needs_texture | base | 267.9 / 269.5 (loud 270.8) | FAIL | 604.3 / 606.6 (loud 605.5) | FAIL | - | - | 1590.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `tlB3W1` | - | recursivesd | selfcontained | base | 225.5 / 270.4 (loud 284.1) | FAIL | 551.0 / 589.7 (loud 520.6) | FAIL | - | - | 546.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wXdyDs` | - | RAX Cruise | selfcontained | base | 239.1 / 271.5 | FAIL | 540.2 / 605.5 | FAIL | - | - | 59.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `scjGR3` | - | iabs fractal | selfcontained | base | 205.0 / 271.7 (loud 308.7) | FAIL | 457.9 / 612.0 (loud 700.8) | FAIL | - | - | 12.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `73jXR3` | - | Aura Farm | selfcontained | base | 231.2 / 272.4 (loud 310.9) | FAIL | 516.9 / 613.9 (loud 695.0) | FAIL | - | - | 176.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `W3jGRW` | - | Mindphaser | selfcontained | base | 249.9 / 272.5 | FAIL | 553.7 / 572.6 | FAIL | - | - | 99.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3tsSWN` | - | 3D Julia Set Slow Loader | selfcontained | base | 173.7 / 273.5 (loud 254.0) | FAIL | 441.5 / 586.8 (loud 386.8) | FAIL | - | - | 57.8 | black | over budget at 720p/1080p; not yet measured at 540p/360p; black_when_loud |
 | `4dfGzs` | #659 | Voxel Edges | needs_texture | base | 240.2 / 273.9 | FAIL | 533.5 / 588.6 | FAIL | - | - | 1674.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tXBGWm` | #134 | Wormhole Soup | needs_texture | base | 252.2 / 273.9 | FAIL | 509.2 / 610.4 | FAIL | - | - | 234.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `DsKcRy` | #471 | CyberPunk | selfcontained | base | 212.9 / 274.0 | FAIL | 449.6 / 599.4 | FAIL | - | - | 166.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WfVGRK` | - | nibblez n' bitz | selfcontained | base | 274.5 / 274.6 | FAIL | 617.6 / 617.8 | FAIL | - | - | 16.7 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WcV3Dt` | #175 | Dream Entity #8474 | selfcontained | base | 275.4 / 276.0 | FAIL | 620.2 / 621.7 | FAIL | - | - | 15.5 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `MXSyzy` | - | Mandelbrot zoom (-0.7746,0.1374) | selfcontained | base | 138.1 / 277.0 (loud 271.9) | FAIL | 241.7 / 621.4 (loud 611.0) | FAIL | - | - | 12.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ftlXzn` | - | Greeble Experiment | selfcontained | base | 233.8 / 277.7 (loud 288.5) | FAIL | 505.8 / 594.0 (loud 613.0) | FAIL | - | - | 821.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3XccWl` | - | RAX | selfcontained | base | 246.6 / 278.2 | FAIL | 558.0 / 626.2 | FAIL | - | - | 26.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tXdczs` | - | Glow Fall | selfcontained | base | 278.2 / 278.5 | FAIL | 625.3 / 626.1 | FAIL | - | - | 30.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `WsBSzm` | - | Spiderweb Fractal | selfcontained | base | 278.6 / 278.8 (loud 278.8) | FAIL | 626.1 / 626.2 (loud 626.7) | FAIL | - | - | 18.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `sXS3Dw` | - | Try And Untie | selfcontained | base | 280.9 / 280.9 | FAIL | 632.0 / 632.0 | FAIL | - | - | 261.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `33dcD8` | - | Mengeroids Mouse-look | selfcontained | base | 281.5 / 281.6 | FAIL | 633.0 / 633.2 | FAIL | - | - | 34.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ssKcWW` | - | Fractal Tower | needs_texture | base | 247.6 / 281.7 (loud 270.3) | FAIL | 559.6 / 612.0 (loud 559.6) | FAIL | - | - | 233.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `33dcz4` | - | Menger Root Ruins | needs_texture | base | 282.1 / 282.2 | FAIL | 634.2 / 634.5 | FAIL | - | - | 168.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WfjSWD` | #047 | Gem Flight | selfcontained | base | 282.1 / 282.9 | FAIL | 630.6 / 631.5 | FAIL | - | - | 26.5 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wfjczc` | #094 | Light Streamers | needs_texture | base | 284.6 / 284.8 | FAIL | 638.6 / 638.8 | FAIL | - | - | 19.5 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -664,22 +1044,34 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `3cKcR1` | - | Bitflip Pond Flight | selfcontained | base | 242.4 / 286.1 | FAIL | 545.7 / 643.7 | FAIL | - | - | 20.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `w3tXWM` | #037 | Calm Apollo | needs_texture | base | 223.4 / 286.7 | FAIL | 480.5 / 577.3 | FAIL | - | - | 350.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `w3GGz1` | #090 | nop sled | selfcontained | base | 255.0 / 287.5 | FAIL | 577.1 / 647.8 | FAIL | - | - | 15.8 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ftsyDl` | - | Fractal 2D Boze | selfcontained | base | 120.5 / 289.1 (loud 310.8) | FAIL | 272.4 / 604.9 (loud 352.7) | FAIL | - | - | 106.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `NclSW4` | - | gaz test tunnel | needs_texture | base | 279.8 / 289.4 | FAIL | 605.0 / 632.0 | FAIL | - | - | 89.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `4fjGzR` | - | phind: test2 | selfcontained | base | 263.7 / 290.9 (loud 312.4) | FAIL | 579.1 / 635.3 (loud 683.3) | FAIL | - | - | 32.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `7XVGWy` | #576 | Demoscene effects museum | selfcontained | base | 10.2 / 291.8 | FAIL | 22.4 / 651.1 | FAIL | - | - | 2411.1 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `fdcyDN` | - | KIFS_001 | selfcontained | base | 230.5 / 295.2 (loud 314.3) | FAIL | 499.4 / 555.8 (loud 578.7) | FAIL | - | - | 1317.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WfSyWy` | - | Wavelights | selfcontained | base | 294.6 / 295.2 | FAIL | 660.2 / 660.9 | FAIL | - | - | 17.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `7dsBRB` | #298 | Molten Cube [287 chars] | selfcontained | base | 295.3 / 295.8 | FAIL | 663.8 / 664.9 | FAIL | - | - | 17.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WtlXW7` | - | Toxic fractal | selfcontained | base | 262.8 / 296.0 | FAIL | 586.1 / 643.2 | FAIL | - | - | 283.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wl3fR7` | - | Slicing a 4D apollian | selfcontained | base | 162.6 / 297.0 | FAIL | 346.2 / 644.5 | FAIL | - | - | 514.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `WdSyDK` | - | Julia ensemble visualiser | selfcontained | base | 226.2 / 297.5 (loud 342.8) | FAIL | 501.0 / 672.9 (loud 775.9) | FAIL | - | - | 9.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `wl3yDN` | - | ray marching color | selfcontained | base | 237.5 / 300.0 (loud 253.1) | FAIL | 511.6 / 589.6 (loud 549.3) | FAIL | - | - | 71.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `tdcfRl` | - | ps_Menger'sMushroom | selfcontained | base | 251.9 / 302.1 (loud 325.3) | FAIL | 557.3 / 640.8 (loud 679.6) | FAIL | - | - | 37.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `sldXD2` | - | Fork Menger Sponge | selfcontained | base | 203.5 / 302.1 | FAIL | 427.8 / 643.1 | FAIL | - | - | 580.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `fssBDX` | #364 | Voxel Canyon [416] | needs_texture | base | 244.4 / 302.3 | FAIL | 558.5 / 693.2 | FAIL | - | - | 17.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `WlcyDS` | - | Kaleidoscopic IFS RayMarching | selfcontained | base | 247.9 / 303.6 (loud 300.1) | FAIL | 573.2 / 662.2 (loud 637.0) | FAIL | - | - | 117.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tcySD1` | - | SpecterHall | selfcontained | base | 303.1 / 303.7 | FAIL | 681.9 / 682.7 | FAIL | - | - | 20.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `4dfcz4` | - | Fractals: Mandelbrot, Orbits | selfcontained | base | 225.2 / 303.9 | FAIL | 493.4 / 672.5 | FAIL | - | - | 22.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tfByzt` | #182 | Down | selfcontained | base | 307.3 / 307.5 | FAIL | 689.4 / 691.9 | FAIL | - | - | 18.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `XXGBzK` | - | fractalic move | selfcontained | base | 238.1 / 307.9 (loud 281.4) | FAIL | 531.8 / 587.4 (loud 547.1) | FAIL | - | - | 21.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `w3dcDj` | - | Glow Run | selfcontained | base | 308.4 / 308.7 | FAIL | 694.2 / 694.3 | FAIL | - | - | 30.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `W3cyDX` | - | Simple perturbation for fractals | selfcontained | base | 261.8 / 309.0 (loud 301.1) | FAIL | 612.6 / 690.0 (loud 673.3) | FAIL | - | - | 23.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `lsBSWm` | - | Waterworld | needs_texture | base | 304.5 / 309.6 | FAIL | 673.4 / 679.4 | FAIL | - | - | 5667.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3cfXRM` | #024 | Fractal Skimmer | selfcontained | base | 261.2 / 310.4 | FAIL | 610.7 / 691.7 | FAIL | - | - | 114.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `dt2cWR` | - | sinh() frac | selfcontained | base | 310.4 / 310.7 (loud 310.7) | FAIL | 697.2 / 698.9 (loud 698.9) | FAIL | - | - | 42.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `NfcSzM` | - | not your dog's toy | selfcontained | base | 263.5 / 311.2 (loud 320.7) | FAIL | 426.5 / 571.5 (loud 478.0) | FAIL | - | - | 531.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `w3GGWV` | #102 | smoke [282] | selfcontained | base | 311.1 / 311.4 | FAIL | 699.7 / 700.1 | FAIL | - | - | 14.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3ltBD8` | #457 | Treasure | selfcontained | base | 274.5 / 314.4 | FAIL | 601.2 / 635.8 | FAIL | - | - | 80.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `MfsyDM` | - | Psychedelic Ray Marching | selfcontained | base | 314.1 / 315.0 (loud 315.0) | FAIL | 706.3 / 708.4 (loud 707.3) | FAIL | - | - | 38.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3Xd3zs` | #040 | Happy Bubble Cruise | needs_texture | base | 317.3 / 317.5 | FAIL | 712.3 / 712.5 | FAIL | - | - | 51.4 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `Wl3BRH` | #477 | Simple Menger Hall | selfcontained | base | 287.3 / 318.6 | FAIL | 621.2 / 637.4 | FAIL | - | - | 134.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tX2GRz` | - | Fractal Bore | selfcontained | base | 308.0 / 319.2 | FAIL | 651.4 / 694.0 | FAIL | - | - | 19.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -692,20 +1084,26 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `t3cGW4` | - | super sugar drops | selfcontained | base | 322.7 / 323.6 | FAIL | 726.2 / 734.4 | FAIL | - | - | 18.1 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `7cjSWy` | - | Oppose | selfcontained | base | 89.3 / 325.0 | FAIL | 187.0 / 725.8 | FAIL | - | - | 17.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tcScWy` | - | Wood Texture 42 | selfcontained | base | 301.5 / 325.2 | FAIL | 653.5 / 675.7 | FAIL | - | - | 39.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `tstcD7` | - | Fractal Sky #2 | selfcontained | base | 244.7 / 325.8 (loud 365.3) | FAIL | 520.1 / 694.5 (loud 784.7) | FAIL | - | - | 64.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tfVSRm` | - | Ivy Ethereal | selfcontained | base | 325.2 / 325.9 | FAIL | 731.5 / 732.3 | FAIL | - | - | 17.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `MllGzB` | - | Evolving Julia | selfcontained | base | 39.7 / 326.7 (loud 424.0) | FAIL | 82.6 / 873.6 (loud 950.5) | FAIL | - | - | 11.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `w3dSzs` | #079 | Big Boom | selfcontained | base | 290.7 / 327.6 | FAIL | 652.3 / 738.7 | FAIL | - | - | 17.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `lsfXWN` | - | Fractals exploring | selfcontained | base | 130.3 / 329.0 (loud 296.8) | FAIL | 289.1 / 516.8 (loud 665.6) | FAIL | - | - | 17.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `Mdd3D2` | - | Untitled 06 | selfcontained | base | 321.4 / 329.7 (loud 321.2) | FAIL | 705.8 / 707.4 (loud 708.3) | FAIL | - | - | 2287.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `Wcc3z2` | #494 | Waveform [315] | selfcontained | base | 330.5 / 330.8 | FAIL | 744.6 / 744.8 | FAIL | - | - | 14.7 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `W33XDS` | #066 | Flares | selfcontained | base | 294.6 / 331.8 | FAIL | 660.7 / 747.9 | FAIL | - | - | 17.1 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wcsczf` | #049 | Tag Swirl | selfcontained | base | 332.7 / 333.3 | FAIL | 748.3 / 749.3 | FAIL | - | - | 15.4 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wXcyzn` | #212 | Artifacts [223] | selfcontained | base | 333.3 / 333.5 | FAIL | 750.1 / 750.4 | FAIL | - | - | 19.4 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `33jSDc` | #203 | Color Ripples [273] | selfcontained | base | 335.6 / 336.5 | FAIL | 754.7 / 757.7 | FAIL | - | - | 24.6 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tcKfDw` | - | Gyroid Jungle | needs_texture | base | 300.0 / 337.3 | FAIL | 669.4 / 755.3 | FAIL | - | - | 165.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `43Gczy` | - | fractals with selector | selfcontained | base | 290.3 / 338.3 (loud 356.4) | FAIL | 552.9 / 689.1 (loud 669.9) | FAIL | - | - | 69.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `Nt2GDd` | - | Too many eyes | selfcontained | base | 301.4 / 338.6 | FAIL | 605.3 / 729.5 | FAIL | - | - | 2326.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `4dlGWn` | - | Fractals: Mandelbrot | selfcontained | base | 248.7 / 340.0 | FAIL | 550.5 / 755.2 | FAIL | - | - | 14.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `7lBGW3` | - | Gooey KIFS fractal | selfcontained | base | 297.7 / 340.3 | FAIL | 578.9 / 732.5 | FAIL | - | - | 2382.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `fslGR8` | - | Ray Marching Fractals | selfcontained | base | 330.0 / 340.6 | FAIL | 730.1 / 741.7 | FAIL | - | - | 435.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3Xs3Rf` | #141 | Small Strange Cave | needs_texture | base | 220.2 / 341.9 | FAIL | 491.6 / 757.6 | FAIL | - | - | 148.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `W3SXRV` | #362 | Cloud Compute [272] | selfcontained | base | 341.5 / 342.4 | FAIL | 768.5 / 769.7 | FAIL | - | - | 16.0 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `43j3DG` | - | Menger Sponge - 3d - cross eyes | selfcontained | base | 242.0 / 342.7 (loud 320.0) | FAIL | 475.7 / 697.0 (loud 594.4) | FAIL | - | - | 589.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WfyczR` | - | Gyroid Flight | needs_texture | base | 295.6 / 344.3 | FAIL | 654.6 / 759.7 | FAIL | - | - | 173.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wflXzS` | - | Frunnel 5: Bio | selfcontained | base | 326.6 / 344.5 | FAIL | 697.5 / 754.2 | FAIL | - | - | 212.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `w32fRw` | #188 | Fire Imp | selfcontained | base | 346.9 / 347.3 | FAIL | 780.3 / 780.9 | FAIL | - | - | 20.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -716,27 +1114,34 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `33lGz4` | - | Little Gem Flight | selfcontained | base | 330.9 / 352.8 | FAIL | 734.0 / 780.1 | FAIL | - | - | 22.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WcsyDM` | #350 | Paradise 3 [325] | selfcontained | base | 353.1 / 353.1 | FAIL | 794.5 / 794.6 | FAIL | - | - | 52.5 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `Xd2XDW` | - | 3d sierpinski triangle | selfcontained | base | 299.8 / 355.4 | FAIL | 657.1 / 756.5 | FAIL | - | - | 24.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `csSfRR` | - | Escape Time Box 2 | selfcontained | base | 40.6 / 356.5 (loud 370.5) | FAIL | 85.9 / 788.9 (loud 799.5) | FAIL | - | - | 33.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
 | `3cfBWB` | - | Holographic Dataplane Transport | selfcontained | base | 358.1 / 358.1 | FAIL | 805.7 / 806.7 | FAIL | - | - | 22.8 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WXdGzn` | #130 | Dawn Flight | selfcontained | base | 358.4 / 358.7 | FAIL | 806.2 / 806.5 | FAIL | - | - | 17.4 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `NfdSDs` | - | Fractal Series-v1 | selfcontained | base | 269.6 / 359.2 (loud 354.7) | FAIL | 670.1 / 803.4 (loud 745.9) | FAIL | - | - | 1661.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `W3dfW4` | #107 | Metal Menger Flight | selfcontained | base | 359.2 / 359.7 | FAIL | 805.6 / 809.5 | FAIL | - | - | 95.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `N3KGzm` | #636 | SURVEY_PROGRAM | selfcontained | base | 360.4 / 360.9 | FAIL | 811.0 / 811.5 | FAIL | - | - | 14.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `7flSWS` | - | Turbulight Tri Tunnel | selfcontained | base | 338.5 / 361.7 | FAIL | 715.7 / 811.2 | FAIL | - | - | 92.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `l323WD` | - | Menger Sponge - 3d | selfcontained | base | 276.8 / 363.7 (loud 315.4) | FAIL | 595.5 / 675.1 (loud 684.6) | FAIL | - | - | 615.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WfccRN` | - | Neon Doodle Fuzz | needs_texture | base | 324.0 / 365.1 | FAIL | 732.3 / 824.6 | FAIL | - | - | 57.9 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `w3S3Dd` | #041 | Megakorp Megaport | needs_texture | base | 248.8 / 367.4 | FAIL | 248.2 / 826.3 | FAIL | - | - | 83.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wcdXWM` | #095 | recv | selfcontained | base | 368.3 / 369.7 | FAIL | 827.5 / 828.7 | FAIL | - | - | 20.7 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wdXcR7` | - | Exploring Mandelbrot | selfcontained | base | 365.9 / 370.6 | FAIL | 815.1 / 826.1 | FAIL | - | - | 19.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
-| `332XWd` | #575 | Undulating Urchin | needs_texture | tex | 370.3 / 370.7 | FAIL | 827.9 / 828.7 | FAIL | - | - | 94.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `332XWd` | #575 | Undulating Urchin | needs_texture | base | 370.7 / 371.3 (loud 369.4) | FAIL | 829.1 / 829.5 (loud 824.5) | FAIL | - | - | 96.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `XXsSR2` | - | Raymarching 4D Mandelbrot | selfcontained | base | 341.9 / 374.3 (loud 430.2) | FAIL | 788.0 / 797.7 (loud 932.4) | FAIL | - | - | 28.5 | flat | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
 | `sX3Xzn` | #667 | Breathing Tiers | selfcontained | base | 294.9 / 374.9 | FAIL | 593.5 / 817.8 | FAIL | - | - | 15402.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
-| `N3KGRd` | #638 | Toon Town | selfcontained | base | 356.2 / 377.4 | FAIL | 763.5 / 808.7 | FAIL | - | - | 489.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `MdycDt` | - | Mandelbrot toying | selfcontained | base | 341.5 / 375.1 (loud 417.7) | FAIL | 762.7 / 838.5 (loud 930.7) | FAIL | - | - | 13.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3ljBDK` | #255 | ENDESGA | selfcontained | base | 343.5 / 377.6 | FAIL | 753.6 / 819.9 | FAIL | - | - | 32.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3cs3zM` | - | Rough Waters | selfcontained | base | 360.4 / 377.9 | FAIL | 739.6 / 809.5 | FAIL | - | - | 162.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `N3KGRd` | #638 | Toon Town | selfcontained | base | 358.6 / 379.1 (loud 394.9) | FAIL | 767.1 / 813.5 (loud 853.6) | FAIL | - | - | 503.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3XtXzX` | #526 | Phosphor 3 [321] | selfcontained | base | 379.8 / 380.3 | FAIL | 855.2 / 855.8 | FAIL | - | - | 26.0 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `WffcWN` | - | sinh() | selfcontained | base | 380.3 / 380.3 (loud 380.3) | FAIL | 855.5 / 855.5 (loud 855.5) | FAIL | - | - | 55.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WXKGRd` | #516 | Phosphor 2 [318] | selfcontained | base | 382.0 / 382.3 | FAIL | 860.3 / 860.3 | FAIL | - | - | 24.9 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tc2SzW` | #142 | Wicked Woods | selfcontained | base | 374.8 / 383.2 | FAIL | 817.2 / 842.3 | FAIL | - | - | 31.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `s3jGDG` | - | Keep Falls | needs_texture | base | 310.4 / 384.2 | FAIL | 683.2 / 820.3 | FAIL | - | - | 94.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `Nct3z2` | - | Machine Below | needs_texture | base | 342.7 / 384.5 | FAIL | 642.7 / 744.5 | FAIL | - | - | 498.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WXV3zt` | #268 | Phosphor [318] | selfcontained | base | 385.5 / 386.0 | FAIL | 868.8 / 869.3 | FAIL | - | - | 25.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3ffcD8` | #169 | 0xff0000 | selfcontained | base | 386.4 / 386.4 | FAIL | 866.1 / 869.3 | FAIL | - | - | 16.9 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `Wclyzj` | - | Loving that sinh() | selfcontained | base | 386.7 / 386.7 (loud 386.7) | FAIL | 869.8 / 869.8 (loud 869.9) | FAIL | - | - | 49.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `t3yXRm` | #068 | Orbs & The Translucent Tunnels | selfcontained | base | 386.1 / 387.2 | FAIL | 870.2 / 870.3 | FAIL | - | - | 51.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `XcXXzS` | #420 | Full Spectrum Cyber | selfcontained | base | 353.4 / 387.4 | FAIL | 771.8 / 787.8 | FAIL | - | - | 1787.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wcG3WK` | - | SpecterGate | selfcontained | base | 387.5 / 387.6 | FAIL | 871.7 / 871.7 | FAIL | - | - | 24.5 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -774,14 +1179,18 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `3fXXzH` | #017 | Fractal Pew Pew | selfcontained | base | 415.4 / 415.7 | FAIL | 931.0 / 933.3 | FAIL | - | - | 29.6 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `w32XDc` | #166 | Color Cloud Tunnels [485] | selfcontained | base | 416.7 / 417.0 | FAIL | 936.6 / 937.5 | FAIL | - | - | 20.9 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `4tdBDn` | - | VR Gasket | selfcontained | base | 404.3 / 417.6 | FAIL | 857.6 / 882.0 | FAIL | - | - | 353.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `M3t3zs` | - | Double and float mandelbrot | selfcontained | base | 359.5 / 418.2 (loud 413.4) | FAIL | 799.7 / 902.0 (loud 932.9) | FAIL | - | - | 56.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tXyGzW` | - | Somewhere Else | selfcontained | base | 417.9 / 418.5 | FAIL | 940.3 / 940.8 | FAIL | - | - | 18.1 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3cXSWr` | #053 | Fractal Skimmer 3 | selfcontained | base | 389.6 / 418.9 | FAIL | 830.2 / 867.8 | FAIL | - | - | 27.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `7X3GRS` | #545 | Coral Reef Y28 | selfcontained | base | 379.4 / 419.4 | FAIL | 827.2 / 919.0 | FAIL | - | - | 17.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wfsSR7` | #055 | Fractal Skimmer 2 | selfcontained | base | 347.6 / 421.9 | FAIL | 773.4 / 914.6 | FAIL | - | - | 26.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `tcVyWc` | - | mandelbrot set :) | selfcontained | base | 219.0 / 422.0 (loud 490.7) | FAIL | 423.5 / 669.9 (loud 1110.3) | FAIL | - | - | 8.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `7clGzs` | - | Schwarz Lines Reflect | selfcontained | base | 419.4 / 423.1 | FAIL | 982.4 / 982.7 | FAIL | - | - | 129.5 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `ft2GR1` | #234 | Exploring Bitspace 2 - 172 chars | selfcontained | base | 268.5 / 423.4 | FAIL | 571.1 / 951.1 | FAIL | - | - | 12.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WfGXWh` | - | Super Moon | selfcontained | base | 424.6 / 424.9 | FAIL | 955.3 / 956.0 | FAIL | - | - | 17.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `M3yfzw` | - | Colina do Sol em LSD | selfcontained | base | 419.8 / 425.0 (loud 420.1) | FAIL | 946.7 / 954.1 (loud 941.4) | FAIL | - | - | 663.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `33B3Rm` | - | Abstract Interference 3 | selfcontained | base | 415.4 / 425.3 | FAIL | 938.7 / 940.7 | FAIL | - | - | 131.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `73K3Rc` | - | Fading Hamsa | selfcontained | base | 417.3 / 426.2 (loud 427.6) | FAIL | 947.6 / 948.1 (loud 962.4) | FAIL | - | - | 496.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `ctKyRz` | #300 | Ring [213] | selfcontained | base | 426.2 / 426.7 | FAIL | 958.9 / 959.0 | FAIL | - | - | 14.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `fXG3Ww` | #557 | Fairy smoke | selfcontained | base | 427.6 / 427.7 | FAIL | 959.9 / 960.6 | FAIL | - | - | 10.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `sflXRS` | - | Blaze | selfcontained | base | 406.7 / 427.9 | FAIL | 934.6 / 952.0 | FAIL | - | - | 605.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -795,9 +1204,12 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `XlSGDc` | - | paxis2 | selfcontained | base | 169.0 / 434.4 | FAIL | 378.1 / 519.6 | FAIL | - | - | 1365.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `sfSSzW` | #140 | Galactic Rift | selfcontained | base | 398.9 / 436.4 | FAIL | 935.1 / 976.3 | FAIL | - | - | 20.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3Xyfzt` | #155 | Steely Menger | selfcontained | base | 438.3 / 438.4 | FAIL | 986.3 / 986.4 | FAIL | - | - | 78.8 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3csSRM` | - | Cosmic Fractal Odyssey | selfcontained | base | 439.2 / 439.5 (loud 439.9) | FAIL | 988.9 / 989.1 (loud 989.1) | FAIL | - | - | 37.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
 | `tXX3RX` | #165 | Tri Cave | selfcontained | base | 308.4 / 439.7 | FAIL | 598.8 / 769.8 | FAIL | - | - | 88.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3XVcWy` | #061 | Kvlt | selfcontained | base | 438.1 / 439.9 | FAIL | 986.1 / 988.3 | FAIL | - | - | 24.5 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `wXjyRm` | - | Breath of Autumn | selfcontained | base | 434.6 / 440.1 (loud 470.2) | FAIL | 967.7 / 981.1 (loud 1059.8) | FAIL | - | - | 19.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tcSyDm` | - | Starfire2 | selfcontained | base | 440.0 / 440.4 | FAIL | 990.1 / 990.3 | FAIL | - | - | 18.6 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `mlSyzD` | - | Bruv the boy mandel made a brot | needs_texture | base | 67.6 / 442.4 (loud 407.1) | FAIL | 150.3 / 865.1 (loud 893.8) | FAIL | - | - | 11.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `W3tSWf` | #060 | Galactic Notes | selfcontained | base | 442.5 / 442.5 | FAIL | 994.6 / 995.6 | FAIL | - | - | 16.0 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `Xtj3Dz` | - | Fractale_ | selfcontained | base | 194.2 / 443.1 | FAIL | 436.0 / 958.0 | FAIL | - | - | 71.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3cBXDD` | - | Thursday Turbo Tunnel | selfcontained | base | 442.9 / 443.4 | FAIL | 996.7 / 997.4 | FAIL | - | - | 28.1 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -805,6 +1217,7 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `tXGXDK` | #380 | Siri [327] | selfcontained | base | 443.8 / 446.0 | FAIL | 999.5 / 999.5 | FAIL | - | - | 17.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `N3dSRn` | #652 | Colorful Blobs | selfcontained | base | 446.4 / 447.4 | FAIL | 1003.0 / 1006.5 | FAIL | - | - | 165.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `DltcWf` | #258 | Weave [207] | selfcontained | base | 238.3 / 448.6 | FAIL | 598.0 / 1009.4 | FAIL | - | - | 11.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `f3jGzy` | - | 3D fractal party | selfcontained | base | 436.8 / 449.4 (loud 444.2) | FAIL | 945.0 / 959.3 (loud 939.4) | FAIL | - | - | 206.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `w3ySDK` | #391 | Deathstar [338] | selfcontained | base | 448.1 / 449.4 | FAIL | 1021.1 / 1021.4 | FAIL | - | - | 25.5 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `W3tczj` | - | Tri Turb Spin | needs_texture | base | 449.5 / 449.6 | FAIL | 1008.6 / 1008.8 | FAIL | - | - | 33.6 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `7cB3zD` | - | Hyperfloat | selfcontained | base | 447.5 / 449.6 | FAIL | 1007.0 / 1007.9 | FAIL | - | - | 227.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -815,6 +1228,7 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `7tVSDh` | #509 | Little Fibonacci Sphere | selfcontained | base | 449.7 / 453.2 | FAIL | 1016.5 / 1019.8 | FAIL | - | - | 12.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3lsSzf` | #661 | Happy Jumping | selfcontained | lite | 405.1 / 453.2 | FAIL | 885.0 / 896.3 | FAIL | - | - | 3260.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tfdGRf` | #120 | Sun [269] | selfcontained | base | 454.5 / 455.2 | FAIL | 1020.9 / 1021.4 | FAIL | - | - | 19.7 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3lGfzc` | - | Ultraviolet Fractal | selfcontained | base | 439.9 / 456.2 (loud 456.0) | FAIL | 995.1 / 1025.3 (loud 1025.5) | FAIL | - | - | 38.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3XcyRr` | #042 | Some Place Nice | needs_texture | base | 456.3 / 456.4 | FAIL | 1023.8 / 1023.8 | FAIL | - | - | 23.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3fdXzf` | #052 | data vortex | selfcontained | base | 456.6 / 456.7 | FAIL | 1026.9 / 1027.1 | FAIL | - | - | 20.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tXjBDc` | - | Apollo Fire Smoke | selfcontained | base | 456.4 / 457.1 | FAIL | 1026.9 / 1029.2 | FAIL | - | - | 19.5 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -825,6 +1239,7 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `W3y3R3` | #025 | Cyclops Tunnel | needs_texture | base | 460.6 / 460.7 | FAIL | 1033.9 / 1034.0 | FAIL | - | - | 21.8 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `332XW3` | - | Electric Fog Tunnel | selfcontained | base | 462.4 / 463.9 | FAIL | 1038.4 / 1038.7 | FAIL | - | - | 28.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wX2Gzy` | - | DDA Testing | selfcontained | base | 323.7 / 463.9 | FAIL | 546.0 / 739.5 | FAIL | - | - | 59.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `M3ffRs` | - | Quantum Entanglement Operator | selfcontained | base | 337.4 / 465.6 (loud 434.1) | FAIL | 767.4 / 860.5 (loud 971.6) | FAIL | - | - | 18.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `ltyBRz` | - | fractal experiment | selfcontained | base | 371.4 / 465.7 | FAIL | 417.9 / 1037.0 | FAIL | - | - | 51.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tcfXzH` | #030 | Banisters | selfcontained | base | 443.2 / 466.6 | FAIL | 1005.9 / 1021.0 | FAIL | - | - | 37.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wfSczV` | #046 | Gravity Orb | selfcontained | base | 467.9 / 468.0 | FAIL | 1052.7 / 1052.7 | FAIL | - | - | 19.4 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -848,13 +1263,17 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `tcGyDz` | #144 | Enter the Flower | needs_texture | base | 487.5 / 488.3 | FAIL | 1095.2 / 1095.4 | FAIL | - | - | 48.9 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `w3tGWS` | - | Slumber | selfcontained | base | 477.0 / 490.4 | FAIL | 1067.5 / 1092.7 | FAIL | - | - | 17.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wXSfzt` | #034 | Drum & Bass Cruise | needs_texture | base | 490.9 / 492.1 | FAIL | 1102.4 / 1102.7 | FAIL | - | - | 47.9 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `sXBXWG` | - | Enlightenment | selfcontained | base | 425.7 / 493.1 (loud 547.9) | FAIL | 955.7 / 1067.7 (loud 1235.5) | FAIL | - | - | 340.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3ccyD7` | #447 | Happy Glow Cruise | selfcontained | base | 406.8 / 494.1 | FAIL | 925.1 / 1091.9 | FAIL | - | - | 34.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3X3fRj` | - | Chonky Gyroid | selfcontained | base | 435.8 / 494.9 | FAIL | 1003.0 / 1109.3 | FAIL | - | - | 77.5 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3clBW2` | - | Dream Entity #894 | selfcontained | base | 495.0 / 495.1 | FAIL | 1111.3 / 1114.4 | FAIL | - | - | 18.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3dcBD8` | - | cohomology fractals | selfcontained | base | 466.1 / 498.9 | FAIL | 1042.2 / 1114.5 | FAIL | - | - | 301.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wXSXzV` | #273 | Nebula 3 [299] | selfcontained | base | 499.2 / 499.8 | FAIL | 1121.7 / 1124.3 | FAIL | - | - | 17.0 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3Xl3Rl` | - | Twists Tri Tunnel Terrain | selfcontained | base | 398.8 / 500.2 | FAIL | 946.2 / 970.0 | FAIL | - | - | 147.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `dlXSDS` | - | 3Dfractals | selfcontained | base | 444.4 / 501.9 (loud 518.7) | FAIL | 945.8 / 1038.0 (loud 1084.6) | FAIL | - | - | 24.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `MdX3zr` | #660 | Flame | selfcontained | base | 499.2 / 504.3 | FAIL | 1119.2 / 1134.4 | FAIL | - | - | 83.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7XB3DD` | - | 8 bit forest | selfcontained | base | 494.5 / 504.5 (loud 524.5) | FAIL | 1101.1 / 1105.4 (loud 1165.9) | FAIL | - | - | 816.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `XsKfWh` | - | Fuzzy Sets: Mandelbrot | needs_texture | base | 330.5 / 506.5 (loud 486.6) | FAIL | 732.3 / 1135.6 (loud 1088.0) | FAIL | - | - | 21.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wXSfRt` | #105 | Purple Glitch Flight | selfcontained | base | 507.3 / 507.4 | FAIL | 1140.2 / 1141.6 | FAIL | - | - | 26.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `N323DV` | #149 | Fuzzy Clouds | selfcontained | base | 507.6 / 507.7 | FAIL | 1142.0 / 1142.0 | FAIL | - | - | 14.8 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tdy3zK` | - | Shadertober 08 - Frail | selfcontained | base | 414.5 / 508.9 | FAIL | 898.5 / 1101.2 | FAIL | - | - | 184.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -862,18 +1281,22 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `tcXXDr` | #106 | Sp00ky Fractal Forest | selfcontained | base | 505.2 / 510.1 | FAIL | 1099.2 / 1118.3 | FAIL | - | - | 270.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `W3G3zV` | - | Apollo Psychegalactic | needs_texture | base | 510.1 / 510.1 | FAIL | 1145.3 / 1145.3 | FAIL | - | - | 24.7 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `t3XXWj` | #334 | Ether [299] | selfcontained | base | 510.0 / 510.4 | FAIL | 1147.7 / 1147.8 | FAIL | - | - | 17.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
-| `3fVyDw` | #429 | STATION 17 | needs_texture | tex | 481.8 / 513.6 | FAIL | 1055.8 / 1118.9 | FAIL | - | - | 1447.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3fVyDw` | #429 | STATION 17 | needs_texture | base | 480.8 / 514.1 (loud 510.8) | FAIL | 1056.4 / 1117.6 (loud 1101.9) | FAIL | - | - | 1448.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tft3Rr` | #257 | Tesseract [332] | selfcontained | base | 514.9 / 516.1 | FAIL | 1158.9 / 1160.2 | FAIL | - | - | 19.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `s3s3WM` | - | Fractal Engine | selfcontained | base | 516.3 / 516.3 | FAIL | 1161.6 / 1161.6 | FAIL | - | - | 184.8 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WfjcD3` | #118 | Colorpop Journey | selfcontained | base | 516.5 / 517.4 | FAIL | 1166.8 / 1166.8 | FAIL | - | - | 20.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wXjSRt` | #486 | Sunset [280] | selfcontained | base | 521.0 / 521.2 | FAIL | 1172.5 / 1172.7 | FAIL | - | - | 17.4 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3djGDt` | - | Raymarch IFS | selfcontained | base | 490.5 / 522.6 | FAIL | 1084.4 / 1137.8 | FAIL | - | - | 118.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3cffDM` | - | SOUL JOURNEY | selfcontained | base | 487.9 / 524.3 (loud 531.9) | FAIL | 1098.2 / 1179.9 (loud 1197.0) | FAIL | - | - | 66.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
 | `t3tSWs` | - | Galactic Orbs | selfcontained | base | 525.0 / 525.2 | FAIL | 1181.2 / 1182.0 | FAIL | - | - | 30.8 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WXXcRn` | #067 | Comfy Clouds [248] | selfcontained | base | 524.6 / 525.6 | FAIL | 1180.5 / 1181.1 | FAIL | - | - | 19.8 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tXBGRw` | - | Menger Mashup | needs_texture | base | 484.3 / 526.0 | FAIL | 1052.9 / 1132.6 | FAIL | - | - | 1293.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7ctXDl` | - | Fractal Series-v6 | selfcontained | base | 385.0 / 528.9 (loud 533.9) | FAIL | 823.7 / 876.5 (loud 1150.9) | FAIL | - | - | 3141.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `s3yGWh` | #560 | Nebula Dive [250 chars] | selfcontained | base | 528.9 / 529.0 | FAIL | 1189.9 / 1190.1 | FAIL | - | - | 27.5 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `W3lGz8` | - | parasites | selfcontained | base | 477.0 / 529.3 | FAIL | 1041.2 / 1046.7 | FAIL | - | - | 196.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `33GGWd` | #195 | Coffee Clouds | selfcontained | base | 470.7 / 530.1 | FAIL | 1065.3 / 1195.0 | FAIL | - | - | 15.8 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `XlVfR3` | - | Black and white madelbrot set | selfcontained | base | 346.1 / 530.3 (loud 539.5) | FAIL | 771.2 / 1182.3 (loud 1191.9) | FAIL | - | - | 15.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `fsB3WG` | - | fractal sky stuff | needs_texture | base | 528.2 / 530.5 (loud 537.5) | FAIL | 1177.0 / 1179.5 (loud 1198.6) | FAIL | - | - | 1700.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tcl3D8` | - | Lightning in the Clouds | selfcontained | base | 485.7 / 531.4 | FAIL | 1071.8 / 1174.2 | FAIL | - | - | 21.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `W3SSW3` | - | Many Parts | selfcontained | base | 529.9 / 531.5 | FAIL | 1185.5 / 1195.3 | FAIL | - | - | 20.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WXsfzj` | #116 | Immolation | needs_texture | base | 533.4 / 533.7 | FAIL | 1197.1 / 1197.2 | FAIL | - | - | 24.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -881,25 +1304,31 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `t3tcRn` | #103 | Life uh... Finds a way | needs_texture | base | 536.1 / 536.9 | FAIL | 1205.6 / 1210.7 | FAIL | - | - | 502.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `w3cGWj` | - | Noisy Twisty | needs_texture | base | 538.1 / 538.2 | FAIL | 1207.4 / 1207.4 | FAIL | - | - | 31.6 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `mdXfDS` | #293 | Sector [497 Chars] | selfcontained | base | 538.3 / 538.4 | FAIL | 1211.1 / 1211.2 | FAIL | - | - | 68.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `4fGyR1` | - | cherry blossom julia (antialias) | selfcontained | base | 475.8 / 539.5 (loud 541.5) | FAIL | 1053.3 / 1191.6 (loud 1197.8) | FAIL | - | - | 19.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3s2GWR` | - | Menger sponge Raymarched | selfcontained | base | 528.0 / 540.7 (loud 533.8) | FAIL | 1186.7 / 1207.3 (loud 1195.4) | FAIL | - | - | 36.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `NcjSRD` | - | Chronophobia | selfcontained | base | 525.5 / 541.8 | FAIL | 1176.5 / 1211.0 | FAIL | - | - | 22.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `W3GSDD` | - | Noise Cave 2 | needs_texture | base | 540.9 / 543.0 | FAIL | 1216.9 / 1217.4 | FAIL | - | - | 731.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `sfVGDG` | #612 | Extruded Fibonacci Zoom | needs_texture | base | 506.6 / 543.5 (loud 551.2) | FAIL | 1108.9 / 1190.6 (loud 1218.2) | FAIL | - | - | 8944.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tXtyzH` | - | DDA Genuary City Thing | selfcontained | base | 485.0 / 543.9 | FAIL | 1083.0 / 1213.5 | FAIL | - | - | 32.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tXBSzK` | - | Wicked Sway Bore [291] | selfcontained | base | 543.8 / 544.1 | FAIL | 1224.3 / 1224.4 | FAIL | - | - | 20.0 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
-| `sfVGDG` | #612 | Extruded Fibonacci Zoom | needs_texture | tex | 507.9 / 544.2 | FAIL | 1110.2 / 1191.7 | FAIL | - | - | 8916.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tfjSzV` | - | Doom Spiral | selfcontained | base | 535.8 / 548.4 | FAIL | 1230.3 / 1233.9 | FAIL | - | - | 203.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WfKGRD` | #449 | Nox | selfcontained | base | 548.6 / 548.8 | FAIL | 1234.0 / 1234.2 | FAIL | - | - | 17.4 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tccXzr` | #020 | Parity | selfcontained | base | 549.7 / 549.8 | FAIL | 1232.6 / 1234.9 | FAIL | - | - | 22.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `t32cDK` | - | 2D Fractal Explorer | selfcontained | base | 549.1 / 550.0 (loud 550.2) | FAIL | 1240.3 / 1252.7 (loud 1234.8) | FAIL | - | - | 18.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tXjXDK` | - | Cam Fractal Glimmer | selfcontained | base | 548.4 / 550.1 | FAIL | 1235.8 / 1235.9 | FAIL | - | - | 20.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `s32SzV` | - | Harmonic Space Folding | selfcontained | base | 333.8 / 550.1 (loud 463.5) | FAIL | 672.8 / 986.2 (loud 1023.0) | FAIL | - | - | 15.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `W3BSzy` | #281 | Heavenly [252] | selfcontained | base | 543.9 / 550.3 | FAIL | 1216.9 / 1238.0 | FAIL | - | - | 16.4 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `W3jBWm` | - | Hyper Cloud | selfcontained | base | 470.4 / 551.9 | FAIL | 1054.6 / 1216.6 | FAIL | - | - | 26.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3fBcR3` | #178 | Spheres+Turbulence | needs_texture | base | 552.0 / 552.2 | FAIL | 1239.0 / 1239.1 | FAIL | - | - | 31.7 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `tXdcDS` | - | julia fractal in layers | selfcontained | base | 180.9 / 557.5 (loud 577.9) | FAIL | 328.0 / 1124.2 (loud 1292.8) | FAIL | - | - | 54.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `w3sBWl` | #147 | Downfall | selfcontained | base | 558.3 / 558.6 | FAIL | 1255.8 / 1256.6 | FAIL | - | - | 16.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wXSfzK` | - | 🦇 Bat Cave 2 🦇 | needs_texture | base | 559.2 / 559.4 | FAIL | 1258.4 / 1258.5 | FAIL | - | - | 76.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ssScD3` | - | Three Morping fractals | selfcontained | base | 560.0 / 560.1 (loud 560.1) | FAIL | 1259.9 / 1259.9 (loud 1259.9) | FAIL | - | - | 92.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3dlSDn` | #453 | Colorful metaballs | selfcontained | base | 518.0 / 560.1 | FAIL | 1155.3 / 1207.7 | FAIL | - | - | 724.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7ddGWN` | - | Metallic Menger Sponge | needs_texture | base | 310.0 / 561.3 (loud 676.3) | FAIL | 665.1 / 1176.0 (loud 1425.0) | FAIL | - | - | 762.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3cXyzB` | #078 | Desert Duo | selfcontained | base | 561.5 / 562.3 | FAIL | 1263.9 / 1265.0 | FAIL | - | - | 18.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tft3R2` | #186 | Happy Cloud [386] | selfcontained | base | 561.6 / 562.3 | FAIL | 1262.2 / 1263.3 | FAIL | - | - | 17.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `7lKSzw` | #276 | Christmas [236 chars] | selfcontained | base | 562.9 / 563.0 | FAIL | 1266.4 / 1266.5 | FAIL | - | - | 14.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
-| `7ddGWN` | - | Metallic Menger Sponge | needs_texture | tex | 312.1 / 563.2 | FAIL | 666.0 / 1182.6 | FAIL | - | - | 759.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `33jSzG` | #176 | Foggy Menger Mass | needs_texture | base | 213.6 / 563.8 | FAIL | 384.3 / 1257.5 | FAIL | - | - | 525.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tfyyRw` | #109 | Hidden | selfcontained | base | 564.3 / 564.4 | FAIL | 1269.4 / 1269.6 | FAIL | - | - | 17.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `NflSWM` | #069 | Gaze | selfcontained | base | 565.5 / 565.7 | FAIL | 1272.7 / 1272.7 | FAIL | - | - | 23.5 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -911,6 +1340,7 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `MdSBDR` | - | Mandelbulb estimation tweak | selfcontained | base | 524.3 / 576.9 | FAIL | 1032.9 / 1217.5 | FAIL | - | - | 68.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `ftVyRK` | #243 | Mine [299 chars] | needs_texture | base | 383.5 / 577.2 | FAIL | 887.8 / 963.0 | FAIL | - | - | 25.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `NsKGzD` | #479 | livecoding_2021_09_09 | selfcontained | base | 469.1 / 579.6 | FAIL | 1017.7 / 1276.0 | FAIL | - | - | 143.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `Nf2GRc` | - | Spiral Septagon fractal | selfcontained | base | 444.7 / 580.3 (loud 661.6) | FAIL | 967.0 / 1210.7 (loud 1474.5) | FAIL | - | - | 14.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
 | `sctXDn` | #613 | Active Matter loading splash | selfcontained | base | 580.8 / 581.0 | FAIL | 1306.6 / 1306.7 | FAIL | - | - | 48.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tf3SDB` | #059 | Big Wave | selfcontained | base | 581.7 / 581.9 | FAIL | 1307.3 / 1307.4 | FAIL | - | - | 18.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tfc3W2` | #192 | Sun Water Clouds | selfcontained | base | 583.3 / 583.6 | FAIL | 1312.5 / 1313.0 | FAIL | - | - | 16.8 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -921,6 +1351,7 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `wfK3Rm` | #280 | Bits [246] | selfcontained | base | 585.7 / 586.6 | FAIL | 1316.8 / 1317.5 | FAIL | - | - | 16.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `4dK3Rz` | - | Zircon city - lyapunov fractal | selfcontained | base | 583.1 / 587.4 | FAIL | 1307.5 / 1316.8 | FAIL | - | - | 31.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `MdX3zN` | - | Complex Dynamics | selfcontained | base | 352.1 / 589.4 | FAIL | 742.3 / 983.8 | FAIL | - | - | 138.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `t3S3Wt` | - | Complex Equation (Z-Domain) v0 | selfcontained | base | 513.7 / 595.0 (loud 595.0) | FAIL | 1175.6 / 1338.6 (loud 1338.6) | FAIL | - | - | 36.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `W3fGDH` | - | Color Puffs | selfcontained | base | 531.9 / 595.5 | FAIL | 1175.9 / 1250.8 | FAIL | - | - | 53.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `Nft3zX` | #010 | Decorative Sphere Sky | selfcontained | base | 590.7 / 596.8 | FAIL | 1324.7 / 1335.2 | FAIL | - | - | 104.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wfVXzD` | #091 | Purple Moon Bluff [362] | selfcontained | base | 597.4 / 597.7 | FAIL | 1343.7 / 1344.1 | FAIL | - | - | 18.1 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -929,6 +1360,7 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `3XBSzy` | #340 | Heavenly 2 [249] | selfcontained | base | 597.9 / 602.6 | FAIL | 1344.6 / 1345.0 | FAIL | - | - | 11.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wcVcz1` | #019 | Glitch Racer | selfcontained | base | 525.9 / 602.6 | FAIL | 1180.3 / 1352.1 | FAIL | - | - | 37.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `33tBR8` | - | Dimensional Overlap | selfcontained | base | 516.6 / 604.6 | FAIL | 1166.5 / 1345.0 | FAIL | - | - | 109.1 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ssjBDm` | - | Three fractals morphing 2 | selfcontained | base | 606.8 / 606.9 (loud 606.9) | FAIL | 1215.4 / 1365.3 (loud 1365.3) | FAIL | - | - | 103.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tcVyWV` | - | Bread Like a Bowl | selfcontained | base | 609.1 / 609.2 | FAIL | 1370.4 / 1370.4 | FAIL | - | - | 62.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3XVSDh` | #333 | IGNITE [325] | selfcontained | base | 610.1 / 610.4 | FAIL | 1371.1 / 1372.0 | FAIL | - | - | 32.0 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wX3XW2` | #309 | Launch [326] | selfcontained | base | 614.2 / 614.4 | FAIL | 1381.9 / 1382.6 | FAIL | - | - | 29.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -940,11 +1372,16 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `3fXcWl` | #187 | Starfire1 | selfcontained | base | 621.1 / 621.4 | FAIL | 1398.8 / 1399.2 | FAIL | - | - | 16.0 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WXtfD2` | - | Hypercity Futurespace | selfcontained | base | 621.4 / 621.5 | FAIL | 1398.0 / 1398.4 | FAIL | - | - | 79.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wXXyD8` | #036 | Restless Souls 👻 | selfcontained | base | 620.6 / 622.3 | FAIL | 1394.9 / 1400.8 | FAIL | - | - | 32.1 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `Xl2Bzm` | - | 3/2018 | selfcontained | base | 619.8 / 623.0 (loud 616.0) | FAIL | 1364.5 / 1373.5 (loud 1333.7) | FAIL | - | - | 21.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
 | `7ctGWB` | #162 | Apollonian Reflect Glow | selfcontained | base | 628.8 / 628.9 | FAIL | 1414.8 / 1414.9 | FAIL | - | - | 618.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7fsSR2` | - | raycasted sdf sphere simple | selfcontained | base | 627.3 / 629.9 (loud 627.5) | FAIL | 1405.6 / 1410.5 (loud 1410.4) | FAIL | - | - | 16.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
 | `tfsBWl` | #125 | Temple Glow | needs_texture | base | 628.0 / 630.5 | FAIL | 1415.7 / 1419.0 | FAIL | - | - | 183.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `4dtfWs` | - | Mandelbrother | selfcontained | base | 303.4 / 631.1 (loud 626.0) | FAIL | 663.9 / 1413.0 (loud 1423.4) | FAIL | - | - | 11.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wX3czf` | #044 | The Architect | selfcontained | base | 630.2 / 631.3 | FAIL | 1415.8 / 1418.5 | FAIL | - | - | 52.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `w3VfDc` | - | Megacity Stroll | selfcontained | base | 632.1 / 632.3 | FAIL | 1422.6 / 1423.0 | FAIL | - | - | 22.9 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `stfGDn` | #464 | Jewel room | selfcontained | base | 617.6 / 632.9 | FAIL | 1334.5 / 1343.4 | FAIL | - | - | 2502.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `W3KGDy` | - | Breathing fractal fields | selfcontained | base | 558.5 / 634.2 (loud 567.5) | FAIL | 1270.2 / 1315.2 (loud 1186.7) | FAIL | - | - | 80.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `lXsGRn` | - | [phreax] neon crystal | selfcontained | base | 632.9 / 635.6 (loud 637.8) | FAIL | 1417.3 / 1421.8 (loud 1430.1) | FAIL | - | - | 58.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3cKSzc` | #331 | Surf [324] | selfcontained | base | 638.3 / 638.3 | FAIL | 1436.7 / 1437.5 | FAIL | - | - | 36.9 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3fKSRc` | #365 | Revive [306] | selfcontained | base | 639.2 / 639.6 | FAIL | 1440.6 / 1440.9 | FAIL | - | - | 51.8 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wXXBRX` | #174 | Cloud LIghts | selfcontained | base | 573.5 / 640.1 | FAIL | 1285.5 / 1443.6 | FAIL | - | - | 44.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -961,11 +1398,13 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `scSXWR` | - | Cathedral [311] | selfcontained | base | 667.7 / 668.6 | FAIL | 1505.4 / 1507.5 | FAIL | - | - | 36.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `NcjGDh` | #065 | Tumble Rock | selfcontained | base | 668.5 / 669.5 | FAIL | 1507.6 / 1508.6 | FAIL | - | - | 22.1 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `l3jyRw` | - | cosmic tunnel 2 | selfcontained | base | 669.7 / 669.7 | FAIL | 1506.7 / 1506.7 | FAIL | - | - | 62.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `XX3XWS` | - | Raymarching realistic lighting | needs_texture | base | 615.3 / 670.8 (loud 785.0) | FAIL | 1321.5 / 1439.1 (loud 1701.9) | FAIL | - | - | 423.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wcsGWH` | - | Spelunkerdunk | selfcontained | base | 605.7 / 671.5 | FAIL | 1341.6 / 1488.1 | FAIL | - | - | 25.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `t3VSRh` | - | Alien Egg Tunnel | needs_texture | base | 673.9 / 674.7 | FAIL | 1515.3 / 1516.9 | FAIL | - | - | 1418.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `ffjGWd` | - | betwixt | needs_texture | base | 679.8 / 679.8 | FAIL | 1525.4 / 1525.5 | FAIL | - | - | 81.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `MXj3Rt` | - | Cyclops I | selfcontained | base | 680.8 / 680.9 | FAIL | 1532.0 / 1532.0 | FAIL | - | - | 19.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `33VfWy` | - | Steely Menger 2: AO's Revenge | selfcontained | base | 682.9 / 682.9 | FAIL | 1536.6 / 1536.6 | FAIL | - | - | 140.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ct2XWW` | - | Perpendicular Julia Morph | selfcontained | base | 469.5 / 683.4 (loud 845.6) | FAIL | 1109.8 / 1291.8 (loud 1875.0) | FAIL | - | - | 56.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tfSczm` | - | Chilly Wee Imp | selfcontained | base | 686.1 / 686.5 | FAIL | 1544.2 / 1544.5 | FAIL | - | - | 21.7 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3fKyz3` | - | Orbs of the Gyroid | selfcontained | base | 602.4 / 688.8 | FAIL | 1350.2 / 1553.2 | FAIL | - | - | 158.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `W3fSDS` | - | Stereo Fractal Test | needs_texture | base | 689.0 / 689.7 | FAIL | 1551.4 / 1551.5 | FAIL | - | - | 860.8 | flat | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -977,14 +1416,17 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `33BSzt` | - | Fractal Strands Demo | selfcontained | base | 694.8 / 706.5 | FAIL | 1549.6 / 1551.6 | FAIL | - | - | 44.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `Nfl3zl` | #092 | Spiral Lit Clouds | selfcontained | base | 682.0 / 706.7 | FAIL | 1549.6 / 1587.7 | FAIL | - | - | 31.6 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wfdGWM` | #207 | Blue Moon Ocean [321] | selfcontained | base | 706.9 / 707.3 | FAIL | 1590.7 / 1592.0 | FAIL | - | - | 16.8 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
-| `csjSWd` | - | Alien Rose | needs_texture | base | 660.1 / 707.4 | FAIL | 1458.5 / 1555.2 | FAIL | - | - | 323.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `4t2BDD` | - | Distance estimation fun | selfcontained | base | 642.8 / 707.4 | FAIL | 1398.0 / 1529.5 | FAIL | - | - | 728.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `csjSWd` | - | Alien Rose | needs_texture | base | 660.6 / 708.0 (loud 756.6) | FAIL | 1459.9 / 1556.7 (loud 1679.7) | FAIL | - | - | 328.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `XXV3zt` | - | tube with words | selfcontained | base | 701.0 / 712.2 | FAIL | 1576.4 / 1576.5 | FAIL | - | - | 665.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3cSBR1` | #152 | Insomnium | needs_texture | base | 714.9 / 716.4 | FAIL | 1610.1 / 1610.6 | FAIL | - | - | 250.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `W3lcDl` | - | Colony 2 | needs_texture | base | 636.7 / 717.5 | FAIL | 1442.8 / 1621.8 | FAIL | - | - | 331.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3fVXWy` | - | basic_mandelbrot | selfcontained | base | 645.7 / 719.1 (loud 868.5) | FAIL | 1386.9 / 1486.7 (loud 1831.9) | FAIL | - | - | 25.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `fdlSWB` | - | Mandelbrot Party antialiased | selfcontained | base | 586.2 / 720.4 (loud 727.6) | FAIL | 1100.7 / 1587.5 (loud 1599.1) | FAIL | - | - | 25.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WdfXRr` | - | Raymarch Mandelbulb | selfcontained | base | 479.6 / 723.6 | FAIL | 1040.0 / 1043.3 | FAIL | - | - | 254.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tfSBW1` | #075 | Colorflow Orb | needs_texture | base | 727.6 / 727.8 | FAIL | 1632.9 / 1633.0 | FAIL | - | - | 35.5 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `scXSzX` | - | Big Red | selfcontained | base | 726.4 / 728.3 | FAIL | 1636.8 / 1638.8 | FAIL | - | - | 23.1 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `Ml3cRB` | - | Octonionic Julia Sets, 2D slices | selfcontained | base | 42.1 / 730.9 (loud 1144.9) | FAIL | 88.6 / 1624.7 (loud 254.4) | FAIL | - | - | 50.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wcBfR3` | - | Vibe Ride | selfcontained | base | 732.4 / 732.5 | FAIL | 1647.9 / 1648.0 | FAIL | - | - | 29.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `NsVyRz` | #363 | Apollonian Fractal [299 chars] | selfcontained | base | 733.0 / 733.5 | FAIL | 1648.8 / 1649.9 | FAIL | - | - | 32.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3XXSDB` | #523 | Angel [305] | selfcontained | base | 734.5 / 734.7 | FAIL | 1653.2 / 1653.9 | FAIL | - | - | 18.0 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -998,7 +1440,11 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `3dlfDH` | - | Fractal Tomography | selfcontained | base | 666.8 / 754.9 | FAIL | 1482.0 / 1629.2 | FAIL | - | - | 569.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WfdGRj` | #202 | Blue Moon River [399] | selfcontained | base | 757.4 / 758.2 | FAIL | 1711.9 / 1712.9 | FAIL | - | - | 17.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tfcXWl` | #054 | Polar Cascade | selfcontained | base | 767.3 / 767.6 | FAIL | 1726.6 / 1726.6 | FAIL | - | - | 21.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `ftyGWK` | - | Fractal-Explorer | selfcontained | base | 729.1 / 769.7 (loud 802.3) | FAIL | 1632.6 / 1714.0 (loud 1789.1) | FAIL | - | - | 138.6 | black | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `NXj3Wz` | - | Infinite Spine | selfcontained | base | 769.7 / 769.8 (loud 769.8) | FAIL | 1731.9 / 1731.9 (loud 1731.9) | FAIL | - | - | 301.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3sySRK` | #666 | CineShader Lava | selfcontained | base | 656.0 / 771.0 | FAIL | 1466.9 / 1730.6 | FAIL | - | - | 848.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `McByRK` | - | mandelbrot-zoom | selfcontained | base | 125.5 / 771.9 (loud 320.8) | FAIL | 348.3 / 710.5 (loud 717.7) | FAIL | - | - | 14.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
+| `fdjSWD` | - | MandleBulb | selfcontained | base | 742.1 / 772.5 (loud 724.4) | FAIL | 1449.9 / 1577.1 (loud 1457.9) | FAIL | - | - | 422.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `33scR2` | #159 | Fire & Smoke Tinkering | selfcontained | base | 773.2 / 773.8 | FAIL | 1740.5 / 1741.1 | FAIL | - | - | 31.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `w33fWr` | - | Dimensional Burst | selfcontained | base | 673.4 / 776.5 | FAIL | 1525.6 / 1747.4 | FAIL | - | - | 31.4 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `4tcBWf` | - | Mandelbrot Set (4096 Iterations) | selfcontained | base | 555.9 / 777.7 | FAIL | 1233.3 / 1604.5 | FAIL | - | - | 10.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -1015,6 +1461,7 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `ltVSzz` | - | Mandelbulb - hhhzzzsss | selfcontained | base | 700.7 / 814.6 | FAIL | 1417.5 / 1573.1 | FAIL | - | - | 308.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `sXB3WD` | - | ][ Tide of the Ancients ][ | needs_texture | base | 721.8 / 815.8 | FAIL | 1647.0 / 1846.0 | FAIL | - | - | 1877.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WcsyDS` | - | Field & Sky | selfcontained | base | 816.2 / 816.6 | FAIL | 1836.0 / 1836.1 | FAIL | - | - | 19.7 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `WfyGWy` | - | raymarching journey (70 seconds) | selfcontained | base | 422.5 / 820.2 (loud 819.9) | FAIL | 950.6 / 1844.2 (loud 1845.0) | FAIL | - | - | 3769.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3XKBWt` | #181 | What Was | selfcontained | base | 819.8 / 820.9 | FAIL | 1843.8 / 1844.4 | FAIL | - | - | 31.8 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wflcRS` | #097 | Surf Space | selfcontained | base | 731.2 / 824.2 | FAIL | 1654.2 / 1857.3 | FAIL | - | - | 22.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `lljGz3` | - | Tetrahedral Sierpinski | selfcontained | base | 661.3 / 826.5 | FAIL | 1464.7 / 1830.5 | FAIL | - | - | 68.7 | black, flat | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -1032,10 +1479,10 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `tct3zl` | - | Purple Moon Valley [385] | selfcontained | base | 868.7 / 869.1 | FAIL | 1954.3 / 1955.3 | FAIL | - | - | 18.5 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WftGzH` | - | Ethereal Tunnel Flight | needs_texture | base | 869.8 / 870.3 | FAIL | 1952.7 / 1953.0 | FAIL | - | - | 44.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `w3XXWB` | - | Fork of Angel | selfcontained | base | 871.4 / 871.9 | FAIL | 1960.6 / 1960.9 | FAIL | - | - | 23.0 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `llf3Wl` | - | heyx3 Distance-estimated fractal | needs_texture | base | 710.3 / 894.2 (loud 837.1) | FAIL | 1619.5 / 1922.0 (loud 1779.5) | FAIL | - | - | 30.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WffSDr` | #124 | Fractal Skimmer 4 | selfcontained | base | 789.9 / 894.4 | FAIL | 1757.4 / 1984.2 | FAIL | - | - | 213.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `flKcDW` | #537 | Mars [244 chars] | needs_texture | base | 887.5 / 894.5 | FAIL | 1879.1 / 1900.2 | FAIL | - | - | 15.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wcyGRR` | #158 | Cold | selfcontained | base | 895.8 / 896.3 | FAIL | 2005.8 / 2006.8 | FAIL | - | - | 17.6 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
-| `llf3Wl` | - | heyx3 Distance-estimated fractal | needs_texture | base | 714.8 / 897.6 | FAIL | 1630.2 / 1924.9 | FAIL | - | - | 22.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wfyXRG` | - | DDA Ruins Sky | needs_texture | base | 423.5 / 903.0 | FAIL | 947.7 / 1685.9 | FAIL | - | - | 67.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tXjGW1` | - | Cable Caves | needs_texture | base | 617.6 / 906.9 | FAIL | 1355.5 / 1496.3 | FAIL | - | - | 262.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WcGSzd` | #016 | Water Cavern Flight | needs_texture | base | 914.8 / 915.0 | FAIL | 2053.1 / 2053.5 | FAIL | - | - | 26.3 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -1049,29 +1496,38 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `sXfGWj` | #563 | Goldeen | selfcontained | base | 803.7 / 935.0 | FAIL | 1777.6 / 1908.0 | FAIL | - | - | 19054.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wfjfzt` | - | Pink Clouds & Blue Water | selfcontained | base | 938.8 / 938.8 | FAIL | 2112.7 / 2112.7 | FAIL | - | - | 22.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `4sSBzy` | #525 | [SH17B] Cold Shore | needs_texture | base | 163.3 / 940.6 | FAIL | 279.4 / 1474.7 | FAIL | - | - | 144.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `4ttXDr` | - | raymarch_bulb_plasma | selfcontained | base | 949.0 / 954.0 (loud 956.7) | FAIL | 2109.5 / 2116.7 (loud 2113.6) | FAIL | - | - | 55.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p; white_when_loud |
 | `t3XyWB` | - | Amidst Mist | selfcontained | base | 952.8 / 954.1 | FAIL | 2137.4 / 2144.7 | FAIL | - | - | 24.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WfdXDl` | - | Waterfall Cascade | selfcontained | base | 956.4 / 957.1 | FAIL | 2150.2 / 2152.4 | FAIL | - | - | 22.4 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3s3yRS` | - | Fractal Sky #3 | selfcontained | base | 755.3 / 966.6 (loud 1144.1) | FAIL | 1614.7 / 2044.2 (loud 2457.3) | FAIL | - | - | 52.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `NfjXDW` | #028 | Chance of Rain | selfcontained | base | 964.5 / 971.4 | FAIL | 2182.7 / 2183.2 | FAIL | - | - | 19.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `w33BD7` | - | Wave Clouds | selfcontained | base | 876.4 / 972.5 | FAIL | 1948.8 / 2200.5 | FAIL | - | - | 48.4 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `Nc2XDD` | #110 | Electric Sky | selfcontained | base | 983.1 / 983.3 | FAIL | 2210.9 / 2211.4 | FAIL | - | - | 24.1 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `MtVyWK` | - | Reflective fractal | selfcontained | lite | 585.0 / 983.6 | FAIL | 1205.6 / 2127.9 | FAIL | - | - | 800.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7fcSWr` | - | A/V Wormhole | selfcontained | base | 381.4 / 985.6 (loud 1009.2) | FAIL | 831.5 / 2183.2 (loud 1058.3) | FAIL | - | - | 4193.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `w3fGRf` | - | pasila 3025 | selfcontained | base | 632.2 / 990.3 (loud 1043.7) | FAIL | 1423.9 / 2119.5 (loud 2248.9) | FAIL | - | - | 377.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tcsyDj` | #104 | Spacefloat | selfcontained | base | 992.7 / 994.3 | FAIL | 2230.9 / 2234.0 | FAIL | - | - | 23.1 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `s3j3zd` | #148 | Uncertainty | selfcontained | base | 999.7 / 1000.0 | FAIL | 2248.6 / 2249.0 | FAIL | - | - | 20.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7XK3Rc` | - | Infinite Hamsa | selfcontained | base | 959.9 / 1000.3 (loud 1051.6) | FAIL | 2159.4 / 2245.7 (loud 2369.1) | FAIL | - | - | 394.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tsjXzm` | - | Fractal Art | needs_texture | base | 780.3 / 1001.1 | FAIL | 1671.8 / 2125.5 | FAIL | - | - | 21.0 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WclGWH` | #014 | Cloud Colors Darkmode | selfcontained | base | 990.8 / 1022.2 | FAIL | 2191.7 / 2269.6 | FAIL | - | - | 35.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `7X3SR8` | #606 | Vegetable raiders | selfcontained | base | 993.4 / 1025.8 | FAIL | 2229.8 / 2298.8 | FAIL | - | - | 11165.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `MlsGzs` | - | Outside Mandelbulb | selfcontained | base | 1024.9 / 1039.3 | FAIL | 2293.1 / 2328.6 | FAIL | - | - | 29.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tflBDM` | #445 | Chill Smoke Orb | selfcontained | base | 1041.0 / 1041.7 | FAIL | 2341.3 / 2342.8 | FAIL | - | - | 22.7 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `332yWD` | - | Core Burn | selfcontained | base | 1060.4 / 1060.5 | FAIL | 2385.5 / 2391.2 | FAIL | - | - | 31.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `clVSWm` | - | M^n(lbr0t Zo0m | selfcontained | base | 349.1 / 1066.2 (loud 1296.0) | FAIL | 258.9 / 2356.4 (loud 3120.8) | FAIL | - | - | 12.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `Nd2BR1` | - | Gaz Fractal Modification #2 | selfcontained | base | 1066.3 / 1066.4 | FAIL | 2399.2 / 2399.2 | FAIL | - | - | 65.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7XV3Dm` | - | 4D hyperbolic | selfcontained | base | 1074.2 / 1074.2 (loud 1087.1) | FAIL | 2415.2 / 2426.9 (loud 2433.5) | FAIL | - | - | 70.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wd2yDm` | - | Cracked | selfcontained | base | 996.0 / 1080.8 | FAIL | 2238.4 / 2426.4 | FAIL | - | - | 124.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3sc3z4` | #664 | GLSL ray tracing test | selfcontained | base | 960.5 / 1084.2 | FAIL | 2150.3 / 2422.7 | FAIL | - | - | 110.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `w3SSWd` | #208 | Checked Out | selfcontained | base | 1088.1 / 1088.2 | FAIL | 2449.8 / 2451.5 | FAIL | - | - | 18.4 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WclcW2` | - | Moondance | selfcontained | base | 1089.1 / 1089.2 | FAIL | 2450.5 / 2451.4 | FAIL | - | - | 24.2 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3fcyD2` | #154 | Dark Falls | selfcontained | base | 947.9 / 1091.3 | FAIL | 2130.9 / 2458.1 | FAIL | - | - | 23.8 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `wtj3Wm` | - | Infinite plane fractal | selfcontained | base | 1061.2 / 1091.6 (loud 1068.4) | FAIL | 2308.3 / 2359.7 (loud 2334.0) | FAIL | - | - | 511.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `ffd3Rj` | - | Energizer 4000 | selfcontained | base | 1009.3 / 1103.6 | FAIL | 2267.9 / 2478.5 | FAIL | - | - | 201.9 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `fc23zV` | #644 | Goo[Base] | selfcontained | base | 1111.9 / 1115.5 | FAIL | 2536.1 / 2541.3 | FAIL | - | - | 2765.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `7XlGDs` | #117 | Hexglow 11 | selfcontained | base | 1086.4 / 1117.4 | FAIL | 2416.6 / 2466.6 | FAIL | - | - | 1213.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `7tsXzN` | - | mandelbrot 001 orbit trap | selfcontained | base | 912.0 / 1123.4 (loud 1380.6) | FAIL | 2034.2 / 2509.1 (loud 3096.6) | FAIL | - | - | 43.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WdcGzN` | - | Dual Quaternion Julia Set | selfcontained | base | 1087.8 / 1157.8 | FAIL | 2410.3 / 2544.1 | FAIL | - | - | 139.7 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `7dcyRr` | #455 | test_but | selfcontained | base | 1059.4 / 1164.8 | FAIL | 2258.6 / 2485.3 | FAIL | - | - | 3758.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `ffsSWn` | #111 | Mega | selfcontained | base | 1177.1 / 1177.2 | FAIL | 2646.3 / 2646.6 | FAIL | - | - | 25.2 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -1082,6 +1538,7 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `WclcRN` | #205 | Sleepless | selfcontained | base | 1097.7 / 1225.9 | FAIL | 2462.3 / 2766.1 | FAIL | - | - | 18.7 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wfGSWW` | #196 | indefinite | selfcontained | base | 1116.0 / 1241.6 | FAIL | 2499.8 / 2807.2 | FAIL | - | - | 19.6 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tctGRM` | #032 | Wings Aflame [425] | selfcontained | base | 1244.8 / 1245.0 | FAIL | 2805.0 / 2805.0 | FAIL | - | - | 23.4 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `csjcRd` | - | KIFS Structure | needs_texture | base | 749.5 / 1258.3 (loud 1267.5) | FAIL | 1613.3 / 2616.8 (loud 2665.2) | FAIL | - | - | 91.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3cdGRn` | #135 | Blast Off | needs_texture | base | 1265.0 / 1265.2 | FAIL | 2839.3 / 2839.4 | FAIL | - | - | 60.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `fclXRf` | - | Little Red | selfcontained | base | 1285.7 / 1286.1 | FAIL | 2892.0 / 2892.3 | FAIL | - | - | 24.5 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `wstcDN` | - | Mandelbulb Ray Marching | selfcontained | base | 1305.8 / 1313.9 | FAIL | 2711.5 / 2721.6 | FAIL | - | - | 24.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -1092,6 +1549,8 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `sX3SR8` | #608 | fractalic cube 4 | selfcontained | base | 1075.0 / 1427.4 | FAIL | 2241.1 / 2977.7 | FAIL | - | - | 6336.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `tsScDV` | - | [4k] String Theory | selfcontained | base | 1241.5 / 1436.2 | FAIL | 2740.7 / 3205.4 | FAIL | - | - | 113.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `73yGDV` | #640 | Glass-DNA | selfcontained | base | 1386.0 / 1450.2 | FAIL | 2930.1 / 3065.1 | FAIL | - | - | 7174.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3ffBDn` | - | Fractals: Mandelbrot Set | selfcontained | base | 1321.5 / 1450.8 (loud 1402.2) | FAIL | 2896.4 / 3165.3 (loud 3147.2) | FAIL | - | - | 18.8 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `3dfXzr` | - | Raymarch Mandelbox | selfcontained | base | 1224.3 / 1476.7 (loud 1451.0) | FAIL | 2655.1 / 3225.7 (loud 3156.2) | FAIL | - | - | 113.1 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `WsXSDH` | #354 | Cheeseburger V2 | needs_texture | base | 1389.9 / 1493.5 | FAIL | 3056.2 / 3307.9 | FAIL | - | - | 35773.6 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `f3XGWX` | #070 | D & D - Ski | selfcontained | base | 1504.5 / 1512.4 | FAIL | 3324.6 / 3331.1 | FAIL | - | - | 11765.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `NcfXW7` | #015 | Mega 2 | selfcontained | base | 1360.2 / 1517.8 | FAIL | 3048.4 / 3423.6 | FAIL | - | - | 32.4 | black, flat, static | over budget at 720p/1080p; not yet measured at 540p/360p |
@@ -1101,68 +1560,74 @@ Runs, but no measured tier is `SOLID` or `OK`. Candidates for a lower tier or an
 | `wfX3zX` | - | Bicho Feo | selfcontained | base | 1416.7 / 1601.3 | FAIL | 3141.3 / 3529.3 | FAIL | - | - | 752.5 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `3c33RN` | - | As Above, So Below | needs_texture | base | 1605.6 / 1607.9 | FAIL | 3586.3 / 3611.7 | FAIL | - | - | 388.9 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 | `NXlGRs` | #127 | D & D-Carving - A Menger journey | selfcontained | base | 1167.6 / 1645.0 | FAIL | 2552.6 / 3614.4 | FAIL | - | - | 13617.4 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
+| `sttfzX` | - | chaos game | selfcontained | base | 1572.8 / 2925.0 (loud 2924.9) | FAIL | 3538.8 / 6579.9 (loud 6580.3) | FAIL | - | - | 20.0 | black | over budget at 720p/1080p; not yet measured at 540p/360p; black_when_loud |
 | `Md3BzX` | - | KIFS + Global Illumination | selfcontained | lite | 1210.6 / 5369.3 | FAIL | 2662.9 / 11924.3 | FAIL | - | - | 224.3 | ok | over budget at 720p/1080p; not yet measured at 540p/360p |
 
-## Does not work (0)
+## Does not work (31)
 
 Error status in the latest result line; `note` carries the reason.
 
-None.
+| id | # | name | class | variant | 720p p50/p95 ms | 720p | 1080p p50/p95 ms | 1080p | other tiers | tier | compile ms | pixels | note |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `WtG3Dc` | - | Bacteria Fractal Slideshow. | selfcontained | base | - | skipped (None) | - | skipped (too_slow) | - | - | 144.3 | - | too_slow: first 720p frame took 1517 ms under worst-case audio (limit 1500 ms) |
+| `33cBRj` | - | Logarithmic Julia Set | selfcontained | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 45.3 | - | too_slow: first 720p frame took 2698 ms (limit 1500 ms) |
+| `3fSXzc` | - | Mandelbulb Realistic Lighting | selfcontained | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 659.6 | - | too_slow: first 720p frame took 1912 ms (limit 1500 ms) |
+| `3llXDN` | - | Exploring sets of julia fractals | selfcontained | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 44.1 | - | too_slow: first 720p frame took 1688 ms (limit 1500 ms) |
+| `4cGBzw` | - | Mandelbulb Fractal (Shaded) | selfcontained | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 153.0 | - | too_slow: first 720p frame took 1611 ms (limit 1500 ms) |
+| `4tjBDD` | - | Adaptive Distance Estimation | selfcontained | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 1429.6 | - | too_slow: first 720p frame took 1729 ms (limit 1500 ms) |
+| `4XXXW2` | - | troyebrot | selfcontained | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 138.0 | - | too_slow: first 720p frame took 5397 ms (limit 1500 ms) |
+| `7cGXRG` | - | loxapollosphere | selfcontained | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 1695.8 | - | too_slow: first 720p frame took 2255 ms (limit 1500 ms) |
+| `7ct3Dr` | - | raymarching scene test | selfcontained | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 1435.2 | - | too_slow: 64x36 probe frame took 47.7 ms: 720p estimate 19093 ms (limit 1500 ms) |
+| `7dtcz2` | - | Basic Supersampling | selfcontained | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 24.9 | - | too_slow: first 720p frame took 2830 ms (limit 1500 ms) |
+| `7dtyWl` | - | Burning Ship POI (Supersampled) | selfcontained | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 25.0 | - | too_slow: 64x36 probe frame took 15.2 ms: 720p estimate 6083 ms (limit 1500 ms) |
+| `7s3SWf` | - | The Sierpinski Triangle | needs_texture | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 26.0 | - | too_slow: first 720p frame took 5073 ms (limit 1500 ms) |
+| `f3yGzt` | - | all the fractals in the fr50 | selfcontained | base | - | skipped (prepare_error) | - | skipped (prepare_error) | - | - | - | - | prepare_error: shader exceeds 256 KiB |
+| `fccXRN` | - | healpix shader wip | selfcontained | base | - | - | - | - | - | - | - | - | hang: no output for 60 s; last: bench: [337/532] fccXRN base tier 1080 max |
+| `fft3DM` | - | many fractals from one | selfcontained | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 118.4 | - | too_slow: first 720p frame took 1535 ms (limit 1500 ms) |
+| `fll3D8` | - | Raymarched mandelbulb | selfcontained | base | - | skipped (gpu_reset) | - | skipped (too_slow) | - | - | 252.9 | - | too_slow: GPU hang watchdog reset the render job at 720p; frames never completed |
+| `fXlXzM` | - | Cluster Bots 2 - The Web | selfcontained | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 803.0 | - | too_slow: first 720p frame took 1548 ms (limit 1500 ms) |
+| `N333W4` | - | Hopalong Cosmos | selfcontained | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 20.6 | - | too_slow: first 720p frame took 2342 ms (limit 1500 ms) |
+| `NflSDn` | - | Procedurally generated fractals | selfcontained | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 200.5 | - | too_slow: first 720p frame took 2996 ms (limit 1500 ms) |
+| `sdyGWw` | - | Masayoshi Shapes | selfcontained | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 31.2 | - | too_slow: first 720p frame took 1731 ms (limit 1500 ms) |
+| `sttfDN` | - | lyapunov fractals modifications | selfcontained | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 22.5 | - | too_slow: first 720p frame took 1706 ms (limit 1500 ms) |
+| `tccBWj` | - | Randomised, subdivided KIFS | selfcontained | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 7424.6 | - | too_slow: 64x36 probe frame took 20.7 ms: 720p estimate 8282 ms (limit 1500 ms) |
+| `tctXzS` | - | Leyes esculpidas 1.25e7 | selfcontained | base | - | skipped (prepare_error) | - | skipped (prepare_error) | - | - | - | - | prepare_error: includes and extensions are unsupported |
+| `tcV3RV` | - | Fractal Industry | needs_texture | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 5515.2 | - | too_slow: first 720p frame took 2721 ms (limit 1500 ms) |
+| `tcySR3` | - | Raymarching fractals example | selfcontained | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 11276.0 | - | too_slow: 64x36 probe frame took 19.0 ms: 720p estimate 7613 ms (limit 1500 ms) |
+| `tdsyDl` | - | [Mandelbrot Set] TIA | selfcontained | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 40.0 | - | too_slow: first 720p frame took 1840 ms (limit 1500 ms) |
+| `tXlXW4` | - | Markus-Lyapunov Fractal | selfcontained | base | - | skipped (compile_error) | - | skipped (compile_error) | - | - | - | - | compile_error: shader compile failed: 0:72(36): error: `u_resolution' undeclared 0:72(31): error: cannot construct `vec3' from a non-numeric data type 0:72(31): error: type mismatch 0:72(27): error: o |
+| `W32fRy` | - | Mirror fractal forest | selfcontained | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 854.9 | - | too_slow: first 720p frame took 2224 ms (limit 1500 ms) |
+| `wc3XRX` | - | #01 Kleinian - FracTales 3D Demo | selfcontained | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 1992.7 | - | too_slow: first 720p frame took 2242 ms (limit 1500 ms) |
+| `Wscfzs` | - | ps_MandelbrotSet | selfcontained | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 30.9 | - | too_slow: first 720p frame took 1988 ms (limit 1500 ms) |
+| `XcdGW8` | - | Mandelbrot set(by mishaNPT) | selfcontained | base | - | - | - | - | - | - | - | - | hang: no output for 60 s; last: bench: [267/532] XcdGW8 base tier 1080 max |
 
-## Needs texture: benchmarked, not qualified (48)
+## Needs texture: benchmarked, not qualified (21)
 
 The Image pass samples `iChannelN` and was not measured as designed: either the result was taken without the channel textures bound, or a channel is an input the renderer cannot supply (keyboard, audio, video, buffer). Timings are indicative only and the picture is unverified; `note` says which.
 
 | id | # | name | channels read | variant | 720p p50/p95 ms | 720p | 1080p p50/p95 ms | 1080p | other tiers | tier | compile ms | pixels |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `33j3WV` | - | Vortex - Duality Rainbow Spiral | ch0=undeclared | - | - | - | - | - | - | - | - | - |
-| `33S3D1` | - | Banach-Tarski Paradox! | ch0=texture | - | - | - | - | - | - | - | - | - |
-| `3l2Xzc` | - | Julia Art | ch0=texture, ch1=texture, ch2=texture | - | - | - | - | - | - | - | - | - |
-| `43BBDm` | - | Fork RaymarchedMandelbulb3DFract | ch0=music | - | - | - | - | - | - | - | - | - |
-| `4dKBDh` | - | Music + Mandlebrot | ch0=musicstream | - | - | - | - | - | - | - | - | - |
-| `7ccXRH` | - | Fractal Supernova Melody | ch0=keyboard | - | - | - | - | - | - | - | - | - |
-| `7cd3R7` | - | Triple Dragon | ch0=keyboard | - | - | - | - | - | - | - | - | - |
-| `7s3SWf` | - | The Sierpinski Triangle | ch0=texture | - | - | - | - | - | - | - | - | - |
-| `csd3RM` | - | FractalsExperiment | ch0=texture | - | - | - | - | - | - | - | - | - |
-| `csjcRd` | - | KIFS Structure | ch0=cubemap | - | - | - | - | - | - | - | - | - |
-| `ctSGzt` | - | FractalSounds | ch0=mic | - | - | - | - | - | - | - | - | - |
-| `Ddjfzy` | - | Alien crystal | ch0=musicstream | - | - | - | - | - | - | - | - | - |
-| `DlBGDV` | - | FabriceNeyret2's twindragon | ch0=texture, ch1=video | - | - | - | - | - | - | - | - | - |
-| `fcdSRB` | - | Living Mandelbulb 3D Raymarched | ch0=undeclared | - | - | - | - | - | - | - | - | - |
-| `fcSSRw` | - | Fractal Sponza | ch1=texture, ch2=texture | - | - | - | - | - | - | - | - | - |
-| `fsB3WG` | - | fractal sky stuff | ch0=texture | - | - | - | - | - | - | - | - | - |
-| `l33BRX` | - | Fork [phreax] g sleeplessm 729 | ch0=mic | - | - | - | - | - | - | - | - | - |
-| `ldKGRm` | - | mandelballs | ch0=texture | - | - | - | - | - | - | - | - | - |
-| `McS3Dh` | - | ewdlop's KIFS Fractals | ch0=texture, ch1=texture, ch2=texture | - | - | - | - | - | - | - | - | - |
-| `McyyRm` | - | Pulsating alien orb | ch0=cubemap | - | - | - | - | - | - | - | - | - |
-| `MfdyRj` | - | Infinite Fractals | ch0=undeclared | - | - | - | - | - | - | - | - | - |
-| `Mlf3D8` | - | fractal_cones | ch2=texture, ch3=keyboard | - | - | - | - | - | - | - | - | - |
-| `mlSyzD` | - | Bruv the boy mandel made a brot | ch0=texture | - | - | - | - | - | - | - | - | - |
-| `NctXzn` | - | A cool sphere | ch0=keyboard | - | - | - | - | - | - | - | - | - |
-| `NdByRG` | - | KIFS Fractals Koch curve | ch0=texture | - | - | - | - | - | - | - | - | - |
-| `NftSRn` | - | force fields | ch0=keyboard | - | - | - | - | - | - | - | - | - |
-| `scdSRn` | - | Spectral Ripples | ch0=keyboard | - | - | - | - | - | - | - | - | - |
-| `ssKcWW` | - | Fractal Tower | ch0=cubemap | - | - | - | - | - | - | - | - | - |
-| `sssXRs` | - | KIFS Fractals Koch Snowflake | ch0=texture | - | - | - | - | - | - | - | - | - |
-| `t3fyWM` | - | koch00 | ch0=texture | - | - | - | - | - | - | - | - | - |
-| `t3yBzy` | - | Day13-ever | ch0=texture | - | - | - | - | - | - | - | - | - |
-| `tcV3RV` | - | Fractal Industry | ch0=texture | - | - | - | - | - | - | - | - | - |
-| `tfVXWh` | - | stars search | ch0=texture | - | - | - | - | - | - | - | - | - |
-| `ttsfRr` | - | Mediterranean tiles | ch0=texture | - | - | - | - | - | - | - | - | - |
-| `ttVGzD` | - | Hello Wook World | ch1=texture | - | - | - | - | - | - | - | - | - |
-| `w3tGWH` | - | UV-mapped Julia Fractal | ch0=texture | - | - | - | - | - | - | - | - | - |
-| `wflXzB` | - | Infinite Loop Spiral Sierpinski | ch0=texture | - | - | - | - | - | - | - | - | - |
-| `Ws2cW3` | - | Day7: Fractals 101 | ch0=texture | - | - | - | - | - | - | - | - | - |
-| `wsjBR1` | - | L/R Shinier... | ch0=musicstream, ch1=video, ch2=video | - | - | - | - | - | - | - | - | - |
-| `WtfGDn` | - | Mandelbrot (The Green Beast) | ch0=texture | - | - | - | - | - | - | - | - | - |
-| `XcKyDW` | - | Pulsating alien cube | ch0=cubemap | - | - | - | - | - | - | - | - | - |
-| `XdlBR7` | - | Fractal Julia | ch0=music | - | - | - | - | - | - | - | - | - |
-| `XfGcDz` | - | Pulsating alien tetrahedron | ch0=cubemap | - | - | - | - | - | - | - | - | - |
-| `Xll3RS` | - | scrub-marine | ch0=undeclared | - | - | - | - | - | - | - | - | - |
-| `XsjBRh` | - | FractalShizzle7 | ch0=undeclared | - | - | - | - | - | - | - | - | - |
-| `XsKfWh` | - | Fuzzy Sets: Mandelbrot | ch0=texture | - | - | - | - | - | - | - | - | - |
-| `XtXGRB` | - | fractal_cones2 | ch2=texture, ch3=keyboard | - | - | - | - | - | - | - | - | - |
-| `XX3XWS` | - | Raymarching realistic lighting | ch0=cubemap | - | - | - | - | - | - | - | - | - |
+| `4dKBDh` | - | Music + Mandlebrot | ch0=musicstream | base | 4.3 / 4.3 (loud 4.3) | SOLID | 9.6 / 9.6 (loud 9.6) | SOLID | - | 1080p | 13.7 | black, flat, static |
+| `XdlBR7` | - | Fractal Julia | ch0=music | base | 15.4 / 21.2 (loud 28.2) | FAIL | 20.2 / 26.1 (loud 33.1) | FAIL | - | - | 13.2 | black |
+| `DlBGDV` | - | FabriceNeyret2's twindragon | ch0=texture, ch1=video | base | 23.2 / 24.6 (loud 24.5) | FAIL | 52.5 / 54.9 (loud 55.1) | FAIL | - | - | 13.6 | ok |
+| `Xll3RS` | - | scrub-marine | ch0=undeclared | base | 33.3 / 38.0 (loud 34.6) | FAIL | 81.4 / 86.4 (loud 87.0) | FAIL | - | - | 19.4 | ok |
+| `MfdyRj` | - | Infinite Fractals | ch0=undeclared | base | 43.8 / 49.1 (loud 48.5) | FAIL | 98.0 / 108.4 (loud 109.6) | FAIL | - | - | 19.4 | ok |
+| `Ddjfzy` | - | Alien crystal | ch0=musicstream | base | 145.9 / 145.9 (loud 145.9) | FAIL | 328.0 / 328.0 (loud 328.0) | FAIL | - | - | 15.2 | black, flat, static |
+| `XsjBRh` | - | FractalShizzle7 | ch0=undeclared | base | 138.8 / 164.0 (loud 163.9) | FAIL | 304.1 / 355.0 (loud 362.1) | FAIL | - | - | 223.8 | ok |
+| `ctSGzt` | - | FractalSounds | ch0=mic | base | 146.9 / 224.0 (loud 227.0) | FAIL | 316.4 / 451.7 (loud 509.6) | FAIL | - | - | 26.0 | ok |
+| `wsjBR1` | - | L/R Shinier... | ch0=musicstream, ch1=video, ch2=video | base | 184.7 / 327.4 (loud 315.3) | FAIL | 408.7 / 687.1 (loud 711.9) | FAIL | - | - | 16.1 | ok |
+| `7cd3R7` | - | Triple Dragon | ch0=keyboard | base | 376.9 / 376.9 (loud 376.9) | FAIL | 845.6 / 845.7 (loud 845.7) | FAIL | - | - | 242.7 | ok |
+| `XtXGRB` | - | fractal_cones2 | ch2=texture, ch3=keyboard | base | 385.2 / 408.8 (loud 432.8) | FAIL | 763.6 / 812.8 (loud 876.7) | FAIL | - | - | 728.5 | ok |
+| `Mlf3D8` | - | fractal_cones | ch2=texture, ch3=keyboard | base | 538.3 / 553.9 (loud 545.4) | FAIL | 1136.6 / 1157.4 (loud 1152.6) | FAIL | - | - | 204.7 | ok |
+| `l33BRX` | - | Fork [phreax] g sleeplessm 729 | ch0=mic | base | 568.6 / 568.7 (loud 568.7) | FAIL | 1276.8 / 1276.8 (loud 1276.8) | FAIL | - | - | 48.3 | ok |
+| `NctXzn` | - | A cool sphere | ch0=keyboard | base | 768.6 / 874.7 (loud 980.1) | FAIL | 1924.3 / 1953.0 (loud 2206.8) | FAIL | - | - | 31985.7 | ok |
+| `fcdSRB` | - | Living Mandelbulb 3D Raymarched | ch0=undeclared | base | - | skipped (None) | - | skipped (too_slow) | - | - | 13940.9 | - |
+| `33j3WV` | - | Vortex - Duality Rainbow Spiral | ch0=undeclared | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 291.4 | - |
+| `43BBDm` | - | Fork RaymarchedMandelbulb3DFract | ch0=music | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 249.6 | - |
+| `7ccXRH` | - | Fractal Supernova Melody | ch0=keyboard | base | - | - | - | - | - | - | - | - |
+| `fcSSRw` | - | Fractal Sponza | ch1=texture, ch2=texture | base | - | - | - | - | - | - | - | - |
+| `NftSRn` | - | force fields | ch0=keyboard | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 617.1 | - |
+| `scdSRn` | - | Spectral Ripples | ch0=keyboard | base | - | skipped (too_slow) | - | skipped (too_slow) | - | - | 34049.0 | - |
 
 ## Multipass: excluded (248)
 
@@ -1419,482 +1884,22 @@ The Image pass reads one or more buffer passes. Only the Image pass exists in th
 | `XXjSRc` | #624 | Jupiter and Io | buffer=2, common=1, image=1 | ch0=buffer, ch1=texture, ch2=texture, ch3=texture | - |
 | `XXlXD7` | - | Particular Fractals | buffer=2, common=1, image=1 | ch0=buffer, ch1=buffer, ch2=buffer, ch3=undeclared | - |
 
-## Not measured (463)
+## Not measured (0)
 
 Shaders with no result line in these files, or (with `--require-worst-case`) with no measurement under worst-case audio.
 
-| id | # | name | class |
-|---|---|---|---|
-| `333fDS` | - | Week 06D - Fractals 4 | selfcontained |
-| `333GzH` | - | even more fun with fractals | selfcontained |
-| `33cBRj` | - | Logarithmic Julia Set | selfcontained |
-| `33d3zr` | - | more fun with fractals (colored) | selfcontained |
-| `33ffD2` | - | Vox 1.5 | selfcontained |
-| `33jfRz` | - | star shining 0211 | selfcontained |
-| `33KBRG` | - | Day14-ever | selfcontained |
-| `33KGzG` | - | cool fractal animation | selfcontained |
-| `33KXz1` | - | Sierpinski tetrahedron | selfcontained |
-| `33SyWm` | - | Mandelbrottttt | selfcontained |
-| `33VyDm` | - | Ethereal Emerald | selfcontained |
-| `3cffDM` | - | SOUL JOURNEY | selfcontained |
-| `3cfGzn` | - | Optical Pulse | selfcontained |
-| `3cs3DS` | - | Week 06E - Fractals 5 | selfcontained |
-| `3csSRM` | - | Cosmic Fractal Odyssey | selfcontained |
-| `3ctyRX` | - | fractals test 2 | selfcontained |
-| `3cyGRd` | - | Fork First-Shad PetraRall 807 | selfcontained |
-| `3d3BWH` | - | Mandelbrot experiment | selfcontained |
-| `3dc3DB` | - | FractalShader-Mandelbrot | selfcontained |
-| `3dfXzr` | - | Raymarch Mandelbox | selfcontained |
-| `3dKGDd` | - | bit fractals | selfcontained |
-| `3dKXzV` | - | Fractals by Bending 2D Space | selfcontained |
-| `3ff3R8` | - | sleeplessm Psychedelic automaton | selfcontained |
-| `3ffBDn` | - | Fractals: Mandelbrot Set | selfcontained |
-| `3fSXzc` | - | Mandelbulb Realistic Lighting | selfcontained |
-| `3ftXR8` | - | Gingerbreadman map | selfcontained |
-| `3fVXWy` | - | basic_mandelbrot | selfcontained |
-| `3l3cR8` | - | Morphing Sakura Fractal | selfcontained |
-| `3lGfzc` | - | Ultraviolet Fractal | selfcontained |
-| `3llXDN` | - | Exploring sets of julia fractals | selfcontained |
-| `3lSGzD` | - | MandelBrotSet | selfcontained |
-| `3s2GWR` | - | Menger sponge Raymarched | selfcontained |
-| `3s3yRS` | - | Fractal Sky #3 | selfcontained |
-| `3scfzs` | - | ps_Koch'sCurve | selfcontained |
-| `3sVGRV` | - | Brainy looking kaliset fractal | selfcontained |
-| `3t3fzM` | - | Animated Lyapunov Flames | selfcontained |
-| `3tfyWN` | - | Fractals! - a simple demo | selfcontained |
-| `3tS3R3` | - | Falling into fractals | selfcontained |
-| `3tsSWN` | - | 3D Julia Set Slow Loader | selfcontained |
-| `3tyyz3` | - | Mandelbrot + Julia sets | selfcontained |
-| `3Xc3zl` | - | Use IFS to Construct Fractals | selfcontained |
-| `3XGczz` | - | other combination of fractals | selfcontained |
-| `3XtBDj` | - | angels | selfcontained |
-| `43d3zr` | - | Fractal Hallways | selfcontained |
-| `43dfD2` | - | gosper curve | selfcontained |
-| `43Gczy` | - | fractals with selector | selfcontained |
-| `43j3DG` | - | Menger Sponge - 3d - cross eyes | selfcontained |
-| `43V3RG` | - | Pink Panther Cell Division | selfcontained |
-| `4cBBDy` | - | Museum of morphing fractals | selfcontained |
-| `4cdBD8` | - | Fractals by nidu42 | selfcontained |
-| `4cfSDB` | - | Phoenix Julia (Paul Bourke) | selfcontained |
-| `4cGBzw` | - | Mandelbulb Fractal (Shaded) | selfcontained |
-| `4cScR3` | - | simple mandelbrot set zoom | selfcontained |
-| `4d2yDG` | - | Newton-Raphson Fractal | selfcontained |
-| `4df3D7` | - | Mandelbrot zoom | selfcontained |
-| `4dlyRN` | - | Mandelbrot with Distance Est | selfcontained |
-| `4dtfWs` | - | Mandelbrother | selfcontained |
-| `4f2Sz1` | - | Extended Newton Experiments | selfcontained |
-| `4fcczf` | - | trippy newtons method fractals | selfcontained |
-| `4fcXz2` | - | Glilia Julitchy | selfcontained |
-| `4fGyR1` | - | cherry blossom julia (antialias) | selfcontained |
-| `4fjGzR` | - | phind: test2 | selfcontained |
-| `4fSGD1` | - | Julia_test | selfcontained |
-| `4ljSzD` | - | Mandelbrot scratch | selfcontained |
-| `4s2BWw` | - | Pinwheel Fractals | selfcontained |
-| `4sVBWh` | - | Mandlebrot Fractal | selfcontained |
-| `4tjBDD` | - | Adaptive Distance Estimation | selfcontained |
-| `4tjSRw` | - | Mandelbrot Set & Julia Set | selfcontained |
-| `4tlXWH` | - | Complex function 1 | selfcontained |
-| `4tSSz3` | - | Ray Marched Fractals | selfcontained |
-| `4ttXDr` | - | raymarch_bulb_plasma | selfcontained |
-| `4X33RB` | - | Neon fractals6502 | selfcontained |
-| `4XG3Rc` | - | Raymarching Free Fractals V2 | selfcontained |
-| `4Xt3Ds` | - | Dark Fractal | selfcontained |
-| `4XXXW2` | - | troyebrot | selfcontained |
-| `4XyGz3` | - | Raymarching Free Fractals V1 | selfcontained |
-| `73BSzc` | - | Dhanurasana | selfcontained |
-| `73jXR3` | - | Aura Farm | selfcontained |
-| `73K3Rc` | - | Fading Hamsa | selfcontained |
-| `73VGRc` | - | Fractal Hamsa | selfcontained |
-| `7c23Rd` | - | z^4 Julia Gasket | selfcontained |
-| `7cdSWl` | - | Fractal Series-v5 | selfcontained |
-| `7cGGDh` | - | Aurora Julia | selfcontained |
-| `7cGXRG` | - | loxapollosphere | selfcontained |
-| `7cKXWw` | - | oscillating grid pair | selfcontained |
-| `7ct3Dr` | - | raymarching scene test | selfcontained |
-| `7ctSWl` | - | Fractal Series-v4 | selfcontained |
-| `7ctXDl` | - | Fractal Series-v6 | selfcontained |
-| `7dd3Wj` | - | Fractals 1 | selfcontained |
-| `7ddcz2` | - | 10 Line Burning Ship | selfcontained |
-| `7ddczX` | - | Julia - Douady Rabbit | selfcontained |
-| `7dfXDH` | - | fractalized Circuit Diagram2 | selfcontained |
-| `7dG3WD` | - | My balls | selfcontained |
-| `7dlSD2` | - | koch fractal | selfcontained |
-| `7dtcz2` | - | Basic Supersampling | selfcontained |
-| `7dtczX` | - | Julia - Dendrite | selfcontained |
-| `7dtyWl` | - | Burning Ship POI (Supersampled) | selfcontained |
-| `7fcSWr` | - | A/V Wormhole | selfcontained |
-| `7fGSRG` | - | A not normal animation | selfcontained |
-| `7fsSR2` | - | raycasted sdf sphere simple | selfcontained |
-| `7fVXWw` | - | amyloid rings | selfcontained |
-| `7ljcWd` | - | Mand Jul Blend | selfcontained |
-| `7lVGDw` | - | Mandelbrot x4 Animated | selfcontained |
-| `7s23zD` | - | Mandelbrot Set (smooth coloring) | selfcontained |
-| `7s2fDD` | - | Fractal 2398129312 | selfcontained |
-| `7tBSRm` | - | Fractals practice v01 | selfcontained |
-| `7tGGzV` | - | Mandelbrot Point Traps | selfcontained |
-| `7tsXzN` | - | mandelbrot 001 orbit trap | selfcontained |
-| `7tsyR2` | - | evolution | selfcontained |
-| `7tV3RR` | - | Julia-Sets Danny | selfcontained |
-| `7XB3DD` | - | 8 bit forest | selfcontained |
-| `7XK3Rc` | - | Infinite Hamsa | selfcontained |
-| `7XV3Dm` | - | 4D hyperbolic | selfcontained |
-| `7Xy3WW` | #635 | Fractal Bang | selfcontained |
-| `cdfXRX` | - | Secant Sea | selfcontained |
-| `cdKcz1` | - | First Fractal Shader | selfcontained |
-| `cdXyWs` | - | Stackathon | selfcontained |
-| `clGSzw` | - | kaleidoscope6678 | selfcontained |
-| `clscDn` | - | Escape Time Box 3 | selfcontained |
-| `clVSWm` | - | M^n(lbr0t Zo0m | selfcontained |
-| `clXXz4` | - | Weird Fractal Thing | selfcontained |
-| `clycWW` | - | learning shaders youtube | selfcontained |
-| `csSfRR` | - | Escape Time Box 2 | selfcontained |
-| `csSXWm` | - | Simple mandelbrot 01 | selfcontained |
-| `ct2XWW` | - | Perpendicular Julia Morph | selfcontained |
-| `ct33Wj` | - | Fork Fork Anima goooo 015 | selfcontained |
-| `ctsyW8` | - | GrayFractals | selfcontained |
-| `ctVfzt` | - | galois field | selfcontained |
-| `dd3Sz8` | - | e3 Learning Fractals 001 | selfcontained |
-| `DdB3zR` | - | Menger sponge (Silice impl ref) | selfcontained |
-| `Ddc3Ws` | - | Basic Learn Sphere Repetition | selfcontained |
-| `DdjfRV` | - | Dreamscapes | selfcontained |
-| `ddKGWR` | - | SierpinskiTetrahedron | selfcontained |
-| `ddlfWl` | - | Escape Time Box | selfcontained |
-| `DdSczc` | - | fractals-fun | selfcontained |
-| `DdtfzH` | - | Alive Fractals | selfcontained |
-| `dlBBzw` | - | Kuroki Fractal | selfcontained |
-| `DlcGWj` | - | Fork Animated L goooo 997 | selfcontained |
-| `dldfWH` | - | rainbow wavessss | selfcontained |
-| `DlfBW2` | - | Shader Art Template | selfcontained |
-| `DlfcWN` | - | Cloth Fractal | selfcontained |
-| `dlGfDD` | - | Raymarching with fractals | selfcontained |
-| `DlGXRw` | - | Fractals, sweet fractals X | selfcontained |
-| `DlGyRy` | - | Mandalabrot | selfcontained |
-| `DlSczc` | - | Red Mandelbrot Set | selfcontained |
-| `DlVSDm` | - | fractals_center | selfcontained |
-| `dlXcDj` | - | GLSL Fractals | selfcontained |
-| `dlXSDS` | - | 3Dfractals | selfcontained |
-| `Ds2BRD` | - | dead easy spong | selfcontained |
-| `ds2fzG` | - | Fractals - Silviu | selfcontained |
-| `ds3yRN` | - | fractlee | selfcontained |
-| `dscXRj` | - | Mandelbrot and other fractals | selfcontained |
-| `DsffWl` | - | fractals 00 | selfcontained |
-| `DsjSz3` | - | Snowflake Fractal | selfcontained |
-| `DsjyRR` | - | InitiationShader | selfcontained |
-| `dsKfDh` | - | Quasicrystal Exploration | selfcontained |
-| `dslczj` | - | Hello World - Shadertoy | selfcontained |
-| `DsscDn` | - | SDF Fractals | selfcontained |
-| `DsSyzc` | - | Fork Initiation sklbz 497 | selfcontained |
-| `dsyczD` | - | Spiraling Tree 2 | selfcontained |
-| `dt2cWR` | - | sinh() frac | selfcontained |
-| `DtBGD3` | - | Mandelbrot Julia Correlation | selfcontained |
-| `dtGfWw` | - | POV: You're in the Menger Sponge | selfcontained |
-| `DtGSWK` | - | primitive_fractal | selfcontained |
-| `DtGXR1` | - | Basic shader helper functions | selfcontained |
-| `DtjGDK` | - | Base -1+i  Twindragon Loop | selfcontained |
-| `dtjyDc` | - | 10 Line Tippett Mandelbrot | selfcontained |
-| `dtKyDG` | - | angle fractals | selfcontained |
-| `dtVSDy` | - | Do you like fractals? I have one | selfcontained |
-| `dtyXDW` | - | Una wea Azul | selfcontained |
-| `f3jGzy` | - | 3D fractal party | selfcontained |
-| `f3jXzK` | - | Radial Fractal | selfcontained |
-| `f3yGzt` | - | all the fractals in the fr50 | selfcontained |
-| `fccXRN` | - | healpix shader wip | selfcontained |
-| `fcGSDh` | - | quasiflower | selfcontained |
-| `fd3cRs` | - | 10 Line Tricorn | selfcontained |
-| `fdcyDN` | - | KIFS_001 | selfcontained |
-| `fdcyR2` | - | Small Newton Set | selfcontained |
-| `fdjSWD` | - | MandleBulb | selfcontained |
-| `fdlSWB` | - | Mandelbrot Party antialiased | selfcontained |
-| `fdtcD2` | - | Julia of Tricorn | selfcontained |
-| `ffd3DM` | - | Mandelbrot Sunset | selfcontained |
-| `fffSRf` | - | Glyph Cascade | selfcontained |
-| `fffXRf` | - | Orbit Trap Circle | selfcontained |
-| `ffKXRt` | - | pon bour | selfcontained |
-| `fft3DM` | - | many fractals from one | selfcontained |
-| `ffXSRf` | - | Perihelion Vault | selfcontained |
-| `ffXSzf` | - | Julia Mirror | selfcontained |
-| `flKyDh` | - | Simple Fractal 4 All (03) | selfcontained |
-| `fll3D8` | - | Raymarched mandelbulb | selfcontained |
-| `flSXD1` | - | Trianglotron | selfcontained |
-| `flXyz7` | - | In, out and around the Sevenfold | selfcontained |
-| `fs3yRs` | - | Better Multibrot (c^n) | selfcontained |
-| `fsBGzR` | - | avoodoocado_mandelbrot | selfcontained |
-| `fsSGRw` | - | Mandelbrot Iterations (smoothed) | selfcontained |
-| `fstBDN` | - | 10 Line Forest | selfcontained |
-| `fsVczm` | - | Distance estimated fractals | selfcontained |
-| `fsXGzB` | - | Mandelbrot Set (all hues) | selfcontained |
-| `ftKyDh` | - | Simple Fractal 4 All (02) | selfcontained |
-| `ftlXzn` | - | Greeble Experiment | selfcontained |
-| `ftsyDl` | - | Fractal 2D Boze | selfcontained |
-| `fttfWH` | - | Rational rings | selfcontained |
-| `ftyGWK` | - | Fractal-Explorer | selfcontained |
-| `fXlXzM` | - | Cluster Bots 2 - The Web | selfcontained |
-| `fXy3zz` | - | Rollercoaster into Fractals | selfcontained |
-| `l323WD` | - | Menger Sponge - 3d | selfcontained |
-| `l32BWW` | - | Raymarched Mandelbulb 3D Fractal | selfcontained |
-| `l3GBD1` | - | Prismatic Fractals | selfcontained |
-| `l3GcWR` | - | [phreax] genuary 2025 #3 | selfcontained |
-| `l3GGRd` | - | Fractals Explorer | selfcontained |
-| `l3GSRG` | - | A Fractal Tile-Generator 2D | selfcontained |
-| `l3KSRy` | - | A Fractal Tile-Generator 2D b | selfcontained |
-| `l3tBRS` | - | Colorful fractals | selfcontained |
-| `l3VcD3` | - | Elliptic inversion fractal | selfcontained |
-| `lcBczm` | - | ccbFractalShadertest | selfcontained |
-| `lclcRj` | - | Endless museum of fractals | selfcontained |
-| `lcSSWc` | - | Week 06F - Fractals 6 | selfcontained |
-| `ldBSDy` | - | Newton Fractals | selfcontained |
-| `ldd3WX` | - | quick fractals | selfcontained |
-| `lddSDl` | - | Acid fractal stuff | selfcontained |
-| `lfdBW4` | - | Frikadellenbrot | selfcontained |
-| `lfXBWf` | - | Mandelbrot fractal neon | selfcontained |
-| `lltSzB` | - | Fun with Fractals | selfcontained |
-| `llVXz1` | - | duck fractal | selfcontained |
-| `llX3Dn` | - | Hello Mandelbrot Shader | selfcontained |
-| `llXcRs` | - | Mandelbrot (w/ zoom) + Julia | selfcontained |
-| `lsdBWs` | - | Julia Set Rotator | selfcontained |
-| `lsfXWN` | - | Fractals exploring | selfcontained |
-| `lsVSRR` | - | Barnsley's fractal | selfcontained |
-| `ltBfWR` | - | Seahorse Valley | selfcontained |
-| `ltGSWz` | - | Menger Sponge Distort-hhhzzzsss | selfcontained |
-| `ltsfRf` | - | Fractal Vine Thing - hhhzzzsss | selfcontained |
-| `lX2cWW` | - | Some kind of alien life | selfcontained |
-| `lXj3zt` | - | Very Basic Fractals | selfcontained |
-| `lXKcWw` | - | symmetrically fractalline | selfcontained |
-| `lXlcD4` | - | Spirals of Chaos - Dynamic Chaos | selfcontained |
-| `lXsGRn` | - | [phreax] neon crystal | selfcontained |
-| `lXyXDy` | - | Dancing patterns | selfcontained |
-| `M32czh` | - | Weird Fractals | selfcontained |
-| `M32GW1` | - | PI Fractals | selfcontained |
-| `M3ffRs` | - | Quantum Entanglement Operator | selfcontained |
-| `M3t3zs` | - | Double and float mandelbrot | selfcontained |
-| `M3VSDV` | - | The emergence and extinction of | selfcontained |
-| `M3y3Rw` | - | Fractalsimple | selfcontained |
-| `M3yfzw` | - | Colina do Sol em LSD | selfcontained |
-| `M3ySzV` | - | A Fractal Tile-Generator 2D U.1 | selfcontained |
-| `McBcz3` | - | Sierpiński Triangle Fractals | selfcontained |
-| `McBSzK` | - | Mandelbrot JBK | selfcontained |
-| `McByRK` | - | mandelbrot-zoom | selfcontained |
-| `McjGDD` | - | Newton fractals | selfcontained |
-| `MctcR2` | - | Cool fractals | selfcontained |
-| `mdcyDH` | - | Mandelbrot_V1 | selfcontained |
-| `Mdd3D2` | - | Untitled 06 | selfcontained |
-| `MddcRN` | - | Julia folder | selfcontained |
-| `mdjSDW` | - | "Loading screen" fractals | selfcontained |
-| `MdSyW3` | - | Newton Fractal - Smooth Color | selfcontained |
-| `MdSyWK` | - | Holy hell, lots of 3D cubessss | selfcontained |
-| `mdVfDK` | - | Bridge to Infinity \|\| ft DoMa | selfcontained |
-| `mdXcDj` | - | radialFractalHex | selfcontained |
-| `MdycDt` | - | Mandelbrot toying | selfcontained |
-| `Mfd3zS` | - | Silly Tree | selfcontained |
-| `MffGRX` | - | Mandlebrot <-> Julia | selfcontained |
-| `MfsyDM` | - | Psychedelic Ray Marching | selfcontained |
-| `Ml3cRB` | - | Octonionic Julia Sets, 2D slices | selfcontained |
-| `mlK3z3` | - | Para Pipe | selfcontained |
-| `MllGzB` | - | Evolving Julia | selfcontained |
-| `mlVSWy` | - | fractal raymarching | selfcontained |
-| `MsjcDz` | - | Mandelbrot and Julia relations | selfcontained |
-| `msSyR3` | - | some nonsense | selfcontained |
-| `msVfWV` | - | Into the TV | selfcontained |
-| `MsVSDK` | - | Nice carpet, bro | selfcontained |
-| `msyyzw` | - | fractal croissant | selfcontained |
-| `Mtc3zn` | - | Curve Fractals? v.0.0.1 | selfcontained |
-| `mtdGDM` | - | Animated Lappronov Fractal Shade | selfcontained |
-| `MtKyRR` | - | Escape Time Sierpinski Triangle | selfcontained |
-| `mtX3W7` | - | Just waves | selfcontained |
-| `MX3BzS` | - | Fractals II | selfcontained |
-| `MX3fzX` | - | Week 06B - Fractals 2 | selfcontained |
-| `MXSyzy` | - | Mandelbrot zoom (-0.7746,0.1374) | selfcontained |
-| `N333W4` | - | Hopalong Cosmos | selfcontained |
-| `N3XSDN` | - | özbek fractals | selfcontained |
-| `NcdXDs` | - | Fractal Series-v3 | selfcontained |
-| `NctXDs` | - | Fractal Series-v2 | selfcontained |
-| `NctXRn` | - | Tie-Dye Squares | selfcontained |
-| `NcXSRf` | - | Radiant Furnace | selfcontained |
-| `Nd33DH` | - | [Julia Sets] | selfcontained |
-| `Ndcczj` | - | 9 Line Julia | selfcontained |
-| `NdfBWS` | - | Julia set simulation | selfcontained |
-| `NdKGDt` | - | Random fractals | selfcontained |
-| `NdtSWX` | - | newtons fractals | selfcontained |
-| `Nf2GRc` | - | Spiral Septagon fractal | selfcontained |
-| `NfcSzM` | - | not your dog's toy | selfcontained |
-| `NfdSDs` | - | Fractal Series-v1 | selfcontained |
-| `NflSDn` | - | Procedurally generated fractals | selfcontained |
-| `NfS3Rz` | - | Hypersymmetrical Fractions | selfcontained |
-| `NfXSRf` | - | Night Bloom | selfcontained |
-| `Nl3GDj` | - | Mandelbrot-Set Danny | selfcontained |
-| `NlVcWh` | - | Colorized Simple Fractal For All | selfcontained |
-| `NlVXWR` | - | MadelbrotFractal | selfcontained |
-| `Ns23zm` | - | Mandelbrot party | selfcontained |
-| `Ns3yRs` | - | Burning Ship Multibrot | selfcontained |
-| `NscXWf` | - | Newton_Fractals | selfcontained |
-| `NstBDN` | - | 10 Line Crown | selfcontained |
-| `NsXGzj` | - | Mandelbrot Iterations | selfcontained |
-| `NtjBRG` | - | Sir Isaac's fractal | selfcontained |
-| `Ntt3z7` | - | Fractal flash | selfcontained |
-| `NXj3Wz` | - | Infinite Spine | selfcontained |
-| `s32SzV` | - | Harmonic Space Folding | selfcontained |
-| `s3s3D2` | - | Complex Fractal Generator VB | selfcontained |
-| `sccXR8` | - | julia set (infinite fractals) | selfcontained |
-| `scjGR3` | - | iabs fractal | selfcontained |
-| `scKXWR` | - | pair-ity | selfcontained |
-| `scS3Rd` | - | Reuleaux triangle fractal | selfcontained |
-| `scs3Wf` | - | Hyperdimensional fractions | selfcontained |
-| `sd3Szs` | - | Fire_shader_sidps | selfcontained |
-| `sdcGWr` | - | Fractal test - how many arms? | selfcontained |
-| `sddSDf` | - | amateur attempt at julia set | selfcontained |
-| `sdsSWB` | - | Fractalis Kaleidoscopus | selfcontained |
-| `sdtcz2` | - | Smooth iterations | selfcontained |
-| `sdXGDN` | - | Fractal spheres | selfcontained |
-| `sdyGWw` | - | Masayoshi Shapes | selfcontained |
-| `sfKSDz` | - | æmœba | selfcontained |
-| `sfVXDz` | - | tcial tiktaalik | selfcontained |
-| `sfVXzG` | - | mezzanesque | selfcontained |
-| `sldXW8` | - | blinky christmas ornament | selfcontained |
-| `slfXRS` | - | Fork Alien Skies animated | selfcontained |
-| `slfyWs` | - | miniverse | selfcontained |
-| `ssdczX` | - | Julia - San Marco | selfcontained |
-| `ssdyRf` | - | Julia of Mandelbrot | selfcontained |
-| `ssjBDm` | - | Three fractals morphing 2 | selfcontained |
-| `sslfW2` | - | complex_fractal | selfcontained |
-| `ssScD3` | - | Three Morping fractals | selfcontained |
-| `sstcz2` | - | 9 Line Burning Julia | selfcontained |
-| `ssVGRw` | - | Mandlebrot set with Perturbation | selfcontained |
-| `ssXyzN` | - | Fractal Idea e | selfcontained |
-| `sttfDN` | - | lyapunov fractals modifications | selfcontained |
-| `sttfzX` | - | chaos game | selfcontained |
-| `sttXDB` | - | Mandelbrot set plotting | selfcontained |
-| `sXBXWG` | - | Enlightenment | selfcontained |
-| `sXfSR2` | - | Falling through Fractal Snow | selfcontained |
-| `sXXSDH` | - | Experimental Harmonic Frac | selfcontained |
-| `sXy3Ww` | - | Explode! | selfcontained |
-| `t32cDK` | - | 2D Fractal Explorer | selfcontained |
-| `t33Bz8` | - | julia! | selfcontained |
-| `t33XWX` | - | Lambda of Lambdabrot | selfcontained |
-| `t3dyWB` | - | trip with fractals | selfcontained |
-| `t3jGRy` | - | symmetry + repetition in 3D | selfcontained |
-| `t3S3Wt` | - | Complex Equation (Z-Domain) v0 | selfcontained |
-| `tccBWj` | - | Randomised, subdivided KIFS | selfcontained |
-| `tcd3zf` | - | Fractalus | selfcontained |
-| `tcGcWR` | - | ___newton's fractal | selfcontained |
-| `tclSW4` | - | Parametric Mandelbrot Fractal | selfcontained |
-| `tctcWj` | - | mandelbrot experiment 001 | selfcontained |
-| `tctXzS` | - | Leyes esculpidas 1.25e7 | selfcontained |
-| `tcVyWc` | - | mandelbrot set :) | selfcontained |
-| `tcXBW8` | - | inside colors | selfcontained |
-| `tcXSzX` | - | Frunnel 7: Manic Flight | selfcontained |
-| `tcy3DG` | - | KuKo #35 | selfcontained |
-| `tcyGRc` | - | Prismatic Noise Ripple V2 | selfcontained |
-| `tcySR3` | - | Raymarching fractals example | selfcontained |
-| `tdcfRl` | - | ps_Menger'sMushroom | selfcontained |
-| `tdj3zG` | - | Raymarch Sierpinski | selfcontained |
-| `tdsyDl` | - | [Mandelbrot Set] TIA | selfcontained |
-| `tfdGDX` | - | First-Shader | selfcontained |
-| `tftXzS` | - | Leyes esculpidas 1.25e6 | selfcontained |
-| `tl3fD4` | - | Rainbow snowflake | selfcontained |
-| `tlB3W1` | - | recursivesd | selfcontained |
-| `tlfcRn` | - | Trees of Circles II | selfcontained |
-| `tlXcz7` | - | Dodecahedralis III | selfcontained |
-| `ts2GDD` | - | Infinite Tetration | selfcontained |
-| `tstcD7` | - | Fractal Sky #2 | selfcontained |
-| `ttlSRj` | - | FractalSmerityCircles | selfcontained |
-| `ttsGz4` | - | Yet another Mandelbrot Set | selfcontained |
-| `tttfW7` | - | Mandelbrot time iterations | selfcontained |
-| `ttVyWy` | - | Little Julia Set Fractal Thing | selfcontained |
-| `tXBBWd` | - | Stereographic Inverse Circles | selfcontained |
-| `tXcfD8` | - | Julia Set - Colorised | selfcontained |
-| `tXdcDS` | - | julia fractal in layers | selfcontained |
-| `tXlXW4` | - | Markus-Lyapunov Fractal | selfcontained |
-| `W32fRy` | - | Mirror fractal forest | selfcontained |
-| `W33GD4` | - | Spherrain 2 | selfcontained |
-| `W33Gzn` | - | more fun with fractals | selfcontained |
-| `w33XRr` | - | fast cosmic scars 🪐 | selfcontained |
-| `W3cyDX` | - | Simple perturbation for fractals | selfcontained |
-| `W3dXW2` | - | FractalSquare-Cube | selfcontained |
-| `w3fGRf` | - | pasila 3025 | selfcontained |
-| `W3KGDy` | - | Breathing fractal fields | selfcontained |
-| `W3SSDG` | - | sphere fractals | selfcontained |
-| `w3t3R2` | - | golf fork mdl TIA | selfcontained |
-| `W3XGDf` | - | fractal tiled tunnel [319] | selfcontained |
-| `w3XyR2` | - | Holey Plane | selfcontained |
-| `wc3XRX` | - | #01 Kleinian - FracTales 3D Demo | selfcontained |
-| `wcBGWc` | - | square tile fractal | selfcontained |
-| `wcBGWt` | - | Fractal 80s Disco Shader | selfcontained |
-| `wcccDf` | - | fractals without name | selfcontained |
-| `WcjGzy` | - | 03R01 | selfcontained |
-| `WclSDH` | - | Sp00ky Fractal Bone | selfcontained |
-| `Wclyzj` | - | Loving that sinh() | selfcontained |
-| `WcsXWM` | - | Frunnel 3: Flora | selfcontained |
-| `wcVSzm` | - | Fractals by nidu42 with mouse | selfcontained |
-| `wcyGR1` | - | teeeeeeeeeeeest1 | selfcontained |
-| `wd3BDM` | - | Mandelbrot distance | selfcontained |
-| `Wd3BzB` | - | Julia set distance Lissajous | selfcontained |
-| `wd3fzl` | - | ps_Menger'sBrocolli | selfcontained |
-| `wdcfRl` | - | ps_Menger'sSponge | selfcontained |
-| `Wdcfzs` | - | ps_JuliaSet | selfcontained |
-| `WdSyDK` | - | Julia ensemble visualiser | selfcontained |
-| `wdXcWH` | - | simple mandelbr0t | selfcontained |
-| `wf3fW2` | - | Wooden Chessboard Pattern | selfcontained |
-| `wff3WH` | - | Mandelbrot and Julia fractals | selfcontained |
-| `WffcWN` | - | sinh() | selfcontained |
-| `WflGWS` | - | Week 06C - Fractals 3 | selfcontained |
-| `WfSfz1` | - | Procedural Fire Glow | selfcontained |
-| `WfyGWy` | - | raymarching journey (70 seconds) | selfcontained |
-| `Wl3fz4` | - | Fork Lyapunov rsiqueira 526 | selfcontained |
-| `wl3yDN` | - | ray marching color | selfcontained |
-| `WlcyDS` | - | Kaleidoscopic IFS RayMarching | selfcontained |
-| `WldSR2` | - | mandelbrot - test | selfcontained |
-| `WlsfWS` | - | circle in circle | selfcontained |
-| `wlXBzN` | - | fun fractals sounds | selfcontained |
-| `ws3fRl` | - | ps_SierpinskisCarpet | selfcontained |
-| `WsBSzm` | - | Spiderweb Fractal | selfcontained |
-| `wscfRl` | - | ps_Sierpinski'sTetraheadron | selfcontained |
-| `Wscfzs` | - | ps_MandelbrotSet | selfcontained |
-| `WsS3W1` | - | MCG: fractals | selfcontained |
-| `wssyDs` | - | Kaleidoscopic Fractal | selfcontained |
-| `WsVBz1` | - | KIFS Fractalss | selfcontained |
-| `WsXGRl` | - | Simple Sierpinski | selfcontained |
-| `WtG3Dc` | - | Bacteria Fractal Slideshow. | selfcontained |
-| `wtj3Wm` | - | Infinite plane fractal | selfcontained |
-| `wtKfW3` | - | kifs 2d _5 | selfcontained |
-| `WtsyR8` | - | Octahedralis III | selfcontained |
-| `wtVcDt` | - | Yet Another Julia Set | selfcontained |
-| `WX33WB` | - | golf f(z) = i^z + c | selfcontained |
-| `wX3fD8` | - | Mandelbrot - Colorised | selfcontained |
-| `WX3fWS` | - | Week 06A - Fractals 1 | selfcontained |
-| `WXc3Rn` | - | fun with fractals | selfcontained |
-| `wXcGRX` | - | Fractal test, mouse sets power | selfcontained |
-| `WXcGWs` | - | Before the Tempest | selfcontained |
-| `wXjyRm` | - | Breath of Autumn | selfcontained |
-| `WXVSDK` | - | Ray Marching Fractal | selfcontained |
-| `WXyyzz` | - | spherical ball with sparkles | selfcontained |
-| `X32Xzd` | - | Exploring Depths of Mandelbrot | selfcontained |
-| `X3dSzs` | - | fractals made easy | selfcontained |
-| `X3jyRK` | - | Iridescent snowflakes | selfcontained |
-| `X3tfRX` | - | (mouse) Infinite Koch snowflake | selfcontained |
-| `XcdGW8` | - | Mandelbrot set(by mishaNPT) | selfcontained |
-| `XcdGWf` | - | AK FYP14: Basic Fractal | selfcontained |
-| `XddyRX` | - | keep making fractals | selfcontained |
-| `XdSXzR` | - | Julia Set. | selfcontained |
-| `Xf2yRD` | - | hw6 | selfcontained |
-| `XfcyDn` | - | Interaktive Mandelbulb3D Fractal | selfcontained |
-| `XfcyWN` | - | Fractal Spiral Pulse | selfcontained |
-| `XfKGDm` | - | Trying to learn shaders properly | selfcontained |
-| `XfsXz2` | - | 10 Line Lambda | selfcontained |
-| `Xl2Bzm` | - | 3/2018 | selfcontained |
-| `XlcfRN` | - | Another mandelbrot | selfcontained |
-| `XltBzl` | - | nomdemonshader | selfcontained |
-| `XlVfR3` | - | Black and white madelbrot set | selfcontained |
-| `XsVXWc` | - | Sine Wave Zion | selfcontained |
-| `XtBBzw` | - | The Beauty of Fractals | selfcontained |
-| `XXGBzK` | - | fractalic move | selfcontained |
-| `XXsSR2` | - | Raymarching 4D Mandelbrot | selfcontained |
+None.
 
-## Variant comparison (17)
+## Variant comparison (32)
 
 Shaders measured in more than one variant.
 
 | id | variant | status | 720p p50/p95 verdict | 1080p p50/p95 verdict | tier |  |
 |---|---|---|---|---|---|---|
+| `332XWd` | base | ok | 370.7 / 371.3 (loud 369.4) FAIL | 829.1 / 829.5 (loud 824.5) FAIL | - |  |
+| `332XWd` | tex | ok | 370.3 / 370.7 FAIL | 827.9 / 828.7 FAIL | - |  |
+| `3fVyDw` | base | ok | 480.8 / 514.1 (loud 510.8) FAIL | 1056.4 / 1117.6 (loud 1101.9) FAIL | - |  |
+| `3fVyDw` | tex | ok | 481.8 / 513.6 FAIL | 1055.8 / 1118.9 FAIL | - |  |
 | `3lfyDr` | base | ok | 311.8 / 445.3 FAIL | 672.7 / 912.4 FAIL | - |  |
 | `3lfyDr` | lite | ok | 82.5 / 119.8 FAIL | 180.2 / 267.4 FAIL | - |  |
 | `3lsSzf` | base | too_slow | - skipped (too_slow) | - skipped (too_slow) | - |  |
@@ -1911,24 +1916,50 @@ Shaders measured in more than one variant.
 | `73y3zV` | lite | ok | 40.6 / 40.6 FAIL | 91.2 / 91.2 FAIL | 360p | chosen |
 | `73yGDV` | base | ok | 1386.0 / 1450.2 FAIL | 2930.1 / 3065.1 FAIL | - |  |
 | `73yGDV` | lite | ok | 269.8 / 291.4 FAIL | 589.6 / 618.5 FAIL | - |  |
+| `7ddGWN` | base | ok | 310.0 / 561.3 (loud 676.3) FAIL | 665.1 / 1176.0 (loud 1425.0) FAIL | - |  |
+| `7ddGWN` | tex | ok | 312.1 / 563.2 FAIL | 666.0 / 1182.6 FAIL | - |  |
+| `7dGSDy` | base | ok | 247.1 / 247.3 (loud 247.4) FAIL | 555.7 / 555.9 (loud 556.0) FAIL | - |  |
+| `7dGSDy` | tex | ok | 247.2 / 247.3 FAIL | 555.9 / 556.0 FAIL | - |  |
+| `7dKXWR` | base | ok | 58.2 / 60.6 (loud 59.2) FAIL | 128.2 / 134.4 (loud 130.1) FAIL | - |  |
+| `7dKXWR` | tex | ok | 58.1 / 60.3 FAIL | 127.8 / 133.9 FAIL | - |  |
+| `Dl23zV` | base | ok | 228.7 / 230.9 (loud 229.0) FAIL | 516.2 / 521.8 (loud 516.4) FAIL | - |  |
+| `Dl23zV` | tex | ok | 228.5 / 230.2 FAIL | 513.4 / 515.5 FAIL | - |  |
 | `fdXXWH` | base | ok | 126.9 / 134.7 FAIL | 283.5 / 294.3 FAIL | - |  |
 | `fdXXWH` | lite | ok | 33.6 / 35.7 FAIL | 74.5 / 78.9 FAIL | 360p | chosen |
+| `flfyWH` | base | ok | 21.9 / 26.6 (loud 29.8) FAIL | 50.7 / 59.4 (loud 65.7) FAIL | - |  |
+| `flfyWH` | tex | ok | 22.1 / 26.8 FAIL | 50.8 / 59.6 FAIL | - |  |
+| `flKyzG` | base | ok | 98.1 / 120.6 (loud 134.4) FAIL | 204.4 / 248.7 (loud 269.5) FAIL | - |  |
+| `flKyzG` | tex | ok | 99.0 / 121.4 FAIL | 206.1 / 250.5 FAIL | - |  |
+| `fsKSzc` | base | ok | 261.7 / 262.0 (loud 262.0) FAIL | 588.5 / 589.1 (loud 589.1) FAIL | - |  |
+| `fsKSzc` | tex | ok | 260.0 / 260.5 FAIL | 584.7 / 585.3 FAIL | - |  |
 | `fXtXzr` | base | too_slow | - skipped (too_slow) | - skipped (too_slow) | - |  |
 | `fXtXzr` | lite | ok | 372.6 / 411.2 FAIL | 829.4 / 880.7 FAIL | - |  |
 | `lsdBDH` | base | ok | 36.4 / 51.3 FAIL | 80.5 / 111.6 FAIL | - |  |
 | `lsdBDH` | lite | ok | 10.1 / 14.2 MARGINAL | 22.4 / 30.9 FAIL | 540p | chosen |
 | `Md3BzX` | base | too_slow | - skipped (too_slow) | - skipped (too_slow) | - |  |
 | `Md3BzX` | lite | ok | 1210.6 / 5369.3 FAIL | 2662.9 / 11924.3 FAIL | - |  |
+| `msB3Wm` | base | ok | 81.4 / 81.4 (loud 81.4) FAIL | 182.9 / 183.0 (loud 183.0) FAIL | - |  |
+| `msB3Wm` | tex | ok | 81.6 / 81.6 FAIL | 183.5 / 183.5 FAIL | - |  |
 | `Mss3R8` | base | ok | 93.8 / 195.3 FAIL | 167.3 / 421.4 FAIL | - |  |
 | `Mss3R8` | lite | ok | 23.5 / 51.5 FAIL | 48.1 / 108.5 FAIL | - |  |
 | `MtVyWK` | base | too_slow | - skipped (too_slow) | - skipped (too_slow) | - |  |
 | `MtVyWK` | lite | ok | 585.0 / 983.6 FAIL | 1205.6 / 2127.9 FAIL | - |  |
+| `N3VGRd` | base | ok | 59.0 / 68.8 (loud 78.7) FAIL | 123.0 / 137.3 (loud 154.3) FAIL | - |  |
+| `N3VGRd` | tex | ok | 59.2 / 68.7 FAIL | 123.2 / 137.9 FAIL | - |  |
+| `NdcXR8` | base | ok | 69.5 / 87.9 (loud 88.1) FAIL | 154.7 / 191.8 (loud 200.4) FAIL | - |  |
+| `NdcXR8` | tex | ok | 69.5 / 87.8 FAIL | 154.5 / 191.4 FAIL | - |  |
 | `sd3SD2` | base | ok | 120.4 / 122.5 FAIL | 258.0 / 268.7 FAIL | - |  |
 | `sd3SD2` | lite | ok | 60.1 / 61.3 FAIL | 134.2 / 137.2 FAIL | - |  |
+| `sdcXzH` | base | ok | 43.8 / 52.5 (loud 55.3) FAIL | 99.7 / 116.0 (loud 129.7) FAIL | - |  |
+| `sdcXzH` | tex | ok | 43.9 / 52.7 FAIL | 100.0 / 116.2 FAIL | - |  |
+| `sfVGDG` | base | ok | 506.6 / 543.5 (loud 551.2) FAIL | 1108.9 / 1190.6 (loud 1218.2) FAIL | - |  |
+| `sfVGDG` | tex | ok | 507.9 / 544.2 FAIL | 1110.2 / 1191.7 FAIL | - |  |
 | `WdKXDt` | base | ok | 91.2 / 129.3 FAIL | 189.4 / 316.8 FAIL | - |  |
 | `WdKXDt` | lite | ok | 11.6 / 16.3 FAIL | 25.8 / 35.8 FAIL | 540p | chosen |
 | `wssBDS` | base | ok | 913.0 / 913.1 FAIL | 2054.2 / 2054.3 FAIL | - |  |
 | `wssBDS` | lite | ok | 30.4 / 30.5 FAIL | 68.4 / 68.5 FAIL | 360p | chosen |
+| `XlfyD7` | base | ok | 98.1 / 99.6 (loud 99.6) FAIL | 220.3 / 224.0 (loud 224.0) FAIL | - |  |
+| `XlfyD7` | tex | ok | 98.1 / 99.6 FAIL | 220.3 / 224.0 FAIL | - |  |
 
 ## Result keys without a catalog entry
 
