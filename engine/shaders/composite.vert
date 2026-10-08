@@ -5,7 +5,6 @@ precision highp float;
 // the layer costs nothing per pixel.
 out vec2 v_guv;
 uniform vec2 u_resolution;
-uniform mediump int u_geo_on;   // shader-layer geometry active; precision matches the fragment stage
 uniform vec4 u_geo;     // bulge, angle, twist, stretch
 uniform vec4 u_geo2;    // ripple amplitude, ripple phase, mirror segments, brightness
 uniform vec4 u_geo3;    // wave amplitude, wave phase
@@ -36,6 +35,6 @@ void main() {
   vec2 offset = (corner == 0) ? vec2(0.0, 0.0) : (corner == 1 || corner == 3) ? vec2(1.0, 0.0)
               : (corner == 2 || corner == 5) ? vec2(0.0, 1.0) : vec2(1.0, 1.0);
   vec2 p = (cell + offset) / vec2(float(COLS), float(ROWS));
-  v_guv = (u_geo_on == 1) ? warp(p) : p;
+  v_guv = warp(p);
   gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
 }

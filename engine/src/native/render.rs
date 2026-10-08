@@ -160,6 +160,8 @@ const DECK_OUTPUT_FLIP: bool = true;
 pub struct Renderer {
     gl: glow::Context,
     program: Program,
+    /// The compositor with shader-layer geometry (layer B), on a grid mesh.
+    program_geo: Program,
     vao: glow::VertexArray,
     pub targets: [Target; 2],
     /// One offscreen target per distinct shader render size in the show.
@@ -358,10 +360,12 @@ impl Renderer {
                 gl.get_parameter_string(glow::RENDERER),
                 gl.get_parameter_string(glow::VERSION)
             );
-            let program = Program::with_vertex(
+            let composite = include_str!("../../shaders/program.frag");
+            let program = Program::new(&gl, composite)?;
+            let program_geo = Program::with_vertex(
                 &gl,
                 include_str!("../../shaders/composite.vert"),
-                include_str!("../../shaders/program.frag"),
+                &composite.replacen("#version 300 es\n", "#version 300 es\n#define GEO 1\n", 1),
             )?;
             let vao = gl.create_vertex_array().map_err(anyhow::Error::msg)?;
             let render_size = render_size();
@@ -448,6 +452,7 @@ impl Renderer {
             Ok(Self {
                 gl,
                 program,
+                program_geo,
                 vao,
                 targets,
                 shader_targets,
@@ -571,13 +576,10 @@ impl Renderer {
             m[7] * 2.0,
         ];
         let geo3 = [m[2] * 0.2 * level[2], self.flow[2] * 3.0, 0.0, 0.0];
-        let meters = [
-            ("u_meter_a", [level[0], level[1], level[2], level[3]]),
-            ("u_meter_b", [m[0], m[1], m[2], m[3]]),
-            // The band meter is a diagnostic: it shows with the HUD only.
-            ("u_meter_c", [level[4], m[4], f32::from(u8::from(state.hud)), 0.0]),
-        ];
-        let geo_on = m[..6].iter().any(|v| *v > 0.0) || self.geo_drift != 0.0;
+        // The geometry build of the compositor is used only while a knob is off its default.
+        let geo_on = m[..6].iter().any(|v| *v > 0.0)
+            || self.geo_drift != 0.0
+            || (m[7] - 0.5).abs() > 0.004;
         if state.shader && !state.blackout {
             if let Some(index) = state.selected_shader { self.compile_selected(index); }
         }
@@ -665,12 +667,12 @@ impl Renderer {
             }
             gl.bind_framebuffer(glow::FRAMEBUFFER, None);
             gl.viewport(0, 0, size.0 as i32, size.1 as i32);
-            gl.use_program(Some(self.program.id));
+            let p = if geo_on { &self.program_geo } else { &self.program };
+            gl.use_program(Some(p.id));
             gl.active_texture(glow::TEXTURE0);
             gl.bind_texture(glow::TEXTURE_2D, Some(self.targets[active.min(1)].texture));
             gl.active_texture(glow::TEXTURE1);
             gl.bind_texture(glow::TEXTURE_2D, Some(shader_target.texture));
-            let p = &self.program;
             gl.active_texture(glow::TEXTURE2);
             gl.bind_texture(glow::TEXTURE_2D, Some(self.hud_texture));
             p.int(gl, "u_hud_tex", 2);
@@ -689,8 +691,7 @@ impl Renderer {
                 if shader.is_some() { state.opacity } else { 0.0 },
             );
             p.float(gl, "u_fx_time", time);
-            p.int(gl, "u_geo_on", i32::from(geo_on));
-            for (name, value) in [("u_geo", geo), ("u_geo2", geo2), ("u_geo3", geo3)].into_iter().chain(meters) {
+            for (name, value) in [("u_geo", geo), ("u_geo2", geo2), ("u_geo3", geo3)] {
                 if let Some(location) = gl.get_uniform_location(p.id, name) {
                     gl.uniform_4_f32(Some(&location), value[0], value[1], value[2], value[3]);
                 }
@@ -727,8 +728,8 @@ impl Renderer {
                     BlendMode::LumaKey => 14,
                 },
             );
-            // The compositor draws the 64x36 quad grid generated in composite.vert.
-            gl.draw_arrays(glow::TRIANGLES, 0, 64 * 36 * 6);
+            // The geometry build draws the 64x36 quad grid generated in composite.vert.
+            gl.draw_arrays(glow::TRIANGLES, 0, if geo_on { 64 * 36 * 6 } else { 3 });
             gl.bind_texture(glow::TEXTURE_2D, None);
             gl.active_texture(glow::TEXTURE1);
             gl.bind_texture(glow::TEXTURE_2D, None);
@@ -795,6 +796,7 @@ impl Drop for Renderer {
             self.gl.delete_vertex_array(self.vao);
             self.gl.delete_texture(self.hud_texture);
             self.gl.delete_program(self.program.id);
+            self.gl.delete_program(self.program_geo.id);
         }
     }
 }

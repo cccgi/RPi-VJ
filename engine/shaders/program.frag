@@ -18,12 +18,13 @@ uniform float u_fx_time;
 uniform int u_sfx;          // video effect applied to the SHADER layer
 uniform float u_sfx_amount;
 uniform sampler2D u_hud_tex;
-uniform int u_geo_on;   // shader-layer geometry active
+// Shader-layer geometry (X-Touch layer B) exists only in the GEO build of this shader.
+// The renderer uses that build while a geometry or brightness knob is off its default,
+// and this lean one otherwise, so an idle layer B costs nothing.
+#ifdef GEO
 in vec2 v_guv;          // shader-layer coordinate, warped in the vertex stage
-uniform vec4 u_meter_a; // band meter levels: bass, low mid, mid, treble
-uniform vec4 u_meter_b; // layer B knobs 1-4
-uniform vec4 u_meter_c; // kick level, knob 5, meter on
 uniform vec4 u_geo2;    // ripple amplitude, ripple phase, mirror segments, brightness
+#endif
 uniform int u_hud;
 
 float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
@@ -117,6 +118,7 @@ vec3 mixLayers(vec3 base, vec3 top, float a, int mode) {
   return mix(base, clamp(r, 0.0, 1.0), clamp(amt, 0.0, 1.0));
 }
 
+#ifdef GEO
 // The warped shader-layer coordinate comes from the vertex stage (composite.vert). Only
 // the mirror fold, which has seams, and the edge mirroring are done per pixel.
 vec2 geoUV(vec2 uv) {
@@ -129,6 +131,7 @@ vec2 geoUV(vec2 uv) {
   }
   return 1.0 - abs(mod(uv, 2.0) - 1.0);
 }
+#endif
 
 void main() {
   if (u_blackout == 1) {
@@ -141,7 +144,11 @@ void main() {
   // The same effect bank, applied independently to the SHADER layer. Two
   // separate slots (u_fx for the clip, u_sfx here) so you can, say, kaleido
   // the footage while pixelating the generative layer over it.
-  vec2 guv = (u_geo_on == 1) ? geoUV(v_guv) : uv;
+#ifdef GEO
+  vec2 guv = geoUV(v_guv);
+#else
+  vec2 guv = uv;
+#endif
   vec2 suv = (u_sfx > 0) ? fxUV(guv, u_sfx, u_sfx_amount) : guv;
   vec4 shaderSample = texture(u_shader_tex, clamp(suv, 0.0, 1.0));
   if (u_sfx == 19) {
@@ -158,7 +165,9 @@ void main() {
   }
   if (u_sfx > 0) shaderSample.rgb = clamp(fxColor(shaderSample.rgb, uv, u_sfx, u_sfx_amount), 0.0, 1.0);
 
+#ifdef GEO
   shaderSample.rgb = clamp(shaderSample.rgb * u_geo2.w, 0.0, 1.0);
+#endif
 
   // Displace warps the base using the top layer's red/green, so it must offset
   // the lookup rather than blend colours.
@@ -211,25 +220,6 @@ void main() {
   vec3 blended = (u_blend_mode == 17) ? mix(base, base + top * 0.35, a)
                                       : mixLayers(base, top, a, u_blend_mode);
   fragColor = vec4(blended, 1.0);
-  // Band meter, bottom right: one bar per layer B knob (bass, low mid, mid, treble, kick).
-  // Bar height is the level that drives the transform; the white tick is the knob; a bar
-  // is grey while its knob is at zero.
-  vec2 mp = gl_FragCoord.xy - vec2(u_resolution.x - 5.0 * 56.0 - 32.0, 32.0);
-  if (u_meter_c.z > 0.5 && mp.x >= 0.0 && mp.y >= -8.0 && mp.x < 280.0 && mp.y < 268.0) {
-    int bar = int(mp.x / 56.0);
-    float x = mod(mp.x, 56.0);
-    float level = bar == 0 ? u_meter_a.x : bar == 1 ? u_meter_a.y : bar == 2 ? u_meter_a.z : bar == 3 ? u_meter_a.w : u_meter_c.x;
-    float knob = bar == 0 ? u_meter_b.x : bar == 1 ? u_meter_b.y : bar == 2 ? u_meter_b.z : bar == 3 ? u_meter_b.w : u_meter_c.y;
-    vec3 tint = bar == 0 ? vec3(1.0, 0.2, 0.2) : bar == 1 ? vec3(1.0, 0.6, 0.1) : bar == 2 ? vec3(0.9, 0.9, 0.1)
-              : bar == 3 ? vec3(0.2, 0.8, 1.0) : vec3(1.0, 0.3, 1.0);
-    vec3 c = blended * 0.2;
-    if (x > 6.0 && x < 50.0 && mp.y >= 0.0 && mp.y < 256.0) {
-      float h = mp.y / 256.0;
-      c = (h < level) ? mix(vec3(0.4), tint, step(0.02, knob)) : vec3(0.07);
-      if (abs(h - knob) < 0.012) c = vec3(1.0);
-    }
-    fragColor = vec4(c, 1.0);
-  }
   vec2 hudPixel=(gl_FragCoord.xy-vec2(20.0))/2.0;
   if(u_hud==1 && all(greaterThanEqual(hudPixel,vec2(0.0))) && all(lessThan(hudPixel,vec2(768.0,16.0)))) {
     float text=texture(u_hud_tex,hudPixel/vec2(768.0,16.0)).r;
