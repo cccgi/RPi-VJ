@@ -1,7 +1,7 @@
 //! Shader benchmark contracts: manifest, result lines, statistics and synthetic inputs.
 //! Nothing here touches the GPU; the measuring loop lives in `native::bench`.
 use crate::{
-    audio::{AudioFrame, BINS},
+    audio::{AudioFrame, BINS, FLOW_RATE, SPEC_FLOW_RATE},
     texture::{self, Bindings},
 };
 use anyhow::{ensure, Context, Result};
@@ -79,6 +79,14 @@ impl Entry {
                 .collect()
         };
         format!("{}.{}.ppm", clean(&self.id), clean(&self.variant))
+    }
+    /// Thumbnail name for a pattern: the 128 BPM one keeps the plain name.
+    pub fn thumb_name_for(&self, pattern: AudioPattern) -> String {
+        let name = self.thumb_name();
+        match pattern {
+            AudioPattern::Beat => name,
+            AudioPattern::Max => name.replace(".ppm", ".max.ppm"),
+        }
     }
 }
 #[derive(Debug, Clone, Deserialize)]
@@ -193,6 +201,12 @@ pub fn synthetic_audio(time: f32) -> AudioFrame {
     let bass = 0.25 + 0.65 * (-4.0 * beat).exp();
     let treble = 0.15 + 0.5 * (-7.0 * off).exp();
     let mid = 0.35 + 0.25 * (std::f32::consts::TAU * bar).sin();
+    // The three levels added with the five-band analysis: a tighter kick fundamental,
+    // the swell in the low mids, a snare on beats two and four in the high mids.
+    let snare = (time * BPM / 120.0 + 0.5).fract();
+    let sub = 0.20 + 0.70 * (-5.0 * beat).exp();
+    let low_mid = 0.40 + 0.25 * (std::f32::consts::TAU * bar).sin();
+    let high_mid = 0.20 + 0.45 * (-6.0 * snare).exp();
     let mut spectrum = [0.0; BINS];
     for (i, bin) in spectrum.iter_mut().enumerate() {
         let x = i as f32 / (BINS - 1) as f32;
@@ -207,6 +221,9 @@ pub fn synthetic_audio(time: f32) -> AudioFrame {
         treble,
         volume: ((bass + mid + treble) / 3.0).clamp(0.0, 1.0),
         onset,
+        sub,
+        low_mid,
+        high_mid,
         spectrum,
         sequence: 0,
     }
@@ -217,6 +234,72 @@ pub fn synthetic_flow(time: f32) -> ([f32; 4], [f32; 32]) {
         [0.40, 0.45, 0.35, 0.30].map(|energy: f32| time * (0.15 + energy * 2.0)),
         std::array::from_fn(|i| time * (0.05 + (0.4 - i as f32 * 0.01) * 2.0)),
     )
+}
+/// Worst-case audio: every level, the onset and every spectrum bin pinned at 1.
+pub fn max_audio() -> AudioFrame {
+    AudioFrame {
+        bass: 1.0,
+        mid: 1.0,
+        treble: 1.0,
+        volume: 1.0,
+        onset: 1.0,
+        sub: 1.0,
+        low_mid: 1.0,
+        high_mid: 1.0,
+        spectrum: [1.0; BINS],
+        sequence: 0,
+    }
+}
+/// Flow clocks after `time` seconds at the highest rate the renderer can advance them.
+pub fn max_flow(time: f32) -> ([f32; 4], [f32; 32]) {
+    (
+        [time * (FLOW_RATE.0 + FLOW_RATE.1); 4],
+        [time * (SPEC_FLOW_RATE.0 + SPEC_FLOW_RATE.1); 32],
+    )
+}
+/// Frames and GPU time kept per tier under the worst-case pattern: half the 128 BPM
+/// sample, since its inputs do not vary with the beat.
+pub const MAX_PATTERN_FRAMES: usize = 45;
+pub const MAX_PATTERN_BUDGET_MS: f64 = 1250.0;
+/// The audio a tier is measured under. A shader has to fit the budget under both.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AudioPattern {
+    /// The 128 BPM pattern of plan section 3.3; fills `tiers`, `pixels` and `thumb`.
+    Beat,
+    /// Everything pinned at maximum and sustained; fills `tiers_max`, `pixels_max` and
+    /// `thumb_max`.
+    Max,
+}
+impl AudioPattern {
+    /// Name in the result line's `audio` list.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Beat => "beat128",
+            Self::Max => "max",
+        }
+    }
+    pub fn audio(self, time: f32) -> AudioFrame {
+        match self {
+            Self::Beat => synthetic_audio(time),
+            Self::Max => max_audio(),
+        }
+    }
+    pub fn flow(self, time: f32) -> ([f32; 4], [f32; 32]) {
+        match self {
+            Self::Beat => synthetic_flow(time),
+            Self::Max => max_flow(time),
+        }
+    }
+    /// Whether a tier keeps sampling after `frames` kept frames costing `spent_ms`.
+    pub fn keep_sampling(self, frames: usize, spent_ms: f64) -> bool {
+        match self {
+            Self::Beat => keep_sampling(frames, spent_ms),
+            Self::Max => {
+                frames < MIN_FRAMES
+                    || (frames < MAX_PATTERN_FRAMES && spent_ms < MAX_PATTERN_BUDGET_MS)
+            }
+        }
+    }
 }
 
 /// Box-filter a bottom-up RGBA readback to a top-down `THUMB`-sized RGB image.
@@ -328,6 +411,11 @@ pub struct Outcome {
     pub throttled: Option<String>,
     /// `(channel, kind)` of every input texture that was bound while measuring.
     pub channels: Vec<(u8, texture::Kind)>,
+    /// `(height, tier)` under worst-case audio, for the tiers that were measured under
+    /// the 128 BPM pattern first. Empty when no tier got that far.
+    pub tiers_max: Vec<(u32, Tier)>,
+    pub pixels_max: Option<Pixels>,
+    pub thumb_max: Option<String>,
 }
 impl Outcome {
     /// A failure before any tier ran: every manifest tier is reported as skipped.
@@ -346,8 +434,34 @@ impl Outcome {
             temp_c: None,
             throttled: None,
             channels: Vec::new(),
+            tiers_max: Vec::new(),
+            pixels_max: None,
+            thumb_max: None,
         }
     }
+}
+fn tier_value(tier: &Tier) -> Value {
+    match tier {
+        Tier::Measured(s) => json!({
+            "frames": s.frames,
+            "mean_ms": round(s.mean_ms, 3),
+            "p50_ms": round(s.p50_ms, 3),
+            "p95_ms": round(s.p95_ms, 3),
+            "max_ms": round(s.max_ms, 3),
+            "first_ms": round(s.first_ms, 3),
+        }),
+        Tier::Aborted { reason, first_ms } => {
+            json!({"skipped": reason, "first_ms": round(*first_ms, 3)})
+        }
+        Tier::Skipped(reason) => json!({"skipped": reason}),
+    }
+}
+fn pixels_value(p: &Pixels) -> Value {
+    json!({
+        "mean_luma": round(p.mean_luma, 4),
+        "spatial_std": round(p.spatial_std, 4),
+        "temporal_diff": round(p.temporal_diff, 4),
+    })
 }
 fn round(value: f64, digits: i32) -> Value {
     let scale = 10f64.powi(digits);
@@ -377,34 +491,11 @@ pub fn result_line(entry: &Entry, outcome: &Outcome) -> String {
     }
     let mut tiers = Map::new();
     for (height, tier) in &outcome.tiers {
-        tiers.insert(
-            height.to_string(),
-            match tier {
-                Tier::Measured(s) => json!({
-                    "frames": s.frames,
-                    "mean_ms": round(s.mean_ms, 3),
-                    "p50_ms": round(s.p50_ms, 3),
-                    "p95_ms": round(s.p95_ms, 3),
-                    "max_ms": round(s.max_ms, 3),
-                    "first_ms": round(s.first_ms, 3),
-                }),
-                Tier::Aborted { reason, first_ms } => {
-                    json!({"skipped": reason, "first_ms": round(*first_ms, 3)})
-                }
-                Tier::Skipped(reason) => json!({"skipped": reason}),
-            },
-        );
+        tiers.insert(height.to_string(), tier_value(tier));
     }
     line.insert("tiers".into(), Value::Object(tiers));
     if let Some(p) = &outcome.pixels {
-        line.insert(
-            "pixels".into(),
-            json!({
-                "mean_luma": round(p.mean_luma, 4),
-                "spatial_std": round(p.spatial_std, 4),
-                "temporal_diff": round(p.temporal_diff, 4),
-            }),
-        );
+        line.insert("pixels".into(), pixels_value(p));
     }
     if let Some(thumb) = &outcome.thumb {
         line.insert("thumb".into(), json!(thumb));
@@ -426,6 +517,27 @@ pub fn result_line(entry: &Entry, outcome: &Outcome) -> String {
             .map(|(channel, kind)| (channel.to_string(), json!(kind.name())))
             .collect();
         line.insert("channels".into(), Value::Object(bound));
+    }
+    // Second extension: the worst-case audio pattern. `tiers`, `pixels` and `thumb` keep
+    // meaning the 128 BPM pattern; these fields sit beside them and are absent when no
+    // tier was measured under worst-case audio, so such a line is exactly the old one.
+    if !outcome.tiers_max.is_empty() {
+        line.insert(
+            "audio".into(),
+            json!([AudioPattern::Beat.name(), AudioPattern::Max.name()]),
+        );
+        let tiers: Map<String, Value> = outcome
+            .tiers_max
+            .iter()
+            .map(|(height, tier)| (height.to_string(), tier_value(tier)))
+            .collect();
+        line.insert("tiers_max".into(), Value::Object(tiers));
+    }
+    if let Some(p) = &outcome.pixels_max {
+        line.insert("pixels_max".into(), pixels_value(p));
+    }
+    if let Some(thumb) = &outcome.thumb_max {
+        line.insert("thumb_max".into(), json!(thumb));
     }
     Value::Object(line).to_string()
 }
@@ -611,6 +723,51 @@ mod tests {
         assert!(flow.iter().chain(&spec).all(|v| v.is_finite() && *v > 0.0));
     }
     #[test]
+    fn beat_pattern_feeds_five_distinct_bounded_bands() {
+        let mut differs = (false, false);
+        for step in 0..400 {
+            let a = synthetic_audio(step as f32 * 0.1);
+            for v in [a.sub, a.low_mid, a.high_mid] {
+                assert!((0.0..=1.0).contains(&v));
+            }
+            differs.0 |= (a.sub - a.bass).abs() > 0.05;
+            differs.1 |= (a.low_mid - a.high_mid).abs() > 0.05;
+        }
+        assert!(differs.0 && differs.1);
+        assert_eq!(AudioPattern::Beat.audio(3.3).bass, synthetic_audio(3.3).bass);
+        assert_eq!(AudioPattern::Beat.flow(3.3), synthetic_flow(3.3));
+    }
+    #[test]
+    fn worst_case_pattern_pins_everything_and_runs_the_clocks_flat_out() {
+        for time in [0.0, 7.3, 39.9] {
+            let a = AudioPattern::Max.audio(time);
+            for v in [
+                a.bass, a.mid, a.treble, a.volume, a.onset, a.sub, a.low_mid, a.high_mid,
+            ] {
+                assert_eq!(v, 1.0);
+            }
+            assert!(a.spectrum.iter().all(|v| *v == 1.0));
+        }
+        let (flow, spec) = AudioPattern::Max.flow(10.0);
+        // No level in 0..=1 can advance a clock faster than this.
+        assert!(flow.iter().all(|v| (*v - 21.5).abs() < 1e-4));
+        assert!(spec.iter().all(|v| (*v - 20.5).abs() < 1e-4));
+        let (beat_flow, beat_spec) = AudioPattern::Beat.flow(10.0);
+        assert!(beat_flow.iter().zip(&flow).all(|(a, b)| a < b));
+        assert!(beat_spec.iter().zip(&spec).all(|(a, b)| a < b));
+        assert_eq!(
+            (AudioPattern::Beat.name(), AudioPattern::Max.name()),
+            ("beat128", "max")
+        );
+        // Half the frames and half the time of the 128 BPM sample, same minimum.
+        assert!(AudioPattern::Max.keep_sampling(2, 9000.0));
+        assert!(!AudioPattern::Max.keep_sampling(3, 9000.0));
+        assert!(AudioPattern::Max.keep_sampling(44, 100.0));
+        assert!(!AudioPattern::Max.keep_sampling(45, 100.0));
+        assert!(!AudioPattern::Max.keep_sampling(20, 1250.0));
+        assert!(AudioPattern::Beat.keep_sampling(60, 1250.0));
+    }
+    #[test]
     fn downsample_flips_and_averages() {
         let (w, h) = (192, 108);
         let mut rgba = vec![0u8; w * h * 4];
@@ -707,6 +864,9 @@ mod tests {
             temp_c: Some(61.23),
             throttled: Some("0x0".into()),
             channels: Vec::new(),
+            tiers_max: Vec::new(),
+            pixels_max: None,
+            thumb_max: None,
         };
         let line = result_line(entry, &ok);
         assert!(!line.contains('\n'));
@@ -751,6 +911,41 @@ mod tests {
         let b: Value = serde_json::from_str(&result_line(entry, &bound)).unwrap();
         assert_eq!(b["channels"], json!({"0": "2d", "2": "cube"}));
         assert_eq!(b["tiers"], v["tiers"]);
+        // A line without a worst-case measurement carries none of the new fields.
+        for field in ["audio", "tiers_max", "pixels_max", "thumb_max"] {
+            assert!(v.get(field).is_none(), "{field}");
+        }
+        let both = Outcome {
+            tiers_max: vec![
+                (720, Tier::Measured(tier_stats(9.0, &[5.0, 5.5, 6.0]))),
+                (
+                    1080,
+                    Tier::Aborted {
+                        reason: "gpu_reset",
+                        first_ms: 1001.0,
+                    },
+                ),
+            ],
+            pixels_max: Some(Pixels {
+                mean_luma: 0.6,
+                spatial_std: 0.2,
+                temporal_diff: 0.1,
+            }),
+            thumb_max: Some(entry.thumb_name_for(AudioPattern::Max)),
+            ..ok.clone()
+        };
+        let m2: Value = serde_json::from_str(&result_line(entry, &both)).unwrap();
+        // The existing fields keep their names and meaning.
+        for field in ["tiers", "pixels", "thumb", "status", "compile_ms"] {
+            assert_eq!(m2[field], v[field], "{field}");
+        }
+        assert_eq!(m2["audio"], json!(["beat128", "max"]));
+        assert_eq!(m2["tiers_max"]["720"]["p95_ms"], 6.0);
+        assert_eq!(m2["tiers_max"]["720"]["frames"], 3);
+        assert_eq!(m2["tiers_max"]["1080"]["skipped"], "gpu_reset");
+        assert_eq!(m2["pixels_max"]["mean_luma"], 0.6);
+        assert_eq!(m2["thumb_max"], "33cGDj.base.max.ppm");
+        assert_eq!(entry.thumb_name_for(AudioPattern::Beat), entry.thumb_name());
 
         let log = format!(
             "shader compile failed:\n0:12(3): error: {}",

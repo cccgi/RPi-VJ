@@ -5,14 +5,16 @@ use super::{
     textures,
 };
 use crate::{
+    audio::Tempo,
     bench::{
-        begin_line, completed_keys, downsample, frame_completed, frame_time, keep_sampling,
-        pixel_stats, ppm, probe_estimate_ms, result_line, synthetic_audio, synthetic_flow,
-        tier_stats, Entry, Manifest, Outcome, Pixels, Tier, BPM, PIXEL_TIMES, PROBE_FACTOR,
-        RESET_SUSPECT_MS, SENTINEL, THUMB, TIME_SPAN, TOO_SLOW_FIRST_MS,
+        begin_line, completed_keys, downsample, frame_completed, frame_time, pixel_stats, ppm,
+        probe_estimate_ms, result_line, tier_stats, AudioPattern, Entry, Manifest, Outcome,
+        Pixels, Tier, BPM, PIXEL_TIMES, PROBE_FACTOR, RESET_SUSPECT_MS, SENTINEL, THUMB,
+        TIME_SPAN, TOO_SLOW_FIRST_MS,
     },
     shader,
 };
+use AudioPattern::{Beat, Max};
 use anyhow::{Context, Result};
 use glow::HasContext;
 use sdl2::{event::Event, keyboard::Keycode, video::GLProfile};
@@ -100,7 +102,13 @@ impl Session<'_> {
     /// The V3D kernel driver resets the GPU when a render job stops making tile progress
     /// (about one second) and `glFinish` then returns as if the frame were done. Render
     /// `time` again over a sentinel fill and report whether the frame really completed.
-    unsafe fn completes(&mut self, program: &Program, target: usize, time: f32) -> bool {
+    unsafe fn completes(
+        &mut self,
+        program: &Program,
+        target: usize,
+        time: f32,
+        pattern: AudioPattern,
+    ) -> bool {
         let ((width, height), fbo) = self.target(target);
         let [r, g, b, a] = SENTINEL.map(|v| f32::from(v) / 255.0);
         self.gl.bind_framebuffer(glow::FRAMEBUFFER, Some(fbo));
@@ -108,7 +116,7 @@ impl Session<'_> {
         self.gl.clear_color(r, g, b, a);
         self.gl.clear(glow::COLOR_BUFFER_BIT);
         self.gl.finish();
-        self.frame(program, target, time);
+        self.frame(program, target, time, pattern);
         let mut buffer = vec![0u8; width as usize * height as usize * 4];
         self.gl.read_pixels(
             0,
@@ -122,9 +130,15 @@ impl Session<'_> {
         frame_completed(&buffer)
     }
     /// One shader frame into `target`, bounded by the sync method. Returns milliseconds.
-    unsafe fn frame(&mut self, program: &Program, target: usize, time: f32) -> f64 {
-        let audio = synthetic_audio(time);
-        let (flow, spec_flow) = synthetic_flow(time);
+    unsafe fn frame(
+        &mut self,
+        program: &Program,
+        target: usize,
+        time: f32,
+        pattern: AudioPattern,
+    ) -> f64 {
+        let audio = pattern.audio(time);
+        let (flow, spec_flow) = pattern.flow(time);
         let (size, fbo) = self.target(target);
         let start = Instant::now();
         render::shader_pass(
@@ -137,6 +151,9 @@ impl Session<'_> {
                 dt: 1.0 / 60.0,
                 frame: self.frame,
                 bpm: BPM,
+                // Both patterns keep time with the clock, so the lock is honest and the
+                // phase-locked branches of a shader are part of what is measured.
+                tempo: Tempo::free(time, BPM, 1.0),
                 audio: &audio,
                 flow: &flow,
                 spec_flow: &spec_flow,
@@ -180,9 +197,15 @@ impl Session<'_> {
         }
         (!codes.is_empty()).then(|| format!("glGetError {}", codes.join(" ")))
     }
-    /// First frame, then up to `MAX_FRAMES` or the time budget. `None` when stopped.
-    unsafe fn tier(&mut self, program: &Program, index: usize) -> Option<Tier> {
-        let first_ms = self.frame(program, index, frame_time(0));
+    /// First frame, then frames up to the pattern's count or time budget. `None` when
+    /// stopped.
+    unsafe fn tier(
+        &mut self,
+        program: &Program,
+        index: usize,
+        pattern: AudioPattern,
+    ) -> Option<Tier> {
+        let first_ms = self.frame(program, index, frame_time(0), pattern);
         self.present(index);
         if index == 0 && first_ms > TOO_SLOW_FIRST_MS {
             return Some(Tier::Aborted {
@@ -194,18 +217,20 @@ impl Session<'_> {
             reason: "gpu_reset",
             first_ms,
         };
-        if first_ms >= RESET_SUSPECT_MS && !self.completes(program, index, frame_time(0)) {
+        if first_ms >= RESET_SUSPECT_MS
+            && !self.completes(program, index, frame_time(0), pattern)
+        {
             return Some(reset);
         }
         let mut frames = Vec::new();
         let mut spent = 0.0;
         let mut slowest = (0.0, 0.0);
-        while keep_sampling(frames.len(), spent) {
+        while pattern.keep_sampling(frames.len(), spent) {
             if self.stopping() {
                 return None;
             }
             let time = frame_time(frames.len() + 1);
-            let ms = self.frame(program, index, time);
+            let ms = self.frame(program, index, time, pattern);
             if ms > slowest.0 {
                 slowest = (ms, time);
             }
@@ -218,19 +243,24 @@ impl Session<'_> {
         // Cost can depend on time: a frame later in the span may be the one that was killed.
         if first_ms < RESET_SUSPECT_MS
             && slowest.0 >= RESET_SUSPECT_MS
-            && !self.completes(program, index, slowest.1)
+            && !self.completes(program, index, slowest.1, pattern)
         {
             return Some(reset);
         }
         Some(Tier::Measured(tier_stats(first_ms, &frames)))
     }
     /// Three readbacks of the first tier; the middle one becomes the thumbnail.
-    unsafe fn pixels(&mut self, program: &Program, thumb: &Path) -> (Pixels, bool) {
+    unsafe fn pixels(
+        &mut self,
+        program: &Program,
+        thumb: &Path,
+        pattern: AudioPattern,
+    ) -> (Pixels, bool) {
         let (width, height) = self.tiers[0].0;
         let mut buffer = vec![0u8; width as usize * height as usize * 4];
         let mut samples = Vec::new();
         for fraction in PIXEL_TIMES {
-            self.frame(program, 0, TIME_SPAN * fraction);
+            self.frame(program, 0, TIME_SPAN * fraction, pattern);
             self.gl.read_pixels(
                 0,
                 0,
@@ -319,9 +349,11 @@ impl Session<'_> {
             program.float(&self.gl, name, *value);
         }
         let link_ms = start.elapsed().as_secs_f64() * 1000.0;
-        let warm_ms = self.frame(&program, usize::MAX, frame_time(0));
+        let warm_ms = self.frame(&program, usize::MAX, frame_time(0), Beat);
         let compile_ms = start.elapsed().as_secs_f64() * 1000.0;
-        if warm_ms >= RESET_SUSPECT_MS && !self.completes(&program, usize::MAX, frame_time(0)) {
+        if warm_ms >= RESET_SUSPECT_MS
+            && !self.completes(&program, usize::MAX, frame_time(0), Beat)
+        {
             // Not even a 64x36 frame finishes; the watchdog wait is not compile time.
             let mut outcome = Outcome::failed(
                 "too_slow",
@@ -341,7 +373,7 @@ impl Session<'_> {
         }
         // Second small frame, now free of compile work: its cost scaled to the first tier
         // tells whether the full-size job is worth submitting.
-        let probe_ms = self.frame(&program, usize::MAX, frame_time(0));
+        let probe_ms = self.frame(&program, usize::MAX, frame_time(0), Beat);
         let estimate_ms = probe_estimate_ms(probe_ms, WARM_SIZE, self.tiers[0].0);
         if estimate_ms > PROBE_FACTOR * TOO_SLOW_FIRST_MS {
             let height = self.tiers[0].0 .1;
@@ -370,41 +402,64 @@ impl Session<'_> {
             temp_c: None,
             throttled: None,
             channels: kinds,
+            tiers_max: Vec::new(),
+            pixels_max: None,
+            thumb_max: None,
         };
         if outcome.error.is_some() {
             outcome.status = "gl_error";
         }
+        let mut stopped = false;
         for index in 0..self.tiers.len() {
             let height = self.tiers[index].0 .1;
-            if outcome.status != "ok" {
-                outcome
-                    .tiers
-                    .push((height, Tier::Skipped(outcome.status.to_owned())));
-                continue;
+            // Each tier under the 128 BPM pattern, then under worst-case audio. Once
+            // something failed, what was not measured is recorded as skipped: a beat
+            // tier always, a worst-case tier only if one was measured before it.
+            for pattern in [Beat, Max] {
+                if outcome.status != "ok" {
+                    let skipped = (height, Tier::Skipped(outcome.status.to_owned()));
+                    match pattern {
+                        Beat => outcome.tiers.push(skipped),
+                        Max if !outcome.tiers_max.is_empty() => outcome.tiers_max.push(skipped),
+                        Max => {}
+                    }
+                    continue;
+                }
+                eprintln!("bench: {label} tier {height} {}", pattern.name());
+                let Some(tier) = self.tier(&program, index, pattern) else {
+                    stopped = true;
+                    break;
+                };
+                if let Tier::Aborted { reason, first_ms } = &tier {
+                    let audio = match pattern {
+                        Beat => "",
+                        Max => " under worst-case audio",
+                    };
+                    outcome.status = "too_slow";
+                    outcome.error = Some(if *reason == "gpu_reset" {
+                        format!(
+                            "GPU hang watchdog reset the render job at {height}p{audio}; frames never completed"
+                        )
+                    } else {
+                        format!(
+                            "first {height}p frame took {first_ms:.0} ms{audio} (limit {TOO_SLOW_FIRST_MS:.0} ms)"
+                        )
+                    });
+                }
+                match pattern {
+                    Beat => outcome.tiers.push((height, tier)),
+                    Max => outcome.tiers_max.push((height, tier)),
+                }
+                if let Some(error) = self.gl_errors() {
+                    outcome.status = "gl_error";
+                    outcome.error = Some(error);
+                }
             }
-            eprintln!("bench: {label} tier {height}");
-            let Some(tier) = self.tier(&program, index) else {
+            if stopped {
                 break;
-            };
-            if let Tier::Aborted { reason, first_ms } = &tier {
-                outcome.status = "too_slow";
-                outcome.error = Some(if *reason == "gpu_reset" {
-                    format!(
-                        "GPU hang watchdog reset the render job at {height}p; frames never completed"
-                    )
-                } else {
-                    format!(
-                        "first {height}p frame took {first_ms:.0} ms (limit {TOO_SLOW_FIRST_MS:.0} ms)"
-                    )
-                });
-            }
-            outcome.tiers.push((height, tier));
-            if let Some(error) = self.gl_errors() {
-                outcome.status = "gl_error";
-                outcome.error = Some(error);
             }
         }
-        if self.stopping() {
+        if stopped || self.stopping() {
             self.gl.use_program(None);
             self.gl.delete_program(program.id);
             return None;
@@ -412,9 +467,15 @@ impl Session<'_> {
         if outcome.status == "ok" {
             eprintln!("bench: {label} pixels");
             let name = entry.thumb_name();
-            let (pixels, written) = self.pixels(&program, &manifest.thumb_dir.join(&name));
+            let (pixels, written) =
+                self.pixels(&program, &manifest.thumb_dir.join(&name), Beat);
             outcome.pixels = Some(pixels);
             outcome.thumb = written.then_some(name);
+            // The same three moments under worst-case audio: how the picture looks loud.
+            let name = entry.thumb_name_for(Max);
+            let (pixels, written) = self.pixels(&program, &manifest.thumb_dir.join(&name), Max);
+            outcome.pixels_max = Some(pixels);
+            outcome.thumb_max = written.then_some(name);
             if let Some(error) = self.gl_errors() {
                 outcome.status = "gl_error";
                 outcome.error = Some(error);
@@ -425,22 +486,25 @@ impl Session<'_> {
         if let Some(warning) = unbound {
             eprintln!("bench: {label} {warning}");
         }
-        let tiers: Vec<String> = outcome
-            .tiers
-            .iter()
-            .map(|(height, tier)| match tier {
-                Tier::Measured(s) => {
-                    format!(
-                        "{height}p p50={:.2} p95={:.2} n={}",
-                        s.p50_ms, s.p95_ms, s.frames
-                    )
-                }
-                Tier::Aborted { reason, first_ms } => {
-                    format!("{height}p {reason} first={first_ms:.0}")
-                }
-                Tier::Skipped(reason) => format!("{height}p skipped:{reason}"),
-            })
-            .collect();
+        let describe = |suffix: &str, tiers: &[(u32, Tier)]| -> Vec<String> {
+            tiers
+                .iter()
+                .map(|(height, tier)| match tier {
+                    Tier::Measured(s) => {
+                        format!(
+                            "{height}p{suffix} p50={:.2} p95={:.2} n={}",
+                            s.p50_ms, s.p95_ms, s.frames
+                        )
+                    }
+                    Tier::Aborted { reason, first_ms } => {
+                        format!("{height}p{suffix} {reason} first={first_ms:.0}")
+                    }
+                    Tier::Skipped(reason) => format!("{height}p{suffix} skipped:{reason}"),
+                })
+                .collect()
+        };
+        let mut tiers = describe("", &outcome.tiers);
+        tiers.extend(describe("/max", &outcome.tiers_max));
         eprintln!(
             "bench: {label} {} compile={compile_ms:.0}ms (link {link_ms:.0}ms) probe={probe_ms:.2}ms~{estimate_ms:.0}ms {}",
             outcome.status,
@@ -597,11 +661,11 @@ pub fn run(path: &Path, resume: bool, windowed: bool) -> Result<()> {
         // A trivial shader proves the pipeline and waits out any GPU job a killed
         // predecessor left running, before an entry can be blamed for the delay.
         let trivial = Program::new(&session.gl, &shader::prepare(CALIBRATION)?.source)?;
-        session.frame(&trivial, usize::MAX, 0.0);
+        session.frame(&trivial, usize::MAX, 0.0, Beat);
         for index in 0..session.tiers.len() {
             let before = gpu_render_ns();
             let frames: Vec<f64> = (0..31)
-                .map(|i| session.frame(&trivial, index, i as f32))
+                .map(|i| session.frame(&trivial, index, i as f32, Beat))
                 .collect();
             let stats = tier_stats(frames[0], &frames[1..]);
             let gpu = before

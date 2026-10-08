@@ -1,6 +1,6 @@
 use super::textures::{self, Channels, VIDEO_UNIT};
 use crate::{
-    audio::AudioFrame,
+    audio::{AudioFrame, BeatClock, Tempo, FLOW_RATE, SPEC_FLOW_RATE},
     control::{BlendMode, State},
     shader,
     show::Show,
@@ -174,6 +174,7 @@ pub struct Renderer {
     previous_time: Option<f32>,
     flow: [f32; 4],
     spec_flow: [f32; 32],
+    clock: BeatClock,
     frame: i32,
     clip_layouts: Vec<bool>,
     hud_texture: glow::Texture,
@@ -204,6 +205,8 @@ pub(super) struct ShaderFrame<'a> {
     pub dt: f32,
     pub frame: i32,
     pub bpm: f32,
+    /// Beat and bar phase and the lock level published as `u_locked`.
+    pub tempo: Tempo,
     pub audio: &'a AudioFrame,
     pub flow: &'a [f32; 4],
     pub spec_flow: &'a [f32; 32],
@@ -250,8 +253,7 @@ pub(super) unsafe fn shader_pass(
     p.int(gl, "FRAMEINDEX", f.frame);
     gl.uniform_4_f32(p.uniforms.get("DATE"), 0.0, 0.0, 0.0, 0.0);
     let (time, audio) = (f.time, f.audio);
-    let beat = (time * f.bpm / 60.0).fract();
-    let bar = (time * f.bpm / 240.0).fract();
+    let (beat, bar) = (f.tempo.beat, f.tempo.bar);
     for (name, v) in [
         ("u_time", time),
         ("TIME", time),
@@ -265,23 +267,23 @@ pub(super) unsafe fn shader_pass(
         ("u_energy", audio.volume),
         ("u_kick", audio.onset),
         ("u_bpm", f.bpm),
-        ("u_sub", audio.bass),
-        ("u_low_mid", audio.mid),
-        ("u_high_mid", audio.mid),
+        ("u_sub", audio.sub),
+        ("u_low_mid", audio.low_mid),
+        ("u_high_mid", audio.high_mid),
         ("u_hit_low", audio.onset * audio.bass),
         ("u_hit_mid", audio.onset * audio.mid),
         ("u_hit_high", audio.onset * audio.treble),
         ("u_beat_phase", beat),
         ("u_bar_phase", bar),
-        ("u_locked", 0.0),
+        ("u_locked", f.tempo.locked),
         ("u_flow", f.flow[0]),
         ("u_flow_low", f.flow[1]),
         ("u_flow_mid", f.flow[2]),
         ("u_flow_high", f.flow[3]),
-        ("uSubBass", audio.bass),
+        ("uSubBass", audio.sub),
         ("uBass", audio.bass),
-        ("uLowMid", audio.mid),
-        ("uHighMid", audio.mid),
+        ("uLowMid", audio.low_mid),
+        ("uHighMid", audio.high_mid),
         ("uTreble", audio.treble),
         ("uEnergy", audio.volume),
         ("uKick", audio.onset),
@@ -447,6 +449,7 @@ impl Renderer {
                 previous_time: None,
                 flow: [0.0; 4],
                 spec_flow: [0.0; 32],
+                clock: BeatClock::default(),
                 frame: 0,
                 clip_layouts: show.clips.iter().map(|c| c.quad_mirror).collect(),
                 hud_texture,
@@ -509,11 +512,12 @@ impl Renderer {
                 .iter_mut()
                 .zip([audio.volume, audio.bass, audio.mid, audio.treble])
         {
-            *clock += dt * (0.15 + energy * 2.0);
+            *clock += dt * (FLOW_RATE.0 + energy * FLOW_RATE.1);
         }
         for (clock, energy) in self.spec_flow.iter_mut().zip(spectrum_bands(audio)) {
-            *clock += dt * (0.05 + energy * 2.0);
+            *clock += dt * (SPEC_FLOW_RATE.0 + energy * SPEC_FLOW_RATE.1);
         }
+        let tempo = self.clock.tick(dt, state.bpm, audio);
         if state.shader && !state.blackout {
             if let Some(index) = state.selected_shader { self.compile_selected(index); }
         }
@@ -583,6 +587,7 @@ impl Renderer {
                         dt,
                         frame: self.frame,
                         bpm: state.bpm,
+                        tempo,
                         audio,
                         flow: &self.flow,
                         spec_flow: &self.spec_flow,

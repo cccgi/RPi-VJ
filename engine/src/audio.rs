@@ -5,6 +5,20 @@ pub const FFT_SIZE: usize = 1024;
 pub const HOP: usize = 256;
 pub const BINS: usize = 128;
 pub const SAMPLE_RATE: f32 = 48000.0;
+/// Band edges in Hz. `bass` (30..250), `mid` (250..4000) and `treble` (4000..16000) are
+/// the three levels the engine has always published. `sub` is the bottom of `bass`
+/// (30..100: the two lowest usable FFT bins, 47 and 94 Hz, where a kick fundamental
+/// lands), `low_mid` and `high_mid` split `mid` at 1 kHz. In power, `low_mid` and
+/// `high_mid` add up to `mid`, and `sub` is never above `bass`.
+pub const BAND_FLOOR_HZ: f32 = 30.0;
+pub const SUB_MAX_HZ: f32 = 100.0;
+pub const BASS_MAX_HZ: f32 = 250.0;
+pub const LOW_MID_MAX_HZ: f32 = 1000.0;
+pub const MID_MAX_HZ: f32 = 4000.0;
+pub const BAND_CEILING_HZ: f32 = 16000.0;
+/// Integrated flow clocks advance by `base + gain * level` per second (`.0`, `.1`).
+pub const FLOW_RATE: (f32, f32) = (0.15, 2.0);
+pub const SPEC_FLOW_RATE: (f32, f32) = (0.05, 2.0);
 
 /// Preserve stereo energy even when left and right have opposite polarity.
 #[derive(Default)]
@@ -25,6 +39,9 @@ impl StereoAnalyzer {
             treble: power(left.treble, right.treble),
             volume: power(left.volume, right.volume),
             onset: left.onset.max(right.onset),
+            sub: power(left.sub, right.sub),
+            low_mid: power(left.low_mid, right.low_mid),
+            high_mid: power(left.high_mid, right.high_mid),
             sequence: left.sequence,
             spectrum: std::array::from_fn(|i| power(left.spectrum[i], right.spectrum[i])),
         }
@@ -37,6 +54,12 @@ pub struct AudioFrame {
     pub treble: f32,
     pub volume: f32,
     pub onset: f32,
+    /// 30..100 Hz, the bottom of `bass`.
+    pub sub: f32,
+    /// 250..1000 Hz, the lower part of `mid`.
+    pub low_mid: f32,
+    /// 1000..4000 Hz, the upper part of `mid`.
+    pub high_mid: f32,
     pub spectrum: [f32; BINS],
     pub sequence: u64,
 }
@@ -48,6 +71,9 @@ impl Default for AudioFrame {
             treble: 0.0,
             volume: 0.0,
             onset: 0.0,
+            sub: 0.0,
+            low_mid: 0.0,
+            high_mid: 0.0,
             spectrum: [0.0; BINS],
             sequence: 0,
         }
@@ -102,6 +128,9 @@ impl Analyzer {
         self.fft
             .process_with_scratch(&mut self.work, &mut self.scratch);
         let mut bands = [0.0_f32; 3];
+        // sub, low-mid, high-mid: accumulated beside the three legacy bands so those keep
+        // their exact arithmetic.
+        let mut split = [0.0_f32; 3];
         let mut spectrum = [0.0_f32; BINS];
         let mut flux = 0.0;
         for i in 1..FFT_SIZE / 2 {
@@ -111,15 +140,22 @@ impl Analyzer {
                 flux += (magnitude - self.previous[i]).max(0.0);
             }
             self.previous[i] = magnitude;
-            if (30.0..=16000.0).contains(&frequency) {
-                let band = if frequency < 250.0 {
+            if (BAND_FLOOR_HZ..=BAND_CEILING_HZ).contains(&frequency) {
+                let band = if frequency < BASS_MAX_HZ {
                     0
-                } else if frequency < 4000.0 {
+                } else if frequency < MID_MAX_HZ {
                     1
                 } else {
                     2
                 };
                 bands[band] += magnitude * magnitude;
+                if frequency < SUB_MAX_HZ {
+                    split[0] += magnitude * magnitude;
+                } else if (BASS_MAX_HZ..LOW_MID_MAX_HZ).contains(&frequency) {
+                    split[1] += magnitude * magnitude;
+                } else if (LOW_MID_MAX_HZ..MID_MAX_HZ).contains(&frequency) {
+                    split[2] += magnitude * magnitude;
+                }
                 let bin =
                     ((frequency / 30.0).ln() / (16000.0_f32 / 30.0).ln() * BINS as f32) as usize;
                 spectrum[bin.min(BINS - 1)] = spectrum[bin.min(BINS - 1)].max(magnitude);
@@ -139,6 +175,9 @@ impl Analyzer {
         self.frame.mid = smooth(self.frame.mid, bands[1].sqrt());
         self.frame.treble = smooth(self.frame.treble, bands[2].sqrt());
         self.frame.volume = smooth(self.frame.volume, rms);
+        self.frame.sub = smooth(self.frame.sub, split[0].sqrt());
+        self.frame.low_mid = smooth(self.frame.low_mid, split[1].sqrt());
+        self.frame.high_mid = smooth(self.frame.high_mid, split[2].sqrt());
         for (old, new) in self.frame.spectrum.iter_mut().zip(spectrum) {
             *old = smooth(*old, new);
         }
@@ -151,9 +190,227 @@ fn smooth(previous: f32, next: f32) -> f32 {
     let alpha = 1.0 - (-(HOP as f32 / SAMPLE_RATE) / tau).exp();
     (previous + alpha * (next - previous)).clamp(0.0, 1.0)
 }
+/// Beat and bar phase in 0..1 and how far they can be trusted (0 = free-running clock).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Tempo {
+    pub beat: f32,
+    pub bar: f32,
+    pub locked: f32,
+}
+impl Tempo {
+    /// Phases of an uncorrected clock at `time` seconds.
+    pub fn free(time: f32, bpm: f32, locked: f32) -> Self {
+        Self {
+            beat: (time * bpm / 60.0).fract(),
+            bar: (time * bpm / 240.0).fract(),
+            locked,
+        }
+    }
+}
+/// Fraction of the phase error taken out per onset (the browser renderer's value).
+pub const LOCK_PLL_GAIN: f32 = 0.25;
+/// Seconds without an on-beat onset after which `locked` has faded to 0 (browser value).
+pub const LOCK_DECAY_S: f32 = 6.0;
+/// An onset within this many beats of the grid counts as on the beat.
+pub const LOCK_ON_BEAT: f32 = 0.125;
+/// An onset at least this far from the grid sits on the half beat and says nothing.
+pub const LOCK_HALF_BEAT: f32 = 0.375;
+/// The decaying onset level must jump by this much to count as a new onset.
+const ONSET_EDGE: f32 = 0.25;
+/// Below this agreement the clock is acquiring: every onset pulls the phase.
+const LOCK_ACQUIRE_BELOW: f32 = 0.3;
+
+/// Beat clock at the operator's BPM whose phase is pulled onto the detected onsets.
+///
+/// This is not a tempo tracker: it never estimates BPM. `locked` rises only while
+/// onsets keep landing on the beat grid of the BPM the operator set, which holds when
+/// that BPM is within about 3% of the music, and fades over `LOCK_DECAY_S` without
+/// such onsets. The bar phase counts four beats from wherever the phase settled; no
+/// downbeat is detected. Runs on the render thread: a few float operations per frame.
+#[derive(Clone, Debug, Default)]
+pub struct BeatClock {
+    beats: f64,
+    agree: f32,
+    age: f32,
+    previous_onset: f32,
+}
+impl BeatClock {
+    pub fn tick(&mut self, dt: f32, bpm: f32, audio: &AudioFrame) -> Tempo {
+        let dt = if dt.is_finite() {
+            dt.clamp(0.0, 0.1)
+        } else {
+            0.0
+        };
+        let bpm = if bpm.is_finite() {
+            bpm.clamp(30.0, 300.0)
+        } else {
+            120.0
+        };
+        self.beats = (self.beats + f64::from(dt * bpm / 60.0)).rem_euclid(4.0);
+        self.age += dt;
+        if self.age >= LOCK_DECAY_S {
+            // Lock lost: acquire again from scratch.
+            self.age = LOCK_DECAY_S;
+            self.agree = 0.0;
+        }
+        let rising = audio.onset - self.previous_onset > ONSET_EDGE;
+        self.previous_onset = audio.onset;
+        if rising {
+            let error = (self.beats.round() - self.beats) as f32;
+            let on_beat = error.abs() <= LOCK_ON_BEAT;
+            if on_beat {
+                self.agree += LOCK_PLL_GAIN * (1.0 - self.agree);
+                self.age = 0.0;
+            } else if error.abs() < LOCK_HALF_BEAT {
+                self.agree *= 1.0 - LOCK_PLL_GAIN;
+            }
+            if on_beat || self.agree < LOCK_ACQUIRE_BELOW {
+                // Onsets that come with low end (kicks) pull harder than hats.
+                let weight = 0.25 + 0.75 * (audio.bass * 2.0).clamp(0.0, 1.0);
+                self.beats =
+                    (self.beats + f64::from(error * LOCK_PLL_GAIN * weight)).rem_euclid(4.0);
+            }
+        }
+        Tempo {
+            beat: (self.beats.fract() as f32).min(0.999_999),
+            bar: ((self.beats / 4.0) as f32).min(0.999_999),
+            locked: ((self.agree - 0.5) / 0.4).clamp(0.0, 1.0)
+                * (1.0 - self.age / LOCK_DECAY_S).clamp(0.0, 1.0),
+        }
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn tone(frequency: f32, hops: usize) -> AudioFrame {
+        let mut analyzer = Analyzer::new();
+        let mut frame = AudioFrame::default();
+        for hop in 0..hops {
+            frame = analyzer.process(&std::array::from_fn(|i| {
+                0.5 * (std::f32::consts::TAU * frequency * (hop * HOP + i) as f32 / SAMPLE_RATE)
+                    .sin()
+            }));
+        }
+        frame
+    }
+    #[test]
+    fn five_bands_separate_pure_tones() {
+        // (tone Hz, which of [sub, bass, low_mid, high_mid, treble] must be loud)
+        for (frequency, loud) in [
+            (55.0, [true, true, false, false, false]),
+            (190.0, [false, true, false, false, false]),
+            (500.0, [false, false, true, false, false]),
+            (2000.0, [false, false, false, true, false]),
+            (8000.0, [false, false, false, false, true]),
+        ] {
+            let f = tone(frequency, 80);
+            let levels = [f.sub, f.bass, f.low_mid, f.high_mid, f.treble];
+            for (level, loud) in levels.iter().zip(loud) {
+                assert!((0.0..=1.0).contains(level), "{frequency} Hz: {levels:?}");
+                if loud {
+                    assert!(*level > 0.4, "{frequency} Hz: {levels:?}");
+                } else {
+                    assert!(*level < 0.05, "{frequency} Hz: {levels:?}");
+                }
+            }
+            // The legacy mid is the power sum of its two halves.
+            let halves = (f.low_mid * f.low_mid + f.high_mid * f.high_mid).sqrt();
+            assert!((f.mid - halves).abs() < 0.01, "{frequency} Hz");
+            assert!(f.sub <= f.bass + 1e-4);
+        }
+    }
+    #[test]
+    fn new_bands_decay_in_silence_and_stay_bounded_when_overdriven() {
+        let mut analyzer = StereoAnalyzer::default();
+        let mut frame = AudioFrame::default();
+        // Every band at once, far above full scale.
+        for hop in 0..80 {
+            frame = analyzer.process(&std::array::from_fn(|i| {
+                let t = (hop * HOP + i / 2) as f32 / SAMPLE_RATE;
+                [55.0, 500.0, 2000.0, 8000.0]
+                    .iter()
+                    .map(|f| 4.0 * (std::f32::consts::TAU * f * t).sin())
+                    .sum()
+            }));
+            for v in [
+                frame.sub,
+                frame.bass,
+                frame.low_mid,
+                frame.high_mid,
+                frame.treble,
+            ] {
+                assert!((0.0..=1.0).contains(&v));
+            }
+        }
+        assert!(frame.sub > 0.5 && frame.low_mid > 0.5 && frame.high_mid > 0.5);
+        for _ in 0..200 {
+            frame = analyzer.process(&[0.0; HOP * 2]);
+        }
+        assert!(frame.sub < 0.001 && frame.low_mid < 0.001 && frame.high_mid < 0.001);
+    }
+    /// Drive a clock at 60 fps with a kick every `period` seconds, the first at `offset`.
+    fn run_clock(
+        clock: &mut BeatClock,
+        bpm: f32,
+        period: f32,
+        offset: f32,
+        seconds: f32,
+    ) -> Vec<Tempo> {
+        let dt = 1.0 / 60.0;
+        let mut audio = AudioFrame::default();
+        let mut next = offset;
+        (0..(seconds / dt) as usize)
+            .map(|frame| {
+                let time = frame as f32 * dt;
+                audio.onset *= 0.9_f32.powi(3);
+                audio.bass *= 0.8;
+                if time >= next {
+                    next += period;
+                    audio.onset = 1.0;
+                    audio.bass = 0.9;
+                }
+                clock.tick(dt, bpm, &audio)
+            })
+            .collect()
+    }
+    #[test]
+    fn beat_clock_locks_onto_kicks_at_the_set_tempo_from_any_phase() {
+        let beat = 60.0 / 128.0;
+        for offset in [0.0, 0.1, 0.2, 0.3, 0.4] {
+            let mut clock = BeatClock::default();
+            let run = run_clock(&mut clock, 128.0, beat, offset, 20.0);
+            assert!(run.iter().all(|t| (0.0..=1.0).contains(&t.locked)
+                && (0.0..1.0).contains(&t.beat)
+                && (0.0..1.0).contains(&t.bar)));
+            assert_eq!(run[0].locked, 0.0);
+            let last = run.last().unwrap();
+            assert!(last.locked > 0.9, "offset {offset}: {last:?}");
+            // The beat phase must wrap where the kicks are.
+            let since_kick = ((20.0 - offset) / beat).fract();
+            let error = (last.beat - since_kick + 0.5).rem_euclid(1.0) - 0.5;
+            assert!(error.abs() < 0.1, "offset {offset}: phase error {error}");
+        }
+    }
+    #[test]
+    fn beat_clock_stays_unlocked_at_the_wrong_tempo_and_fades_in_silence() {
+        // Music at 140 BPM against a clock set to 128.
+        let mut clock = BeatClock::default();
+        let run = run_clock(&mut clock, 128.0, 60.0 / 140.0, 0.0, 30.0);
+        let worst = run.iter().map(|t| t.locked).fold(0.0, f32::max);
+        assert!(worst < 0.3, "locked reached {worst}");
+        // A locked clock fades within the decay time once the kicks stop.
+        let mut clock = BeatClock::default();
+        run_clock(&mut clock, 128.0, 60.0 / 128.0, 0.0, 20.0);
+        let silent = AudioFrame::default();
+        let mut locked = 1.0;
+        for _ in 0..(LOCK_DECAY_S * 60.0) as usize + 2 {
+            locked = clock.tick(1.0 / 60.0, 128.0, &silent).locked;
+        }
+        assert_eq!(locked, 0.0);
+        // Nonsense input never produces nonsense output.
+        let t = clock.tick(f32::NAN, f32::INFINITY, &silent);
+        assert!(t.beat.is_finite() && t.bar.is_finite() && t.locked == 0.0);
+    }
     #[test]
     fn antiphase_stereo_preserves_energy() {
         let mut analyzer = StereoAnalyzer::default();
