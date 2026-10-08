@@ -18,6 +18,9 @@ uniform float u_fx_time;
 uniform int u_sfx;          // video effect applied to the SHADER layer
 uniform float u_sfx_amount;
 uniform sampler2D u_hud_tex;
+uniform int u_geo_on;   // shader-layer geometry active
+uniform vec4 u_geo;     // zoom scale, angle, twist, stretch
+uniform vec4 u_geo2;    // ripple amplitude, ripple phase, mirror segments, brightness
 uniform int u_hud;
 
 float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
@@ -111,6 +114,26 @@ vec3 mixLayers(vec3 base, vec3 top, float a, int mode) {
   return mix(base, clamp(r, 0.0, 1.0), clamp(amt, 0.0, 1.0));
 }
 
+// Shader-layer geometry: mirror fold, rotation that differs from centre to edge, zoom,
+// stretch and a radial ripple. Edges mirror so a rotated layer never shows a border.
+vec2 geoUV(vec2 uv) {
+  float aspect = u_resolution.x / u_resolution.y;
+  vec2 p = (uv - 0.5) * vec2(aspect, 1.0);
+  if (u_geo2.z > 1.5) {
+    float seg = 3.14159265 / u_geo2.z;
+    float a = abs(mod(atan(p.y, p.x), 2.0 * seg) - seg);
+    p = length(p) * vec2(cos(a), sin(a));
+  }
+  float r = length(p);
+  float ang = u_geo.y + u_geo.z * (0.5 - r);
+  float c = cos(ang), s = sin(ang);
+  p = mat2(c, -s, s, c) * p * u_geo.x;
+  p *= vec2(1.0 + u_geo.w, 1.0 - u_geo.w);
+  if (r > 0.0001) p += (p / r) * sin(r * 36.0 - u_geo2.y) * u_geo2.x;
+  uv = p / vec2(aspect, 1.0) + 0.5;
+  return 1.0 - abs(mod(uv, 2.0) - 1.0);
+}
+
 void main() {
   if (u_blackout == 1) {
     fragColor = vec4(0.0, 0.0, 0.0, 1.0);
@@ -122,7 +145,8 @@ void main() {
   // The same effect bank, applied independently to the SHADER layer. Two
   // separate slots (u_fx for the clip, u_sfx here) so you can, say, kaleido
   // the footage while pixelating the generative layer over it.
-  vec2 suv = (u_sfx > 0) ? fxUV(uv, u_sfx, u_sfx_amount) : uv;
+  vec2 guv = (u_geo_on == 1) ? geoUV(uv) : uv;
+  vec2 suv = (u_sfx > 0) ? fxUV(guv, u_sfx, u_sfx_amount) : guv;
   vec4 shaderSample = texture(u_shader_tex, clamp(suv, 0.0, 1.0));
   if (u_sfx == 19) {
     float so = u_sfx_amount * 0.02;
@@ -137,6 +161,8 @@ void main() {
     shaderSample.rgb = mix(shaderSample.rgb, vec3(se), u_sfx_amount);
   }
   if (u_sfx > 0) shaderSample.rgb = clamp(fxColor(shaderSample.rgb, uv, u_sfx, u_sfx_amount), 0.0, 1.0);
+
+  shaderSample.rgb = clamp(shaderSample.rgb * u_geo2.w, 0.0, 1.0);
 
   // Displace warps the base using the top layer's red/green, so it must offset
   // the lookup rather than blend colours.

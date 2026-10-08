@@ -42,6 +42,8 @@ pub enum Command {
     SetInputGain { gain: f32 },
     SetSpeed { speed: f64 },
     ToggleLayerOrder,
+    /// One of the eight performance macros (X-Touch layer B knobs), 0..=1.
+    SetMacro { index: u8, value: f32 },
     CrateShader { crate_id: u8 },
     DeleteShader,
 }
@@ -79,6 +81,10 @@ pub struct State {
     /// Clip drawn over the shader instead of under it.
     #[serde(default)]
     pub invert_order: bool,
+    /// Shader-layer geometry and brightness: pulse, rock, ripple, twist, stretch, mirror,
+    /// drift (0.5 is still) and brightness (0.5 is unchanged).
+    #[serde(default = "default_macros")]
+    pub macros: [f32; 8],
     #[serde(default)]
     pub failed_shaders: Vec<usize>,
     #[serde(default)]
@@ -90,6 +96,10 @@ fn one() -> f32 {
     1.0
 }
 pub const MAX_INPUT_GAIN: f32 = 4.0;
+pub const MACRO_DEFAULTS: [f32; 8] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.5];
+fn default_macros() -> [f32; 8] {
+    MACRO_DEFAULTS
+}
 impl State {
     pub fn new(clips: usize) -> Self {
         Self {
@@ -119,6 +129,7 @@ impl State {
             video_opacity: 1.0,
             input_gain: 1.0,
             invert_order: false,
+            macros: MACRO_DEFAULTS,
             failed_shaders: Vec::new(),
             shader_crates: Vec::new(),
             deleted_shaders: Vec::new(),
@@ -166,6 +177,7 @@ impl State {
             ]
             .iter()
             .all(|v| v.is_finite() && (0.0..=1.0).contains(v))
+            && self.macros.iter().all(|v| v.is_finite() && (0.0..=1.0).contains(v))
             && self.input_gain.is_finite()
             && (0.0..=MAX_INPUT_GAIN).contains(&self.input_gain)
             && self.speed.is_finite()
@@ -290,6 +302,10 @@ impl State {
                 self.speed = speed.clamp(0.25, 4.0);
             }
             Command::ToggleLayerOrder => self.invert_order = !self.invert_order,
+            Command::SetMacro { index, value } => {
+                unit(value)?;
+                *self.macros.get_mut(usize::from(index)).ok_or("unknown macro")? = value;
+            }
             Command::CrateShader { crate_id } => {
                 if crate_id >= 4 { return Err("unknown shader crate"); }
                 if let Some(shader) = self.selected_shader {

@@ -13,15 +13,24 @@
 //!   fader   audio input gain (layer A), shader opacity (layer B)
 //!   pads 1-8   clip on/off, shader on/off, opacity 25/50/75/100 %, blend prev/next
 //!   pads 9-16  layer order, tap, BPM -, BPM +, -, HUD, reset, blackout
+//!
+//!   layer B knobs 1-7  shader geometry: pulse, rock, ripple, twist, stretch, mirror, drift
+//!   layer B knob 8     shader brightness            click: back to the default
+//!   layer B pads       as layer A
 //! ```
-use crate::control::{BlendMode, Command, Layer, State};
+use crate::control::{BlendMode, Command, Layer, State, MACRO_DEFAULTS};
 
 /// Zero-based MIDI channel the unit was measured on; replaced by whatever it sends.
 pub const CHANNEL: u8 = 10;
-pub const KNOBS: usize = 8;
+/// Ring slots: eight per layer.
+pub const KNOBS: usize = 16;
 const KNOB_CC: u8 = 1;
 const FADER_A_CC: u8 = 9;
 const FADER_B_CC: u8 = 10;
+/// Layer B knobs are CC 11-18, their clicks notes 24-31 and the layer B pads notes 32-47.
+const MACRO_CC: u8 = 11;
+const MACRO_CLICK: u8 = 24;
+const LAYER_B_PADS: u8 = 32;
 pub const GAIN_MIN: f32 = 0.02;
 pub const GAIN_MAX: f32 = 2.0;
 const BLENDS: [BlendMode; 8] = [
@@ -76,10 +85,15 @@ impl Parser {
     }
 }
 
+/// Ring slot of a knob CC: 0-7 on layer A, 8-15 on layer B.
 pub fn knob_index(control: u8) -> Option<usize> {
-    (KNOB_CC..KNOB_CC + KNOBS as u8)
-        .contains(&control)
-        .then(|| usize::from(control - KNOB_CC))
+    if (KNOB_CC..KNOB_CC + 8).contains(&control) {
+        Some(usize::from(control - KNOB_CC))
+    } else if (MACRO_CC..MACRO_CC + 8).contains(&control) {
+        Some(8 + usize::from(control - MACRO_CC))
+    } else {
+        None
+    }
 }
 /// Fader position to linear gain: off at the bottom, then 0.02x to 2x on a log curve.
 pub fn fader_gain(position: f32) -> f32 {
@@ -111,11 +125,20 @@ pub fn commands(event: Event, state: &State, last_clip: Option<usize>, now_ms: u
                 5 => amount(Layer::Video, v),
                 6 => amount(Layer::Shader, v),
                 FADER_A_CC => Command::SetInputGain { gain: fader_gain(v) },
+                n if (MACRO_CC..MACRO_CC + 8).contains(&n) => Command::SetMacro { index: n - MACRO_CC, value: v },
                 _ => return Vec::new(),
             }
         }
         Event::Note { pressed: false, .. } => return Vec::new(),
+        Event::Note { number, .. } if (LAYER_B_PADS..LAYER_B_PADS + 16).contains(&number) => {
+            let pad = Event::Note { number: number - LAYER_B_PADS + 8, pressed: true };
+            return commands(pad, state, last_clip, now_ms);
+        }
         Event::Note { number, .. } => match number {
+            n if (MACRO_CLICK..MACRO_CLICK + 8).contains(&n) => Command::SetMacro {
+                index: n - MACRO_CLICK,
+                value: MACRO_DEFAULTS[usize::from(n - MACRO_CLICK)],
+            },
             0 => Command::SetVideoOpacity { opacity: 1.0 },
             1 => opacity(1.0),
             2 => opacity(0.5),
@@ -160,13 +183,22 @@ impl Feedback {
     /// MIDI messages that bring rings and LEDs in line with `state`; the second item is
     /// the knob a message moves, if any.
     pub fn update(&mut self, state: &State, channel: u8) -> Vec<([u8; 3], Option<usize>)> {
+        let m = state.macros;
         let rings = [
-            state.video_opacity,
-            state.opacity,
-            state.opacity,
-            (state.speed - 0.5) as f32,
-            state.video_effect_amount,
-            state.shader_effect_amount,
+            (1, state.video_opacity),
+            (2, state.opacity),
+            (3, state.opacity),
+            (4, (state.speed - 0.5) as f32),
+            (5, state.video_effect_amount),
+            (6, state.shader_effect_amount),
+            (11, m[0]),
+            (12, m[1]),
+            (13, m[2]),
+            (14, m[3]),
+            (15, m[4]),
+            (16, m[5]),
+            (17, m[6]),
+            (18, m[7]),
         ];
         let lit = [
             state.requested.or(state.playing).is_some(),
@@ -175,17 +207,23 @@ impl Feedback {
             state.blackout,
         ];
         let mut out = Vec::new();
-        for (knob, value) in rings.into_iter().enumerate() {
+        for (control, value) in rings {
             let value = raw(value);
+            let Some(knob) = knob_index(control) else { continue };
             if self.knobs[knob] != Some(value) {
                 self.knobs[knob] = Some(value);
-                out.push(([0xb0 | channel, KNOB_CC + knob as u8, value], Some(knob)));
+                out.push(([0xb0 | channel, control, value], Some(knob)));
             }
         }
         for (index, on) in lit.into_iter().enumerate() {
             if self.leds[index] != Some(on) {
                 self.leds[index] = Some(on);
-                out.push(([0x90 | channel, LED_NOTES[index], if on { 127 } else { 0 }], None));
+                let velocity = if on { 127 } else { 0 };
+                out.push(([0x90 | channel, LED_NOTES[index], velocity], None));
+                // The unit lights pads addressed on channel 1 as well; the browser rig sent both.
+                if channel != 0 {
+                    out.push(([0x90, LED_NOTES[index], velocity], None));
+                }
             }
         }
         out
@@ -261,7 +299,7 @@ mod tests {
     fn feedback_writes_only_what_changed() {
         let mut state = State::new(1);
         let mut feedback = Feedback::default();
-        assert_eq!(feedback.update(&state, 10).len(), 6 + 4);
+        assert_eq!(feedback.update(&state, 10).len(), 6 + 8 + 4 * 2);
         assert!(feedback.update(&state, 10).is_empty());
         state.apply(Command::SetOpacity { opacity: 1.0 }).unwrap();
         // Knobs 2 and 3 both show the shader opacity.
@@ -274,6 +312,18 @@ mod tests {
         state.apply(Command::SetVideoOpacity { opacity: 64.0 / 127.0 }).unwrap();
         assert!(feedback.update(&state, 10).is_empty());
         state.apply(Command::Blackout { enabled: true }).unwrap();
-        assert_eq!(feedback.update(&state, 10), vec![([0x9a, 23, 127], None)]);
+        assert_eq!(
+            feedback.update(&state, 10),
+            vec![([0x9a, 23, 127], None), ([0x90, 23, 127], None)]
+        );
+        // Layer B: a macro knob moves its own ring only, and its click restores the default.
+        apply(&mut state, Event::Control { number: 18, value: 127 });
+        apply(&mut state, Event::Control { number: 11, value: 127 });
+        assert_eq!((state.macros[7], state.macros[0]), (1.0, 1.0));
+        assert_eq!(feedback.update(&state, 10).len(), 2);
+        apply(&mut state, Event::Note { number: 31, pressed: true });
+        assert_eq!(state.macros[7], 0.5);
+        apply(&mut state, Event::Note { number: 47, pressed: true });
+        assert!(!state.blackout);
     }
 }

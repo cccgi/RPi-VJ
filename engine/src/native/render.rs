@@ -180,6 +180,8 @@ pub struct Renderer {
     hud_texture: glow::Texture,
     hud_pixels: Vec<u8>,
     hud_stamp: f32,
+    /// Accumulated drift rotation of the shader layer, radians.
+    geo_drift: f32,
 }
 /// Diagnostic override: when either variable is set, every shader renders at this size
 /// regardless of its manifest `render_height`.
@@ -455,6 +457,7 @@ impl Renderer {
                 hud_texture,
                 hud_pixels: vec![0; 768 * 16],
                 hud_stamp: -1.0,
+                geo_drift: 0.0,
             })
         }
     }
@@ -518,6 +521,31 @@ impl Renderer {
             *clock += dt * (SPEC_FLOW_RATE.0 + energy * SPEC_FLOW_RATE.1);
         }
         let tempo = self.clock.tick(dt, state.bpm, audio);
+        // Layer B macros: each knob scales one transform, each driven by a different band.
+        let m = state.macros;
+        let spin = (m[6] - 0.5) * 2.0;
+        if spin.abs() > 0.04 {
+            self.geo_drift = (self.geo_drift + dt * spin * 1.5) % std::f32::consts::TAU;
+        } else if self.geo_drift != 0.0 {
+            // Knob centred: settle back upright instead of freezing at an angle.
+            self.geo_drift *= 1.0 - (dt * 3.0).min(1.0);
+            if self.geo_drift.abs() < 0.002 {
+                self.geo_drift = 0.0;
+            }
+        }
+        let geo = [
+            1.0 - m[0] * 0.45 * audio.bass.min(1.0),
+            self.geo_drift + m[1] * 0.9 * audio.mid.min(1.0) * (time * 1.3).sin(),
+            m[3] * (0.6 + 2.0 * audio.low_mid.min(1.0)),
+            m[4] * 0.3 * audio.high_mid.min(1.0),
+        ];
+        let geo2 = [
+            m[2] * 0.06 * audio.treble.min(1.0),
+            time * 6.0,
+            if m[5] < 0.06 { 0.0 } else { 2.0 + (m[5] * 6.99).floor() },
+            m[7] * 2.0,
+        ];
+        let geo_on = m[..6].iter().any(|v| *v > 0.0) || self.geo_drift != 0.0;
         if state.shader && !state.blackout {
             if let Some(index) = state.selected_shader { self.compile_selected(index); }
         }
@@ -629,6 +657,12 @@ impl Renderer {
                 if shader.is_some() { state.opacity } else { 0.0 },
             );
             p.float(gl, "u_fx_time", time);
+            p.int(gl, "u_geo_on", i32::from(geo_on));
+            for (name, value) in [("u_geo", geo), ("u_geo2", geo2)] {
+                if let Some(location) = gl.get_uniform_location(p.id, name) {
+                    gl.uniform_4_f32(Some(&location), value[0], value[1], value[2], value[3]);
+                }
+            }
             p.float(gl, "u_fx_amount", state.video_effect_amount);
             p.float(gl, "u_sfx_amount", state.shader_effect_amount);
             p.int(gl, "u_fx", state.video_effect as i32);
