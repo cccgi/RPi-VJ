@@ -180,7 +180,7 @@ mod tests {
                 count += 1;
             }
         }
-        assert_eq!(count, 18);
+        assert_eq!(count, 15);
     }
     #[test]
     fn rejects_unsupported_and_oversized() {

@@ -768,24 +768,6 @@
       "opacity": 0.9
     },
     {
-      "label": "STRATA",
-      "path": "shaders/strata_drift.fs",
-      "blend": "Additive",
-      "opacity": 0.9
-    },
-    {
-      "label": "POLYHEDRA",
-      "path": "shaders/vs_sacred_polyhedron.fs",
-      "blend": "Additive",
-      "opacity": 0.9
-    },
-    {
-      "label": "SHATTERED",
-      "path": "shaders/vs_shattered_glitch_core.fs",
-      "blend": "Additive",
-      "opacity": 0.9
-    },
-    {
       "label": "DEEPDRIFT",
       "path": "shaders/deep_drift.fs",
       "blend": "Additive",
@@ -1308,49 +1290,10 @@
         },
         {
           "key": 11,
-          "label": "STRATA",
-          "command": {
-            "type": "TriggerShader",
-            "shader": 14
-          },
-          "color": [
-            35,
-            65,
-            95
-          ]
-        },
-        {
-          "key": 12,
-          "label": "POLYHEDRA",
-          "command": {
-            "type": "TriggerShader",
-            "shader": 15
-          },
-          "color": [
-            35,
-            65,
-            95
-          ]
-        },
-        {
-          "key": 13,
-          "label": "SHATTERED",
-          "command": {
-            "type": "TriggerShader",
-            "shader": 16
-          },
-          "color": [
-            35,
-            65,
-            95
-          ]
-        },
-        {
-          "key": 14,
           "label": "DEEPDRIFT",
           "command": {
             "type": "TriggerShader",
-            "shader": 17
+            "shader": 14
           },
           "color": [
             35,
