@@ -45,12 +45,26 @@ const BLENDS: [BlendMode; 8] = [
     BlendMode::LumaKey,
     BlendMode::Difference,
 ];
-/// Pads whose LED mirrors state: clip on, shader on, clip on top, blackout. Checked on
-/// the unit: an LED has the number of the note its pad sends and lights on velocity 1
-/// (127 does nothing; 2 would blink). Each is also lit on layer B, whose pads are 24 up.
-const LED_NOTES: [u8; 4] = [8, 9, 16, 23];
-const LAYER_B_LED: u8 = 24;
+/// Pads whose LED mirrors state, as (bottom row, column): clip on, shader on, clip on
+/// top, blackout.
+const LED_PADS: [(bool, u8); 4] = [(false, 0), (false, 1), (true, 0), (true, 7)];
+/// The unit lights an LED on velocity 1 (127 does nothing, 2 blinks).
 const LED_ON: u8 = 1;
+/// One raw step of a knob moves its value this many steps of 127, so about 32 clicks
+/// cover the range instead of 127.
+pub const KNOB_STEP: i16 = 4;
+/// LED notes for one pad. The numbering is not settled on this unit: note 15 lit the top
+/// row's eighth pad while 23 and 47 lit nothing on the unit's own channel. Until it is,
+/// every numbering consistent with that is sent, on the unit's channel and on channel 1:
+/// the pad's own notes on both layers, and the documented 0-15 and 16-31 blocks with the
+/// rows as observed. The sets of different pads do not overlap.
+fn led_notes(bottom: bool, column: u8) -> [u8; 3] {
+    if bottom {
+        [column, 16 + column, 40 + column]
+    } else {
+        [8 + column, 24 + column, 32 + column]
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Event {
@@ -183,9 +197,31 @@ fn raw(value: f32) -> u8 {
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Feedback {
     pub knobs: [Option<u8>; KNOBS],
-    leds: [Option<bool>; LED_NOTES.len()],
+    leds: [Option<bool>; LED_PADS.len()],
+    /// Where the unit said a knob was before the last ring write, and when (ms).
+    before: [Option<(u8, u64)>; KNOBS],
 }
 impl Feedback {
+    /// A knob reported `raw`. Returns the value it now stands for: the previous value
+    /// moved by `KNOB_STEP` per raw step. `update` then writes that value back, so the
+    /// unit and the ring jump with it. A report that was already on its way when the
+    /// last write went out still counts from the position before that write.
+    pub fn turned(&mut self, knob: usize, raw: u8, now_ms: u64) -> u8 {
+        let raw = raw.min(127);
+        let Some(current) = self.knobs[knob] else {
+            self.knobs[knob] = Some(raw);
+            return raw;
+        };
+        let distance = |from: u8| (i16::from(raw) - i16::from(from)).abs();
+        let base = match self.before[knob] {
+            Some((old, at)) if now_ms.saturating_sub(at) < 120 && distance(old) < distance(current) => old,
+            _ => current,
+        };
+        let value = i16::from(current) + (i16::from(raw) - i16::from(base)) * KNOB_STEP;
+        self.before[knob] = Some((raw, now_ms));
+        self.knobs[knob] = Some(raw);
+        value.clamp(0, 127) as u8
+    }
     /// MIDI messages that bring rings and LEDs in line with `state`; the second item is
     /// the knob a message moves, if any.
     pub fn update(&mut self, state: &State, channel: u8) -> Vec<([u8; 3], Option<usize>)> {
@@ -224,9 +260,14 @@ impl Feedback {
         for (index, on) in lit.into_iter().enumerate() {
             if self.leds[index] != Some(on) {
                 self.leds[index] = Some(on);
+                let (bottom, column) = LED_PADS[index];
                 let velocity = if on { LED_ON } else { 0 };
-                out.push(([0x90 | channel, LED_NOTES[index], velocity], None));
-                out.push(([0x90 | channel, LED_NOTES[index] + LAYER_B_LED, velocity], None));
+                for note in led_notes(bottom, column) {
+                    out.push(([0x90 | channel, note, velocity], None));
+                    if channel != 0 {
+                        out.push(([0x90, note, velocity], None));
+                    }
+                }
             }
         }
         out
@@ -299,11 +340,35 @@ mod tests {
         assert!((state.input_gain - GAIN_MAX).abs() < 1e-5);
     }
     #[test]
+    fn a_knob_step_moves_four_and_the_ring_follows() {
+        let mut state = State::new(1);
+        let mut feedback = Feedback::default();
+        feedback.update(&state, 10);
+        state.apply(Command::SetVideoOpacity { opacity: 64.0 / 127.0 }).unwrap();
+        feedback.update(&state, 10);
+        // One click up from 64: the value jumps to 68 and the unit is told so.
+        assert_eq!(feedback.turned(0, 65, 1000), 68);
+        state.apply(Command::SetVideoOpacity { opacity: 68.0 / 127.0 }).unwrap();
+        assert_eq!(feedback.update(&state, 10), vec![([0xba, 1, 68], Some(0))]);
+        // A click sent before the unit received that write still counts from 65.
+        assert_eq!(feedback.turned(0, 66, 1010), 72);
+        state.apply(Command::SetVideoOpacity { opacity: 72.0 / 127.0 }).unwrap();
+        feedback.update(&state, 10);
+        // Later clicks count from the written position, down as well as up, and clamp.
+        assert_eq!(feedback.turned(0, 71, 3000), 68);
+        state.apply(Command::SetVideoOpacity { opacity: 68.0 / 127.0 }).unwrap();
+        feedback.update(&state, 10);
+        assert_eq!(feedback.turned(0, 127, 5000), 127);
+        // The unit echoing a write is not a turn.
+        state.apply(Command::SetVideoOpacity { opacity: 1.0 }).unwrap();
+        feedback.update(&state, 10);
+        assert_eq!(feedback.turned(0, 127, 5001), 127);
+    }
+    #[test]
     fn feedback_writes_only_what_changed() {
         let mut state = State::new(1);
         let mut feedback = Feedback::default();
-        assert_eq!(feedback.update(&state, 10).len(), 6 + 8 + 4 * 2);
-        state.apply(Command::Blackout { enabled: false }).unwrap();
+        assert_eq!(feedback.update(&state, 10).len(), 6 + 8 + 4 * 6);
         assert!(feedback.update(&state, 10).is_empty());
         state.apply(Command::SetOpacity { opacity: 1.0 }).unwrap();
         // Knobs 2 and 3 both show the shader opacity.
@@ -316,10 +381,11 @@ mod tests {
         state.apply(Command::SetVideoOpacity { opacity: 64.0 / 127.0 }).unwrap();
         assert!(feedback.update(&state, 10).is_empty());
         state.apply(Command::Blackout { enabled: true }).unwrap();
-        assert_eq!(
-            feedback.update(&state, 10),
-            vec![([0x9a, 23, 1], None), ([0x9a, 47, 1], None)]
-        );
+        let lit = feedback.update(&state, 10);
+        assert_eq!(lit.len(), 6);
+        for message in [[0x9a, 7, 1], [0x90, 7, 1], [0x9a, 23, 1], [0x90, 23, 1], [0x9a, 47, 1]] {
+            assert!(lit.contains(&(message, None)), "{message:?}");
+        }
         // Layer B: a macro knob moves its own ring only, and its click restores the default.
         apply(&mut state, Event::Control { number: 18, value: 127 });
         apply(&mut state, Event::Control { number: 11, value: 127 });

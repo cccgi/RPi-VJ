@@ -123,7 +123,6 @@ pub fn run(show: Show, path: &Path) -> Result<()> {
     let mut midi_channel = crate::xtouch::CHANNEL;
     let mut midi_epoch = 0;
     let mut feedback = crate::xtouch::Feedback::default();
-    let mut knob_written = [Instant::now(); crate::xtouch::KNOBS];
     let mut last_clip = None;
     deck.publish(&state, false);
     let mut peer: Option<Connection> = None;
@@ -181,16 +180,17 @@ pub fn run(show: Show, path: &Path) -> Result<()> {
         for (channel, event) in midi.events.try_iter().take(64) {
             use crate::xtouch::Event;
             midi_channel = channel;
-            if let Event::Control { number, value } = event {
-                if let Some(knob) = crate::xtouch::knob_index(number) {
-                    // The unit may echo what we just wrote to a ring; that is not a turn.
-                    if knob_written[knob].elapsed() < Duration::from_millis(80) {
-                        continue;
-                    }
-                    feedback.knobs[knob] = Some(value);
-                }
-            }
             let now = started.elapsed().as_millis() as u64;
+            let event = match event {
+                Event::Control { number, value } => match crate::xtouch::knob_index(number) {
+                    Some(knob) => Event::Control {
+                        number,
+                        value: feedback.turned(knob, value, now),
+                    },
+                    None => event,
+                },
+                other => other,
+            };
             for command in crate::xtouch::commands(event, &state, last_clip, now) {
                 if let Err(error) = state.apply(command) {
                     eprintln!("midi command rejected: {error}");
@@ -208,11 +208,8 @@ pub fn run(show: Show, path: &Path) -> Result<()> {
                 midi_epoch = epoch;
                 feedback = crate::xtouch::Feedback::default();
             }
-            for (bytes, knob) in feedback.update(&state, midi_channel) {
+            for (bytes, _) in feedback.update(&state, midi_channel) {
                 midi.send(&bytes);
-                if let Some(knob) = knob {
-                    knob_written[knob] = Instant::now();
-                }
             }
         }
         let mut disconnect = false;
