@@ -261,6 +261,7 @@ python engine/tools/shader_bank/report.py \
   $R/wp-a-proof.jsonl $R/wave1/results-wave1.jsonl $R/wave2/results-wave2.jsonl \
   $R/textures/results-textures.jsonl $R/wp-j-proof.jsonl $R/$RUN/results-$RUN.jsonl \
   --variants base,lite,tex --min-tier 720 \
+  --exclude-file engine/tools/shader_bank/bank_exclude.txt \
   --thumbs-dir $R/wave1/thumbs --thumbs-dir $R/textures/thumbs-textures \
   --thumbs-dir $R/wp-j-thumbs --thumbs-dir $R/$RUN/thumbs-$RUN \
   --show-dir target/shader-bank/show-720-$RUN
