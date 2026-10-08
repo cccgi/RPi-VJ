@@ -193,6 +193,13 @@ mod sheet {
         let prefix = &args[3];
         let iterations: usize = args.get(4).map_or(Ok(0), |n| n.parse())?;
         std::fs::create_dir_all(out).with_context(|| format!("create {}", out.display()))?;
+        // Every page of the shader show as it stands, as a record of the layout.
+        for index in 0..shaders.pages.len() {
+            let mut state = State::from_show(&shaders);
+            state.page = index;
+            let jpegs = Painter::default().page(&surface::page(&shaders, &state), true)?;
+            sheet(&jpegs, 2)?.save(out.join(format!("{prefix}-page-{}.png", index + 1)))?;
+        }
         for scene in scenes(&shaders, &legacy)? {
             let keys = surface::page(&scene.show, &scene.state);
             let mut painter = Painter::default();

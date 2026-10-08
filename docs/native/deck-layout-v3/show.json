@@ -1,0 +1,2641 @@
+{
+ "version": 2,
+ "bpm": 128,
+ "audio_device": "Sound Blaster Play! 3, USB Audio",
+ "clips": [
+  {
+   "label": "NO VIDEO",
+   "path": "no-video.mp4",
+   "thumbnail": null,
+   "quad_mirror": false
+  }
+ ],
+ "shaders": [
+  {
+   "label": "WfySDD",
+   "path": "bank-v2/WfySDD.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/WfySDD.jpg"
+  },
+  {
+   "label": "3f23Rm",
+   "path": "bank-v2/3f23Rm.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/3f23Rm.jpg"
+  },
+  {
+   "label": "DdBGDh",
+   "path": "bank-v2/DdBGDh.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/DdBGDh.jpg"
+  },
+  {
+   "label": "mlfcRM",
+   "path": "bank-v2/mlfcRM.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/mlfcRM.jpg"
+  },
+  {
+   "label": "WXX3RH",
+   "path": "bank-v2/WXX3RH.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/3083c722c0c738cad0f468383167a0d246f91af2bfa373e9c5c094fb8c8413e0.png",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/WXX3RH.jpg"
+  },
+  {
+   "label": "3sVGWh",
+   "path": "bank-v2/3sVGWh.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/52d2a8f514c4fd2d9866587f4d7b2a5bfa1a11a0e772077d7682deb8b3b517e5.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/3sVGWh.jpg"
+  },
+  {
+   "label": "4tBXRh",
+   "path": "bank-v2/4tBXRh.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/4tBXRh.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "Ds3fDX",
+   "path": "bank-v2/Ds3fDX.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/Ds3fDX.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "kaleidoscope_mirror",
+   "path": "bank-v2/kaleidoscope_mirror.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/kaleidoscope_mirror.jpg"
+  },
+  {
+   "label": "llfXRl",
+   "path": "bank-v2/llfXRl.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/fb918796edc3d2221218db0811e240e72e340350008338b0c07a52bd353666a6.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": false
+    },
+    {
+     "channel": 1,
+     "path": "bank-v2/assets/52d2a8f514c4fd2d9866587f4d7b2a5bfa1a11a0e772077d7682deb8b3b517e5.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": false
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/llfXRl.jpg"
+  },
+  {
+   "label": "ltXyD7",
+   "path": "bank-v2/ltXyD7.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/ltXyD7.jpg"
+  },
+  {
+   "label": "stKBzt",
+   "path": "bank-v2/stKBzt.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/stKBzt.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "tlf3zn",
+   "path": "bank-v2/tlf3zn.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/tlf3zn.jpg"
+  },
+  {
+   "label": "3fySDD",
+   "path": "bank-v2/3fySDD.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/3fySDD.jpg"
+  },
+  {
+   "label": "tX3GW2",
+   "path": "bank-v2/tX3GW2.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/tX3GW2.jpg"
+  },
+  {
+   "label": "ldXXDj",
+   "path": "bank-v2/ldXXDj.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/e6e5631ce1237ae4c05b3563eda686400a401df4548d0f9fad40ecac1659c46c.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": false
+    },
+    {
+     "channel": 1,
+     "path": "bank-v2/assets/0c7bf5fe9462d5bffbd11126e82908e39be3ce56220d900f633d58fb432e56f5.png",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": false
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/ldXXDj.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "WclSWn",
+   "path": "bank-v2/WclSWn.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/WclSWn.jpg"
+  },
+  {
+   "label": "wffXDr",
+   "path": "bank-v2/wffXDr.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/e6e5631ce1237ae4c05b3563eda686400a401df4548d0f9fad40ecac1659c46c.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/wffXDr.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "tf2SWc",
+   "path": "bank-v2/tf2SWc.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/f735bee5b64ef98879dc618b016ecf7939a5756040c2cde21ccb15e69a6e1cfb.png",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/tf2SWc.jpg"
+  },
+  {
+   "label": "lXXXzS",
+   "path": "bank-v2/lXXXzS.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/lXXXzS.jpg"
+  },
+  {
+   "label": "Wt33Wf",
+   "path": "bank-v2/Wt33Wf.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/Wt33Wf.jpg"
+  },
+  {
+   "label": "3tBGRm",
+   "path": "bank-v2/3tBGRm.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/3tBGRm.jpg"
+  },
+  {
+   "label": "4XyyDc",
+   "path": "bank-v2/4XyyDc.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/4XyyDc.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "audio_oscilloscope",
+   "path": "bank-v2/audio_oscilloscope.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/audio_oscilloscope.jpg"
+  },
+  {
+   "label": "deep_drift",
+   "path": "bank-v2/deep_drift.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/deep_drift.jpg"
+  },
+  {
+   "label": "liquid_metal",
+   "path": "bank-v2/liquid_metal.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/liquid_metal.jpg"
+  },
+  {
+   "label": "M3KcRy",
+   "path": "bank-v2/M3KcRy.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/M3KcRy.jpg"
+  },
+  {
+   "label": "md3fDX",
+   "path": "bank-v2/md3fDX.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/md3fDX.jpg"
+  },
+  {
+   "label": "plasma_flow",
+   "path": "bank-v2/plasma_flow.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/plasma_flow.jpg"
+  },
+  {
+   "label": "XXGyWR",
+   "path": "bank-v2/XXGyWR.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/XXGyWR.jpg"
+  },
+  {
+   "label": "msfSz8",
+   "path": "bank-v2/msfSz8.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/msfSz8.jpg"
+  },
+  {
+   "label": "ffjXzy",
+   "path": "bank-v2/ffjXzy.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/ffjXzy.jpg"
+  },
+  {
+   "label": "beat_tunnel",
+   "path": "bank-v2/beat_tunnel.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/beat_tunnel.jpg"
+  },
+  {
+   "label": "neon_tunnel",
+   "path": "bank-v2/neon_tunnel.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/neon_tunnel.jpg"
+  },
+  {
+   "label": "vs_cyber_wormhole",
+   "path": "bank-v2/vs_cyber_wormhole.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/vs_cyber_wormhole.jpg"
+  },
+  {
+   "label": "dlVGzh",
+   "path": "bank-v2/dlVGzh.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/dlVGzh.jpg"
+  },
+  {
+   "label": "dlVyWG",
+   "path": "bank-v2/dlVyWG.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/dlVyWG.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "7llBzS",
+   "path": "bank-v2/7llBzS.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/7llBzS.jpg"
+  },
+  {
+   "label": "stfBRB",
+   "path": "bank-v2/stfBRB.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/stfBRB.jpg"
+  },
+  {
+   "label": "sl2yRK",
+   "path": "bank-v2/sl2yRK.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/0c7bf5fe9462d5bffbd11126e82908e39be3ce56220d900f633d58fb432e56f5.png",
+     "kind": "2d",
+     "filter": "nearest",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/sl2yRK.jpg"
+  },
+  {
+   "label": "NtSGDD",
+   "path": "bank-v2/NtSGDD.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/NtSGDD.jpg"
+  },
+  {
+   "label": "fdScDR",
+   "path": "bank-v2/fdScDR.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/0c7bf5fe9462d5bffbd11126e82908e39be3ce56220d900f633d58fb432e56f5.png",
+     "kind": "2d",
+     "filter": "nearest",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/fdScDR.jpg"
+  },
+  {
+   "label": "dtyczc",
+   "path": "bank-v2/dtyczc.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/dtyczc.jpg"
+  },
+  {
+   "label": "mtdyDs",
+   "path": "bank-v2/mtdyDs.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/mtdyDs.jpg"
+  },
+  {
+   "label": "Nljyzh",
+   "path": "bank-v2/Nljyzh.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/f735bee5b64ef98879dc618b016ecf7939a5756040c2cde21ccb15e69a6e1cfb.png",
+     "kind": "2d",
+     "filter": "nearest",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/Nljyzh.jpg"
+  },
+  {
+   "label": "sljGRW",
+   "path": "bank-v2/sljGRW.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/cb49c003b454385aa9975733aff4571c62182ccdda480aaba9a8d250014f00ec.png",
+     "kind": "2d",
+     "filter": "nearest",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/sljGRW.jpg"
+  },
+  {
+   "label": "3sc3WN",
+   "path": "bank-v2/3sc3WN.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/3sc3WN.jpg"
+  },
+  {
+   "label": "3lByRd",
+   "path": "bank-v2/3lByRd.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/0c7bf5fe9462d5bffbd11126e82908e39be3ce56220d900f633d58fb432e56f5.png",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/3lByRd.jpg"
+  },
+  {
+   "label": "Mtj3Rh",
+   "path": "bank-v2/Mtj3Rh.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/Mtj3Rh.jpg"
+  },
+  {
+   "label": "7ldBzN",
+   "path": "bank-v2/7ldBzN.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/fb918796edc3d2221218db0811e240e72e340350008338b0c07a52bd353666a6.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/7ldBzN.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "4c3SRH",
+   "path": "bank-v2/4c3SRH.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/4c3SRH.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "clKyWD",
+   "path": "bank-v2/clKyWD.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/clKyWD.jpg"
+  },
+  {
+   "label": "cstBzn",
+   "path": "bank-v2/cstBzn.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/cstBzn.jpg"
+  },
+  {
+   "label": "l3VcWG",
+   "path": "bank-v2/l3VcWG.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/l3VcWG.jpg"
+  },
+  {
+   "label": "mdXGzs",
+   "path": "bank-v2/mdXGzs.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/e6e5631ce1237ae4c05b3563eda686400a401df4548d0f9fad40ecac1659c46c.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/mdXGzs.jpg"
+  },
+  {
+   "label": "ddVfzd",
+   "path": "bank-v2/ddVfzd.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/ddVfzd.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "3dtBDN",
+   "path": "bank-v2/3dtBDN.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/3dtBDN.jpg"
+  },
+  {
+   "label": "mlfSzn",
+   "path": "bank-v2/mlfSzn.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/ad56fba948dfba9ae698198c109e71f118a54d209c0ea50d77ea546abad89c57.png",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/mlfSzn.jpg"
+  },
+  {
+   "label": "mlyyDy",
+   "path": "bank-v2/mlyyDy.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/mlyyDy.jpg"
+  },
+  {
+   "label": "7djyWc",
+   "path": "bank-v2/7djyWc.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/7djyWc.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "W33GRX",
+   "path": "bank-v2/W33GRX.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/W33GRX.jpg"
+  },
+  {
+   "label": "mlS3Rd",
+   "path": "bank-v2/mlS3Rd.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/mlS3Rd.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "WfGSRD",
+   "path": "bank-v2/WfGSRD.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/WfGSRD.jpg"
+  },
+  {
+   "label": "csjfWc",
+   "path": "bank-v2/csjfWc.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/0a40562379b63dfb89227e6d172f39fdce9022cba76623f1054a2c83d6c0ba5d.png",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/csjfWc.jpg"
+  },
+  {
+   "label": "wtSyRc",
+   "path": "bank-v2/wtSyRc.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/wtSyRc.jpg"
+  },
+  {
+   "label": "Msc3zf",
+   "path": "bank-v2/Msc3zf.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/Msc3zf.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "NdlfzX",
+   "path": "bank-v2/NdlfzX.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/3871e838723dd6b166e490664eead8ec60aedd6b8d95bc8e2fe3f882f0fd90f0.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/NdlfzX.jpg"
+  },
+  {
+   "label": "slffRX",
+   "path": "bank-v2/slffRX.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/slffRX.jpg"
+  },
+  {
+   "label": "mlBfR3",
+   "path": "bank-v2/mlBfR3.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/bd6464771e47eed832c5eb2cd85cdc0bfc697786b903bfd30f890f9d4fc36657.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/mlBfR3.jpg"
+  },
+  {
+   "label": "ftyfzh",
+   "path": "bank-v2/ftyfzh.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/ftyfzh.jpg"
+  },
+  {
+   "label": "NlsBzM",
+   "path": "bank-v2/NlsBzM.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/NlsBzM.jpg"
+  },
+  {
+   "label": "dsyBDy",
+   "path": "bank-v2/dsyBDy.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/dsyBDy.jpg"
+  },
+  {
+   "label": "slsfRB",
+   "path": "bank-v2/slsfRB.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/slsfRB.jpg"
+  },
+  {
+   "label": "4tlfz2",
+   "path": "bank-v2/4tlfz2.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/4tlfz2.jpg"
+  },
+  {
+   "label": "WcGXRD",
+   "path": "bank-v2/WcGXRD.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/WcGXRD.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "sltfR7",
+   "path": "bank-v2/sltfR7.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/fb918796edc3d2221218db0811e240e72e340350008338b0c07a52bd353666a6.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/sltfR7.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "XXyBRR",
+   "path": "bank-v2/XXyBRR.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/XXyBRR.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "tlGXRz",
+   "path": "bank-v2/tlGXRz.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/tlGXRz.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "XsBfRW",
+   "path": "bank-v2/XsBfRW.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/XsBfRW.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "7XGGDt",
+   "path": "bank-v2/7XGGDt.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/52d2a8f514c4fd2d9866587f4d7b2a5bfa1a11a0e772077d7682deb8b3b517e5.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/7XGGDt.jpg"
+  },
+  {
+   "label": "ssBXDG",
+   "path": "bank-v2/ssBXDG.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/10eb4fe0ac8a7dc348a2cc282ca5df1759ab8bf680117e4047728100969e7b43.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/ssBXDG.jpg"
+  },
+  {
+   "label": "4l2GzW",
+   "path": "bank-v2/4l2GzW.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/4l2GzW.jpg"
+  },
+  {
+   "label": "wc23Wc",
+   "path": "bank-v2/wc23Wc.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/wc23Wc.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "3ssXDj",
+   "path": "bank-v2/3ssXDj.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/3ssXDj.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "3ttSzr",
+   "path": "bank-v2/3ttSzr.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/3ttSzr.jpg"
+  },
+  {
+   "label": "WtdXR8",
+   "path": "bank-v2/WtdXR8.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/WtdXR8.jpg"
+  },
+  {
+   "label": "s3V3Wd",
+   "path": "bank-v2/s3V3Wd.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/s3V3Wd.jpg"
+  },
+  {
+   "label": "mtyGWy",
+   "path": "bank-v2/mtyGWy.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/mtyGWy.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "XXtBRr",
+   "path": "bank-v2/XXtBRr.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/XXtBRr.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "f33Xz8",
+   "path": "bank-v2/f33Xz8.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/f33Xz8.jpg"
+  },
+  {
+   "label": "sXVGDc",
+   "path": "bank-v2/sXVGDc.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/10eb4fe0ac8a7dc348a2cc282ca5df1759ab8bf680117e4047728100969e7b43.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    },
+    {
+     "channel": 1,
+     "path": "bank-v2/assets/bd6464771e47eed832c5eb2cd85cdc0bfc697786b903bfd30f890f9d4fc36657.jpg",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/sXVGDc.jpg"
+  },
+  {
+   "label": "ll2GD3",
+   "path": "bank-v2/ll2GD3.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/ll2GD3.jpg"
+  },
+  {
+   "label": "3ddXWl",
+   "path": "bank-v2/3ddXWl.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/3ddXWl.jpg"
+  },
+  {
+   "label": "3dV3R1",
+   "path": "bank-v2/3dV3R1.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/3dV3R1.jpg"
+  },
+  {
+   "label": "3dVczK",
+   "path": "bank-v2/3dVczK.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "channels": [
+    {
+     "channel": 0,
+     "path": "bank-v2/assets/3083c722c0c738cad0f468383167a0d246f91af2bfa373e9c5c094fb8c8413e0.png",
+     "kind": "2d",
+     "filter": "mipmap",
+     "wrap": "repeat",
+     "vflip": true
+    }
+   ],
+   "thumbnail": "bank-v2/thumbs/3dVczK.jpg"
+  },
+  {
+   "label": "4lSSRy",
+   "path": "bank-v2/4lSSRy.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/4lSSRy.jpg"
+  },
+  {
+   "label": "4lXGDl",
+   "path": "bank-v2/4lXGDl.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/4lXGDl.jpg"
+  },
+  {
+   "label": "audio_wave_rings",
+   "path": "bank-v2/audio_wave_rings.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/audio_wave_rings.jpg"
+  },
+  {
+   "label": "dtj3Wy",
+   "path": "bank-v2/dtj3Wy.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/dtj3Wy.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "ftVcWh",
+   "path": "bank-v2/ftVcWh.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/ftVcWh.jpg"
+  },
+  {
+   "label": "ldfSzN",
+   "path": "bank-v2/ldfSzN.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/ldfSzN.jpg"
+  },
+  {
+   "label": "ldXyDS",
+   "path": "bank-v2/ldXyDS.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/ldXyDS.jpg"
+  },
+  {
+   "label": "lt23RK",
+   "path": "bank-v2/lt23RK.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/lt23RK.jpg"
+  },
+  {
+   "label": "multiband_rings",
+   "path": "bank-v2/multiband_rings.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/multiband_rings.jpg"
+  },
+  {
+   "label": "spectrum_flow",
+   "path": "bank-v2/spectrum_flow.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/spectrum_flow.jpg"
+  },
+  {
+   "label": "strobe_geometry",
+   "path": "bank-v2/strobe_geometry.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/strobe_geometry.jpg"
+  },
+  {
+   "label": "tcXfW8",
+   "path": "bank-v2/tcXfW8.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/tcXfW8.jpg",
+   "canvas": "sweep"
+  },
+  {
+   "label": "tscSDM",
+   "path": "bank-v2/tscSDM.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 720,
+   "thumbnail": "bank-v2/thumbs/tscSDM.jpg"
+  },
+  {
+   "label": "tsG3WR",
+   "path": "bank-v2/tsG3WR.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/tsG3WR.jpg"
+  },
+  {
+   "label": "wdy3WR",
+   "path": "bank-v2/wdy3WR.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/wdy3WR.jpg"
+  },
+  {
+   "label": "wslBRf",
+   "path": "bank-v2/wslBRf.fs",
+   "blend": "Additive",
+   "opacity": 0.9,
+   "render_height": 1080,
+   "thumbnail": "bank-v2/thumbs/wslBRf.jpg"
+  }
+ ],
+ "pages": [
+  {
+   "name": "SHADERS 1",
+   "bindings": [
+    {
+     "key": 0,
+     "label": "Shader Art Coding Introduction",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 87
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 1,
+     "label": "GM Shaders: Noise Example",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 2
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 2,
+     "label": "Fractal Anxiety",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 6
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 3,
+     "label": "Efficient Chaos",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 14
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 4,
+     "label": "Cyber Fuji 2020",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 20
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 5,
+     "label": "Molecules 2 [284 chars]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 37
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 6,
+     "label": "Truchet [137]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 42
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 7,
+     "label": "Binary [128]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 51
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 8,
+     "label": "Chromatic Aberration [229 chars]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 54
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 9,
+     "label": "GM Shaders: Lights",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 61
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 10,
+     "label": "Eclipse 2",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 66
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 11,
+     "label": "Double Mod",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 71
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 12,
+     "label": "Dth Str",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 77
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 13,
+     "label": "glowingMarblingBlack",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 85
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 14,
+     "label": "Balatro Background Shaders",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 88
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 15,
+     "label": "fractalskew",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 92
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    }
+   ]
+  },
+  {
+   "name": "SHADERS 2",
+   "bindings": [
+    {
+     "key": 0,
+     "label": "Mini: Squircle 2",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 0
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 1,
+     "label": "Constructing SDFs",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 1
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 2,
+     "label": "Breaking Repetition",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 3
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 3,
+     "label": "Fire [326]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 4
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 4,
+     "label": "Paramed KIFS Fractals Example",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 5
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 5,
+     "label": "Sacred geometries",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 7
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 6,
+     "label": "kaleidoscope mirror",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 8
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 7,
+     "label": "Perlin Texture Blending",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 9
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 8,
+     "label": "Geode",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 10
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 9,
+     "label": "Fork Fractal An NikolaErce 712",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 11
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 10,
+     "label": "Simple Worley",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 12
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 11,
+     "label": "Mini: Hillside",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 13
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 12,
+     "label": "Music - Pirates",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 15
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 13,
+     "label": "Turbulent Dark",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 16
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 14,
+     "label": "Turbulent Flame",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 17
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 15,
+     "label": "One-Pass Fire",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 18
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 16,
+     "label": "Cheap Turbulence",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 19
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 17,
+     "label": "UI noise halo",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 21
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 18,
+     "label": "Color oil",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 22
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 19,
+     "label": "audio oscilloscope",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 23
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 20,
+     "label": "deep drift",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 24
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 21,
+     "label": "liquid metal",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 25
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 22,
+     "label": "FBM Plasma Outlines",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 26
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 23,
+     "label": "Electric fields",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 27
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    }
+   ]
+  },
+  {
+   "name": "SHADERS 3",
+   "bindings": [
+    {
+     "key": 0,
+     "label": "plasma flow",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 28
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 1,
+     "label": "Red Blue Plasma Noise",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 29
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 2,
+     "label": "Spiral [127 Chars]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 30
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 3,
+     "label": "coherence",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 31
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 4,
+     "label": "beat tunnel",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 32
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 5,
+     "label": "neon tunnel",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 33
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 6,
+     "label": "vs cyber wormhole",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 34
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 7,
+     "label": "The Entry",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 35
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 8,
+     "label": "Gathering [177]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 36
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 9,
+     "label": "Molecules [281 chars]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 38
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 10,
+     "label": "Tubes 2 [215 chars]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 39
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 11,
+     "label": "Fractal Golfing [86 chars]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 40
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 12,
+     "label": "Wordle [240 chars]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 41
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 13,
+     "label": "Gyroid Slice [158]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 43
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 14,
+     "label": "Truchet Blobs [250 chars]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 44
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 15,
+     "label": "Windows 10 [160 Chars]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 45
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 16,
+     "label": "Rainbow [108 Chars]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 46
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 17,
+     "label": "Final Storm",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 47
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 18,
+     "label": "Xor - Triangles",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 48
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 19,
+     "label": "Hurricane Twist",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 49
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 20,
+     "label": "Add vs Screen",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 50
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 21,
+     "label": "Semi-Circle Wave [254]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 52
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 22,
+     "label": "Stripy Anti-aliasing",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 53
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    }
+   ]
+  },
+  {
+   "name": "SHADERS 4",
+   "bindings": [
+    {
+     "key": 0,
+     "label": "GM Shaders: Tonemaps",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 55
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 1,
+     "label": "Tixy Land",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 56
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 2,
+     "label": "GM Shaders: Shading",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 57
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 3,
+     "label": "Gravity [170]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 58
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 4,
+     "label": "Quadicube in 456 chars",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 59
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 5,
+     "label": "Mini: Mosaic",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 60
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 6,
+     "label": "Mini: Nova",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 62
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 7,
+     "label": "\ud835\udd4f",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 63
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 8,
+     "label": "Photon Transmission",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 64
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 9,
+     "label": "Glowing Spheres",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 65
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 10,
+     "label": "Eclipse 3 [167 chars]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 67
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 11,
+     "label": "Perspective Demo",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 68
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 12,
+     "label": "2D Rotation Demo",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 69
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 13,
+     "label": "Sliding Spheres [239 bytes]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 70
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 14,
+     "label": "Shuffling Mosaic [337 chars]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 72
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 15,
+     "label": "Wire",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 73
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 16,
+     "label": "Mini: Squircle",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 74
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 17,
+     "label": "Portal [176 chars]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 75
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 18,
+     "label": "GM Shaders: Gamma",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 76
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 19,
+     "label": "Pretty Hip",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 78
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 20,
+     "label": "Wolfenstein-like Raytracing",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 79
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 21,
+     "label": "Polar_coordinates_sample",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 80
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 22,
+     "label": "Xor - Infinite Worley Noise",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 81
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 23,
+     "label": "Grok [111]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 82
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    }
+   ]
+  },
+  {
+   "name": "SHADERS 5",
+   "bindings": [
+    {
+     "key": 0,
+     "label": "Emissive Square",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 83
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 1,
+     "label": "crumpledWave",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 84
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 2,
+     "label": "Oil spill.",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 86
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 3,
+     "label": "Rounded Box - CSS-like",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 89
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 4,
+     "label": "For Beginners",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 90
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 5,
+     "label": "Palettes",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 91
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 6,
+     "label": "Bouncing ball, basic as it gets!",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 93
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 7,
+     "label": "Koch Snowflake Kaleidoscope",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 94
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 8,
+     "label": "Fractals: MRS",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 95
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 9,
+     "label": "baby's first go",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 96
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 10,
+     "label": "audio wave rings",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 97
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 11,
+     "label": "-1+i base & twindragon figure",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 98
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 12,
+     "label": "Simple Fractal for All",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 99
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 13,
+     "label": "WhateverThisIs\u00e2\u201e\u00a2",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 100
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 14,
+     "label": "mature crew sux fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 101
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 15,
+     "label": "Fractalsq",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 102
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 16,
+     "label": "multiband rings",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 103
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 17,
+     "label": "spectrum flow",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 104
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 18,
+     "label": "strobe geometry",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 105
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 19,
+     "label": "Neon Chill",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 106
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 20,
+     "label": "Base fractal with smooth count",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 107
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 21,
+     "label": "Distance fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 108
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 22,
+     "label": "Patterned lights",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 109
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 23,
+     "label": "Flickering plaid",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 110
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    }
+   ]
+  }
+ ]
+}
