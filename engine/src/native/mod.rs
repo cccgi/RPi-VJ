@@ -81,6 +81,7 @@ pub fn run(
     let mut capture = None;
     let mut capture_retry = Instant::now() - Duration::from_secs(3);
     let mut audio = AudioFrame::default();
+    let (idle_clock, mut idle_tick, mut idle) = (Instant::now(), Instant::now(), 0.0f32);
     let mut last_audio = Instant::now();
     let mut events = sdl.event_pump().map_err(anyhow::Error::msg)?;
     let mut state = State::from_show(&show);
@@ -195,6 +196,14 @@ pub fn run(
         if last_audio.elapsed() > Duration::from_millis(250) {
             audio = AudioFrame::default();
         }
+        // Silence: fade in slow stand-in levels so audio-driven shaders do not freeze, and
+        // drop them quickly when sound returns. `audio` stays the real signal.
+        let idle_dt = idle_tick.elapsed().as_secs_f32().min(0.1);
+        idle_tick = Instant::now();
+        let quiet = audio.volume < 0.01 && audio.bass < 0.01 && audio.mid < 0.01;
+        idle = (idle + if quiet { idle_dt * 0.4 } else { -idle_dt * 4.0 }).clamp(0.0, 1.0);
+        let heard = audio.clone();
+        let moving = crate::audio::idle_audio(&heard, idle_clock.elapsed().as_secs_f32(), idle);
         let mut candidate_error = None;
         for (index, player) in players.iter_mut().enumerate() {
             if let Err(error) = player.poll() {
@@ -332,7 +341,7 @@ pub fn run(
         renderer.draw(
             active,
             &drawing,
-            &audio,
+            &moving,
             start.elapsed().as_secs_f32(),
             window.drawable_size(),
         );
@@ -368,7 +377,7 @@ pub fn run(
                 .map_or(0, |(_, _, n)| n.load(Ordering::Relaxed));
             eprintln!(
                 "renderer frames={frames} late={late_frames} audio_dropped={dropped} warmed={warmed:?} bands={:.2?} macros={:.2?} gain={:.2}",
-                [audio.bass, audio.low_mid, audio.mid, audio.treble, audio.onset],
+                [heard.bass, heard.low_mid, heard.mid, heard.treble, heard.onset],
                 state.macros,
                 state.input_gain
             );

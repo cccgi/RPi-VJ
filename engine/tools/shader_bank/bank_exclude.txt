@@ -1,0 +1,2 @@
+# Shader ids kept out of generated shows: pass to report.py with --exclude-file.
+73cSRr   # too pixelated on the output (owner, 2026-10-07)

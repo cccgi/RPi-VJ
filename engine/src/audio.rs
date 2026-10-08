@@ -63,6 +63,24 @@ pub struct AudioFrame {
     pub spectrum: [f32; BINS],
     pub sequence: u64,
 }
+/// Stand-in levels for silence: every band drifts on its own slow sine, with no onsets,
+/// so shaders whose only motion is audio-driven keep moving gently. `amount` (0..=1)
+/// fades it in; the result is added to `frame`, which is silent when this is used.
+pub fn idle_audio(frame: &AudioFrame, time: f32, amount: f32) -> AudioFrame {
+    let wave = |rate: f32, phase: f32| 0.5 + 0.5 * (time * rate + phase).sin();
+    let mut out = frame.clone();
+    out.bass += amount * (0.10 + 0.24 * wave(0.31, 0.0));
+    out.sub += amount * (0.08 + 0.18 * wave(0.19, 1.3));
+    out.low_mid += amount * (0.08 + 0.20 * wave(0.27, 2.1));
+    out.mid += amount * (0.08 + 0.20 * wave(0.23, 0.7));
+    out.high_mid += amount * (0.06 + 0.16 * wave(0.37, 3.3));
+    out.treble += amount * (0.04 + 0.16 * wave(0.41, 4.0));
+    out.volume += amount * (0.14 + 0.12 * wave(0.17, 5.2));
+    for (index, bin) in out.spectrum.iter_mut().enumerate() {
+        *bin += amount * (0.05 + 0.15 * wave(0.29, index as f32 * 0.21));
+    }
+    out
+}
 impl Default for AudioFrame {
     fn default() -> Self {
         Self {
@@ -410,6 +428,25 @@ mod tests {
         // Nonsense input never produces nonsense output.
         let t = clock.tick(f32::NAN, f32::INFINITY, &silent);
         assert!(t.beat.is_finite() && t.bar.is_finite() && t.locked == 0.0);
+    }
+    #[test]
+    fn idle_audio_moves_slowly_stays_bounded_and_fades() {
+        let silent = AudioFrame::default();
+        assert_eq!(idle_audio(&silent, 3.0, 0.0).bass, 0.0);
+        let mut previous = idle_audio(&silent, 0.0, 1.0);
+        let mut travelled = 0.0;
+        for step in 1..600 {
+            let frame = idle_audio(&silent, step as f32 / 60.0, 1.0);
+            for value in [frame.bass, frame.mid, frame.treble, frame.volume, frame.spectrum[7]] {
+                assert!((0.0..=0.4).contains(&value));
+            }
+            assert_eq!(frame.onset, 0.0);
+            // Smooth: never more than a small step between frames.
+            assert!((frame.bass - previous.bass).abs() < 0.002);
+            travelled += (frame.bass - previous.bass).abs();
+            previous = frame;
+        }
+        assert!(travelled > 0.2);
     }
     #[test]
     fn antiphase_stereo_preserves_energy() {

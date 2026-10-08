@@ -568,7 +568,8 @@ impl Renderer {
         let meters = [
             ("u_meter_a", [level[0], level[1], level[2], level[3]]),
             ("u_meter_b", [m[0], m[1], m[2], m[3]]),
-            ("u_meter_c", [level[4], m[4], 1.0, 0.0]),
+            // The band meter is a diagnostic: it shows with the HUD only.
+            ("u_meter_c", [level[4], m[4], f32::from(u8::from(state.hud)), 0.0]),
         ];
         let geo_on = m[..6].iter().any(|v| *v > 0.0) || self.geo_drift != 0.0;
         if state.shader && !state.blackout {
