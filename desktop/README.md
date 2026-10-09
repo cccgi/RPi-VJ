@@ -54,6 +54,20 @@ written every 20 seconds and on exit.
   The group list also holds groups worked out from each shader's tags, code and
   author (Fractals, Raymarched 3D, Tunnels, Tiny code, Space, Nature and so on, then
   one per author with ten or more shaders).
+- **Shader editor:** under the preview while a shader is being tried out. Transform
+  (zoom, turn, move), motion (speed, and how far it follows the music), colour (hue,
+  saturation, brightness, contrast, gamma, invert), and a slider for each number the
+  shader declares up front (`#define NAME 1.5` or `const float NAME = 1.5;`). "Edit
+  code" opens the shader's code; "Apply" compiles it and, if it compiles, keeps it as
+  an edited copy in `target/desktop/user-shaders/` (the library file is never
+  changed; "Back to the original" drops the copy). Everything set here stays with
+  the shader and applies wherever it plays.
+- **Download from Shadertoy:** "Download…" beside the tabs. Paste links or ids and
+  press Download. It runs the repository's own tools (`fetch_shadertoy_user.py`,
+  `make_native_shadertoy.py`, `shader_bank/catalog.py`, `shader_bank/fetch_assets.py`)
+  with `python`, which needs Playwright and opens a browser window while it works.
+  New shaders are checked for compiling and collected in the group "New, to review";
+  right-click one and choose "Mark as reviewed" to take it out.
 - **Effects tab:** beside "Shaders" at the top of the left panel. Drag an effect onto
   a layer (its controls or any of its cells) or onto the "Composition effects" box on
   the right; double-click adds it to the selected layer. Each layer and the

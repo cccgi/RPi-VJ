@@ -103,6 +103,29 @@ pub const EFFECTS: [(&str, &str); 26] = [
     ("Colorize", "Colour"),
     ("Flip", "Distort"),
 ];
+const GRADE: &str = "#version 300 es
+precision highp float;
+uniform sampler2D u_src;
+uniform float u_hue;
+uniform float u_saturation;
+uniform float u_brightness;
+uniform float u_contrast;
+uniform float u_gamma;
+uniform float u_invert;
+in vec2 uv;
+out vec4 color;
+void main() {
+    vec3 c = texture(u_src, uv).rgb;
+    float angle = u_hue * 6.2831853;
+    vec3 axis = vec3(0.57735);
+    c = c * cos(angle) + cross(axis, c) * sin(angle) + axis * dot(axis, c) * (1.0 - cos(angle));
+    c = mix(vec3(dot(c, vec3(0.2126, 0.7152, 0.0722))), c, u_saturation);
+    c = ((c - 0.5) * u_contrast + 0.5) * u_brightness;
+    c = pow(max(c, 0.0), vec3(1.0 / max(u_gamma, 0.05)));
+    c = mix(c, 1.0 - c, u_invert);
+    color = vec4(clamp(c, 0.0, 1.0), 1.0);
+}
+";
 const FX: &str = "#version 300 es
 precision highp float;
 uniform sampler2D u_src;
@@ -225,6 +248,9 @@ pub struct Frame<'a> {
     pub audio: &'a AudioFrame,
     pub flow: &'a [f32; 4],
     pub spec_flow: &'a [f32; 32],
+    /// The picture turned (cos, sin) and shifted (x, y in picture heights), and zoomed.
+    pub canvas: [f32; 4],
+    pub zoom: f32,
 }
 /// One step of the layer stack: `top` over `base`.
 pub struct Mix {
@@ -251,6 +277,7 @@ pub struct Gfx {
     es: bool,
     mix: Program,
     fx: Program,
+    grade: Program,
     textures: RefCell<HashMap<String, Rc<Texture>>>,
 }
 pub fn spectrum_bands(audio: &AudioFrame) -> [f32; 32] {
@@ -272,7 +299,8 @@ impl Gfx {
             let es = compile(&gl, VERTEX, probe).map(|id| gl.delete_program(id)).is_ok();
             let mix = build(&gl, es, MIX, &[])?;
             let fx = build(&gl, es, FX, &[])?;
-            Ok(Self { gl, vao, es, mix, fx, textures: RefCell::default() })
+            let grade = build(&gl, es, GRADE, &[])?;
+            Ok(Self { gl, vao, es, mix, fx, grade, textures: RefCell::default() })
         }
     }
     pub fn dialect(&self) -> &'static str {
@@ -486,10 +514,11 @@ impl Gfx {
                 ("u_beat_phase", f.tempo.beat),
                 ("u_bar_phase", f.tempo.bar),
                 ("u_locked", f.tempo.locked),
-                ("u_canvas_cos", 1.0),
-                ("u_canvas_sin", 0.0),
-                ("u_canvas_x", 0.0),
-                ("u_canvas_y", 0.0),
+                ("u_canvas_cos", f.canvas[0]),
+                ("u_canvas_sin", f.canvas[1]),
+                ("u_canvas_x", f.canvas[2] * size.1),
+                ("u_canvas_y", f.canvas[3] * size.1),
+                ("u_canvas_zoom", f.zoom),
                 ("u_canvas_cx", size.0 * 0.5),
                 ("u_canvas_cy", size.1 * 0.5),
                 ("u_flow", f.flow[0]),
@@ -562,6 +591,23 @@ impl Gfx {
             gl.draw_arrays(glow::TRIANGLES, 0, 3);
             gl.active_texture(glow::TEXTURE1);
             gl.bind_texture(glow::TEXTURE_2D, None);
+            self.end();
+        }
+    }
+    /// Colour work on one picture: hue turn (0..1), saturation, brightness, contrast,
+    /// gamma, and invert (0 or 1), in that order of `grade`.
+    pub fn grade(&self, target: &Target, source: glow::Texture, grade: [f32; 6]) {
+        let (gl, p) = (&self.gl, &self.grade);
+        // SAFETY: as in `new`; locations belong to the grade program.
+        unsafe {
+            self.begin(target, p);
+            gl.active_texture(glow::TEXTURE0);
+            gl.bind_texture(glow::TEXTURE_2D, Some(source));
+            gl.uniform_1_i32(p.uniforms.get("u_src"), 0);
+            for (name, value) in ["u_hue", "u_saturation", "u_brightness", "u_contrast", "u_gamma", "u_invert"].into_iter().zip(grade) {
+                gl.uniform_1_f32(p.uniforms.get(name), value);
+            }
+            gl.draw_arrays(glow::TRIANGLES, 0, 3);
             self.end();
         }
     }

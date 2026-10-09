@@ -68,6 +68,10 @@ struct Options {
     thumbs: bool,
     /// Move two of the filled cells to the top layer.
     move_test: bool,
+    /// Download these Shadertoy ids or links, print the log and leave.
+    download: Option<String>,
+    /// Give the previewed shader a look: zoom, turn, speed, colour and its first parameter.
+    look_test: bool,
     /// Open this composition file at start.
     open: Option<PathBuf>,
     /// Bind and send a few MIDI messages, and take the checked list through a preset.
@@ -103,6 +107,8 @@ impl Options {
                 "--midi-test" => options.midi_test = true,
                 "--open" => options.open = Some(value().into()),
                 "--move-test" => options.move_test = true,
+                "--download" => options.download = Some(value()),
+                "--look-test" => options.look_test = true,
                 "--tab" => options.tab = value().parse().unwrap_or(0),
                 "--preview" => options.preview = Some(value()),
                 "--detach" => options.detach = true,
@@ -128,6 +134,7 @@ impl Options {
             || self.open.is_some()
             || self.preview.is_some()
             || self.thumbs
+            || self.download.is_some()
             || self.snapshot.is_some()
             || self.ui_snapshot.is_some()
             || self.exit_after.is_some()
@@ -176,6 +183,241 @@ struct Effect {
     kind: usize,
     amount: f32,
     bypass: bool,
+}
+/// How one shader is adjusted wherever it plays: its place and size, its pace and how
+/// far it follows the music, its colours, and the numbers its code declares up front.
+#[derive(Clone, PartialEq)]
+struct Look {
+    zoom: f32,
+    /// Degrees.
+    rotate: f32,
+    /// Across and up, in picture heights.
+    pan: [f32; 2],
+    speed: f32,
+    react: f32,
+    hue: f32,
+    saturation: f32,
+    brightness: f32,
+    contrast: f32,
+    gamma: f32,
+    invert: bool,
+    params: Vec<(String, f32)>,
+}
+impl Default for Look {
+    fn default() -> Self {
+        Self {
+            zoom: 1.0,
+            rotate: 0.0,
+            pan: [0.0; 2],
+            speed: 1.0,
+            react: 1.0,
+            hue: 0.0,
+            saturation: 1.0,
+            brightness: 1.0,
+            contrast: 1.0,
+            gamma: 1.0,
+            invert: false,
+            params: Vec::new(),
+        }
+    }
+}
+impl Look {
+    fn canvas(&self) -> [f32; 4] {
+        let angle = self.rotate.to_radians();
+        [angle.cos(), angle.sin(), self.pan[0], self.pan[1]]
+    }
+    /// The colour settings, when any of them is off its neutral value.
+    fn grade(&self) -> Option<[f32; 6]> {
+        let grade = [self.hue, self.saturation, self.brightness, self.contrast, self.gamma, f32::from(u8::from(self.invert))];
+        (grade != [0.0, 1.0, 1.0, 1.0, 1.0, 0.0]).then_some(grade)
+    }
+    fn json(&self) -> serde_json::Value {
+        serde_json::json!({
+            "zoom": self.zoom, "rotate": self.rotate, "pan": self.pan, "speed": self.speed, "react": self.react,
+            "hue": self.hue, "saturation": self.saturation, "brightness": self.brightness, "contrast": self.contrast,
+            "gamma": self.gamma, "invert": self.invert, "params": self.params,
+        })
+    }
+    fn from(saved: &serde_json::Value) -> Self {
+        let number = |name: &str, otherwise: f32| saved[name].as_f64().map_or(otherwise, |value| value as f32);
+        let pair = |value: &serde_json::Value| Some((value[0].as_str()?.to_owned(), value[1].as_f64()? as f32));
+        Self {
+            zoom: number("zoom", 1.0).clamp(0.05, 20.0),
+            rotate: number("rotate", 0.0),
+            pan: [saved["pan"][0].as_f64().unwrap_or(0.0) as f32, saved["pan"][1].as_f64().unwrap_or(0.0) as f32],
+            speed: number("speed", 1.0),
+            react: number("react", 1.0),
+            hue: number("hue", 0.0),
+            saturation: number("saturation", 1.0),
+            brightness: number("brightness", 1.0),
+            contrast: number("contrast", 1.0),
+            gamma: number("gamma", 1.0),
+            invert: saved["invert"].as_bool().unwrap_or(false),
+            params: saved["params"].as_array().into_iter().flatten().filter_map(pair).collect(),
+        }
+    }
+}
+/// A number a shader declares up front, `#define NAME 1.5` or `const float NAME = 1.5;`:
+/// its name, its value, and whether it is written as a whole number.
+fn param_of(line: &str) -> Option<(&str, f32, bool)> {
+    let words: Vec<&str> = line.split_whitespace().collect();
+    let (name, value) = match words.as_slice() {
+        ["#define", name, value] => (*name, *value),
+        ["const", "float" | "int", name, "=", value] => (*name, value.strip_suffix(';')?),
+        _ => return None,
+    };
+    let plain = !name.is_empty() && name.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'_');
+    // The two the converter writes into every file are not the shader's own.
+    if !plain || ["HW_PERFORMANCE", "iFrameRate"].contains(&name) {
+        return None;
+    }
+    let number = value.strip_suffix('f').unwrap_or(value);
+    let starts = number.bytes().next().is_some_and(|byte| byte.is_ascii_digit() || byte == b'.' || byte == b'-');
+    let whole = !number.contains('.') && !number.contains('e');
+    Some((name, number.parse().ok().filter(|value: &f32| starts && value.is_finite())?, whole))
+}
+/// `text` with the declared numbers named in `params` set to their new values.
+fn with_params(text: &str, params: &[(String, f32)]) -> String {
+    if params.is_empty() {
+        return text.to_owned();
+    }
+    let rewrite = |line: &str| {
+        let (name, _, whole) = param_of(line)?;
+        let value = params.iter().find(|(known, _)| known == name)?.1;
+        let number = if whole { format!("{}", value.round() as i64) } else { format!("{value:?}") };
+        Some(match line.split_whitespace().nth(1) {
+            Some(kind) if !line.trim_start().starts_with('#') => format!("const {kind} {name} = {number};"),
+            _ => format!("#define {name} {number}"),
+        })
+    };
+    text.lines().map(|line| rewrite(line).unwrap_or_else(|| line.to_owned())).collect::<Vec<_>>().join("\n")
+}
+/// The levels a shader is fed, scaled: 0 is a shader that ignores the music.
+fn scaled(audio: &AudioFrame, amount: f32) -> AudioFrame {
+    let mut out = audio.clone();
+    for level in [
+        &mut out.bass,
+        &mut out.mid,
+        &mut out.treble,
+        &mut out.volume,
+        &mut out.onset,
+        &mut out.sub,
+        &mut out.low_mid,
+        &mut out.high_mid,
+    ] {
+        *level = (*level * amount).clamp(0.0, 1.0);
+    }
+    out
+}
+/// The shader a layer is playing, if it is playing one.
+fn playing(layer: &Layer) -> Option<usize> {
+    match layer.active.and_then(|column| layer.cells[column].as_ref())?.source {
+        Source::Shader(entry) => Some(entry),
+        Source::Clip(_) => None,
+    }
+}
+/// A layer's picture with its shader's colour settings applied, if it has any.
+fn graded(gfx: &gfx::Gfx, looks: &HashMap<usize, Look>, layer: &Layer, into: &gfx::Target) -> glow::Texture {
+    match playing(layer).and_then(|entry| looks.get(&entry)).and_then(Look::grade) {
+        Some(grade) => {
+            gfx.grade(into, layer.target.texture, grade);
+            into.texture
+        }
+        None => layer.target.texture,
+    }
+}
+/// Shadertoy ids out of pasted text: links, or bare six-character ids.
+fn shadertoy_ids(text: &str) -> Vec<String> {
+    let mut ids: Vec<String> = Vec::new();
+    for word in text.split(|c: char| c.is_whitespace() || c == ',' || c == ';') {
+        let id: String = match word.find("view/") {
+            Some(at) => word[at + 5..].chars().take_while(char::is_ascii_alphanumeric).collect(),
+            None => word.to_owned(),
+        };
+        if id.len() == 6 && id.bytes().all(|byte| byte.is_ascii_alphanumeric()) && !ids.contains(&id) {
+            ids.push(id);
+        }
+    }
+    ids
+}
+/// A download from Shadertoy running in the background, and what it has said so far.
+struct Download {
+    log: Arc<std::sync::Mutex<Vec<String>>>,
+    done: Arc<std::sync::atomic::AtomicBool>,
+    ids: Vec<String>,
+}
+/// Fetch, convert and catalogue `ids` with the repository's own tools, saying what
+/// happens line by line.
+fn run_download(root: PathBuf, ids: Vec<String>, log: Arc<std::sync::Mutex<Vec<String>>>) {
+    use std::io::BufRead;
+    let say = |line: String| {
+        if let Ok(mut lines) = log.lock() {
+            lines.push(line);
+        }
+    };
+    let list = root.join("target/desktop/download-ids.txt");
+    let incoming = root.join("target/desktop/incoming");
+    let ready = std::fs::create_dir_all(&incoming).and_then(|()| std::fs::write(&list, ids.join("\n")));
+    if let Err(error) = ready {
+        return say(format!("could not write {}: {error}", list.display()));
+    }
+    let (list, folder) = (list.to_string_lossy().into_owned(), incoming.to_string_lossy().into_owned());
+    let run = |what: &str, args: &[&str]| -> bool {
+        say(format!("== {what}"));
+        let started = std::process::Command::new("python")
+            .args(args)
+            .current_dir(&root)
+            .env("PYTHONUTF8", "1")
+            .env("PYTHONUNBUFFERED", "1")
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn();
+        let mut child = match started {
+            Ok(child) => child,
+            Err(error) => {
+                say(format!("could not start python: {error}"));
+                return false;
+            }
+        };
+        if let Some(out) = child.stdout.take() {
+            for line in std::io::BufReader::new(out).lines().map_while(|line| line.ok()) {
+                say(line);
+            }
+        }
+        match child.wait_with_output() {
+            Ok(output) if output.status.success() => true,
+            Ok(output) => {
+                let errors = String::from_utf8_lossy(&output.stderr);
+                let lines: Vec<&str> = errors.lines().collect();
+                lines[lines.len().saturating_sub(6)..].iter().for_each(|line| say((*line).to_owned()));
+                say(format!("{what} failed"));
+                false
+            }
+            Err(error) => {
+                say(format!("{what} failed: {error}"));
+                false
+            }
+        }
+    };
+    if !run("Downloading from Shadertoy (a browser window opens)", &["engine/tools/fetch_shadertoy_user.py", "--ids-file", &list, "--name", "desktop"]) {
+        return;
+    }
+    if !run("Converting for the engine", &["engine/tools/make_native_shadertoy.py", "--ids-file", &list, "--out", &folder]) {
+        return;
+    }
+    // Only new files go into the library; a shader already there is left as it is.
+    let mut added = 0;
+    for id in &ids {
+        let (from, to) = (incoming.join(format!("{id}.fs")), root.join(format!("target/native-13-shaders/{id}.fs")));
+        if from.is_file() && !to.exists() && std::fs::copy(&from, &to).is_ok() {
+            added += 1;
+        }
+    }
+    say(format!("{added} new shader file(s) in the library"));
+    if added > 0 {
+        run("Rebuilding the catalog", &["engine/tools/shader_bank/catalog.py"]);
+        run("Fetching input textures", &["engine/tools/shader_bank/fetch_assets.py"]);
+    }
 }
 /// The size of the pictures shown when a library shader is hovered.
 const PREVIEW: (u32, u32) = (320, 180);
@@ -248,6 +490,8 @@ struct Layer {
     /// When the live cell was launched, and the cells played since the last shuffle round.
     launched: Instant,
     played: Vec<usize>,
+    /// The shader clock: it runs at the pace the shader's look sets.
+    time: f32,
     reactor: Reactor,
     clock: BeatClock,
     flow: [f32; 4],
@@ -395,6 +639,7 @@ enum Action {
     Preview(usize),
     Favorite(Vec<usize>, bool),
     Remove(Vec<usize>, bool),
+    Reviewed(Vec<usize>),
     LoadPreset(usize),
     DeletePreset(usize),
     OpenComposition(serde_json::Value),
@@ -462,6 +707,21 @@ struct App {
     /// Effects on the whole composition, and two targets effects are worked through.
     master: Vec<Effect>,
     scratch: [gfx::Target; 2],
+    /// Each shader's look, by library index; the picture a look's colours are worked
+    /// into; and the preview's own finished picture.
+    looks: HashMap<usize, Look>,
+    graded: gfx::Target,
+    pre_out: gfx::Target,
+    /// The editor: the numbers the previewed shader declares, its code while that is
+    /// open (shader, text, compile error), and when a changed number asks for a rebuild.
+    declared: Option<(usize, Vec<(String, f32, bool)>)>,
+    code: Option<(usize, String, Option<String>)>,
+    rebuild_at: Option<Instant>,
+    /// Downloading from Shadertoy, and the shaders that came in and are not reviewed yet.
+    download: Option<Download>,
+    download_text: String,
+    download_open: bool,
+    review: BTreeSet<usize>,
     // MIDI.
     midi: midi::Midi,
     bindings: Vec<(MidiKey, Control)>,
@@ -533,6 +793,7 @@ fn new_layer(gfx: &gfx::Gfx, name: String, columns: usize, size: usize) -> Resul
         on_sections: false,
         launched: Instant::now(),
         played: Vec::new(),
+        time: 0.0,
         reactor: Reactor::default(),
         clock: BeatClock::default(),
         flow: [0.0; 4],
@@ -601,6 +862,16 @@ impl App {
             detached: false,
             master: Vec::new(),
             scratch: [gfx.target(RENDER_SIZES[size])?, gfx.target(RENDER_SIZES[size])?],
+            looks: HashMap::new(),
+            graded: gfx.target(RENDER_SIZES[size])?,
+            pre_out: gfx.target(RENDER_SIZES[size])?,
+            declared: None,
+            code: None,
+            rebuild_at: None,
+            download: None,
+            download_text: String::new(),
+            download_open: false,
+            review: BTreeSet::new(),
             lights: HashMap::new(),
             led: [0, 1, 127, 127, 0],
             apc: false,
@@ -720,11 +991,28 @@ impl App {
             }
         }
         app.tab = app.options.tab.min(1);
+        if let Some(wanted) = app.options.download.clone() {
+            app.download_text = wanted;
+            app.start_download();
+        }
         app.detached |= app.options.detach;
         if app.options.thumbs {
             app.thumb_run = Some(0);
         }
         if let Some(entry) = app.options.preview.as_ref().and_then(|id| app.index_of.get(id).copied()) {
+            if app.options.look_test {
+                let first = app.source_text(entry).ok().and_then(|text| text.lines().find_map(|line| param_of(line).map(|found| found.0.to_owned())));
+                let look = Look {
+                    zoom: 2.0,
+                    rotate: 30.0,
+                    speed: 0.5,
+                    hue: 0.33,
+                    contrast: 1.4,
+                    params: first.into_iter().map(|name| (name, 2.0)).collect(),
+                    ..Look::default()
+                };
+                app.looks.insert(entry, look);
+            }
             app.apply(Action::Preview(entry));
             app.favorites.insert(entry);
         }
@@ -980,6 +1268,8 @@ impl App {
                 audio: &audio,
                 flow: &[6.0; 4],
                 spec_flow: &[3.0; 32],
+                canvas: [1.0, 0.0, 0.0, 0.0],
+                zoom: 1.0,
             },
         );
         self.gfx.delete(program);
@@ -1022,7 +1312,8 @@ impl App {
             _ if removed => false,
             0 => true,
             1 => self.favorites.contains(&entry),
-            group => self.groups.get(group - 3).is_some_and(|(_, members)| members.contains(&entry)),
+            3 => self.review.contains(&entry),
+            group => self.groups.get(group - 4).is_some_and(|(_, members)| members.contains(&entry)),
         }
     }
     /// Empty the composition: every cell, layer and player.
@@ -1156,12 +1447,264 @@ impl App {
         }
         self.source = Some(source);
     }
+    /// Where an edited copy of a shader's code is kept; the library file is never changed.
+    fn edited_path(&self, entry: usize) -> PathBuf {
+        self.root.join("target/desktop/user-shaders").join(format!("{}.fs", self.library[entry].id))
+    }
+    /// A shader's code: the edited copy if there is one, else the library file.
+    fn source_text(&self, entry: usize) -> Result<String> {
+        let edited = self.edited_path(entry);
+        let path = if edited.is_file() { &edited } else { &self.library[entry].path };
+        Ok(std::fs::read_to_string(path)?)
+    }
     fn build(&self, entry: usize) -> Result<gfx::Program> {
+        self.build_text(entry, &self.source_text(entry)?)
+    }
+    /// Compile `text` as this shader, with its look's numbers written in.
+    fn build_text(&self, entry: usize, text: &str) -> Result<gfx::Program> {
+        let params = self.looks.get(&entry).map(|look| look.params.as_slice()).unwrap_or(&[]);
         let entry = &self.library[entry];
         let channels = self.channels.get(&entry.id).map(Vec::as_slice).unwrap_or(&[]);
         let kinds: Vec<_> = channels.iter().map(|channel| (channel.channel, channel.kind)).collect();
-        let prepared = shader::load_with(&entry.path, &kinds)?;
-        self.gfx.program(&prepared.source, &prepared.defaults, channels)
+        let prepared = shader::prepare_with(&with_params(text, params), &kinds)?;
+        // The engine's canvas turns and shifts the picture; here it zooms it as well.
+        let source = prepared
+            .source
+            .replacen("vec4 rpivj_frag() {", "uniform float u_canvas_zoom;\nvec4 rpivj_frag() {", 1)
+            .replacen("(gl_FragCoord.xy - c)", "((gl_FragCoord.xy - c) / u_canvas_zoom)", 1);
+        self.gfx.program(&source, &prepared.defaults, channels)
+    }
+    /// Have every cell that holds this shader compile again, after its code or numbers changed.
+    fn refresh_cells(&mut self, entry: usize) {
+        let (mut programs, mut pictures) = (Vec::new(), Vec::new());
+        for layer in &mut self.layers {
+            for cell in layer.cells.iter_mut().flatten().filter(|cell| cell.source == Source::Shader(entry)) {
+                cell.prepared = false;
+                cell.error = None;
+                programs.extend(cell.program.take());
+                pictures.extend(cell.thumb.take().map(|(target, _)| target));
+            }
+        }
+        programs.into_iter().for_each(|program| self.gfx.delete(program));
+        pictures.into_iter().for_each(|target| self.gfx.discard(target));
+    }
+    fn previewed(&self) -> Option<usize> {
+        playing(&self.pre)
+    }
+    /// Begin downloading the ids in the box that the library does not have yet.
+    fn start_download(&mut self) {
+        let ids: Vec<String> = shadertoy_ids(&self.download_text).into_iter().filter(|id| !self.index_of.contains_key(id)).collect();
+        if ids.is_empty() {
+            self.message = Some("nothing to download: no new Shadertoy id in the box".into());
+            return;
+        }
+        let log = Arc::new(std::sync::Mutex::new(vec![format!("{} to download: {}", ids.len(), ids.join(" "))]));
+        let done = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let (root, wanted, said, flag) = (self.root.clone(), ids.clone(), Arc::clone(&log), Arc::clone(&done));
+        std::thread::spawn(move || {
+            run_download(root, wanted, said);
+            flag.store(true, Ordering::Relaxed);
+        });
+        self.download = Some(Download { log, done, ids });
+    }
+    /// Take a finished download into the library: new shaders go on the end, so every
+    /// place that knows a shader by its position still holds, and into "to review".
+    fn finish_download(&mut self) {
+        let Some(job) = self.download.as_ref().filter(|job| job.done.swap(false, Ordering::Relaxed)) else { return };
+        let (log, wanted) = (Arc::clone(&job.log), job.ids.clone());
+        let fresh = library::load(&self.root).unwrap_or_default();
+        let mut lines = Vec::new();
+        for entry in fresh {
+            if self.index_of.contains_key(&entry.id) || !wanted.contains(&entry.id) {
+                continue;
+            }
+            let index = self.library.len();
+            self.index_of.insert(entry.id.clone(), index);
+            self.library.push(entry);
+            self.review.insert(index);
+        }
+        self.channels = library::channels(&self.root);
+        self.groups = library::groups(&self.library);
+        for id in &wanted {
+            lines.push(match self.index_of.get(id).copied() {
+                Some(index) if !self.library[index].runnable() => format!("{id}: in the library, but multipass, so it cannot run"),
+                Some(index) => match self.build(index) {
+                    Ok(program) => {
+                        self.gfx.delete(program);
+                        format!("{id}: {} compiles; waiting for review", self.library[index].title())
+                    }
+                    Err(error) => format!("{id}: does not compile: {}", format!("{error:#}").lines().next().unwrap_or_default()),
+                },
+                None => format!("{id}: did not arrive"),
+            });
+        }
+        lines.push("Done.".into());
+        if let Ok(mut said) = log.lock() {
+            said.extend(lines);
+        }
+        if !self.review.is_empty() {
+            (self.group, self.view) = (3, View::All);
+        }
+    }
+    /// The download box: links or ids in, the tools' own words out.
+    fn download_window(&mut self, ctx: &egui::Context) {
+        if !self.download_open {
+            return;
+        }
+        let mut open = true;
+        let running = self.download.as_ref().is_some_and(|job| !job.log.lock().is_ok_and(|lines| lines.last().is_some_and(|line| line == "Done." || line.ends_with("failed"))));
+        egui::Window::new("Download from Shadertoy").open(&mut open).default_width(460.0).show(ctx, |ui| {
+            ui.label("Shadertoy links or ids, one per line or separated by spaces:");
+            ui.add(egui::TextEdit::multiline(&mut self.download_text).desired_rows(5).desired_width(f32::INFINITY).hint_text("https://www.shadertoy.com/view/XsXXDn"));
+            ui.horizontal(|ui| {
+                if ui.add_enabled(!running, egui::Button::new("Download")).clicked() {
+                    self.start_download();
+                }
+                if running {
+                    ui.spinner();
+                    ui.weak("working; the browser window it opens closes by itself");
+                }
+            });
+            ui.weak("New shaders arrive in the group \"New, to review\". Shadertoy is asked slowly, about 12 seconds a shader.");
+            if let Some(job) = &self.download {
+                let lines = job.log.lock().map(|lines| lines.clone()).unwrap_or_default();
+                egui::ScrollArea::vertical().max_height(220.0).stick_to_bottom(true).show(ui, |ui| {
+                    for line in &lines[lines.len().saturating_sub(200)..] {
+                        ui.monospace(line);
+                    }
+                });
+            }
+        });
+        self.download_open = open;
+    }
+    /// Under the preview: what can be changed about the shader being tried out. The
+    /// changes stay with the shader and apply wherever it plays.
+    fn editor(&mut self, ui: &mut egui::Ui, actions: &mut Vec<Action>) {
+        let Some(entry) = self.previewed() else { return };
+        if self.declared.as_ref().map(|(known, _)| *known) != Some(entry) {
+            let text = self.source_text(entry).unwrap_or_default();
+            let mut found: Vec<(String, f32, bool)> = Vec::new();
+            for (name, value, whole) in text.lines().filter_map(param_of) {
+                if found.len() < 16 && !found.iter().any(|(known, _, _)| known == name) {
+                    found.push((name.to_owned(), value, whole));
+                }
+            }
+            self.declared = Some((entry, found));
+        }
+        let before = self.looks.get(&entry).cloned().unwrap_or_default();
+        let mut look = before.clone();
+        let edited = self.edited_path(entry).is_file();
+        ui.separator();
+        ui.horizontal(|ui| {
+            ui.strong("Shader editor");
+            if ui.small_button("Reset").on_hover_text("Back to the shader as it came").clicked() {
+                look = Look::default();
+            }
+            if edited {
+                ui.weak("edited code in use");
+            }
+        });
+        ui.spacing_mut().slider_width = 130.0;
+        egui::CollapsingHeader::new("Transform").default_open(true).show(ui, |ui| {
+            ui.add(egui::Slider::new(&mut look.zoom, 0.2..=5.0).logarithmic(true).text("zoom"));
+            ui.add(egui::Slider::new(&mut look.rotate, -180.0..=180.0).suffix("°").text("turn"));
+            ui.add(egui::Slider::new(&mut look.pan[0], -1.0..=1.0).text("across"));
+            ui.add(egui::Slider::new(&mut look.pan[1], -1.0..=1.0).text("up"));
+        });
+        egui::CollapsingHeader::new("Motion").default_open(true).show(ui, |ui| {
+            ui.add(egui::Slider::new(&mut look.speed, -2.0..=4.0).text("speed"));
+            ui.add(egui::Slider::new(&mut look.react, 0.0..=2.0).text("follows the music"));
+        });
+        egui::CollapsingHeader::new("Colour").default_open(true).show(ui, |ui| {
+            ui.add(egui::Slider::new(&mut look.hue, 0.0..=1.0).text("hue"));
+            ui.add(egui::Slider::new(&mut look.saturation, 0.0..=2.0).text("saturation"));
+            ui.add(egui::Slider::new(&mut look.brightness, 0.0..=2.0).text("brightness"));
+            ui.add(egui::Slider::new(&mut look.contrast, 0.0..=2.0).text("contrast"));
+            ui.add(egui::Slider::new(&mut look.gamma, 0.3..=3.0).logarithmic(true).text("gamma"));
+            ui.checkbox(&mut look.invert, "invert");
+        });
+        egui::CollapsingHeader::new("The shader's own numbers").default_open(true).show(ui, |ui| {
+            let declared = self.declared.as_ref().map(|(_, found)| found.as_slice()).unwrap_or(&[]);
+            if declared.is_empty() {
+                ui.weak("This shader declares no numbers up front. Its shapes are in its code.");
+            }
+            for (name, original, whole) in declared {
+                let mut value = look.params.iter().find(|(known, _)| known == name).map_or(*original, |(_, value)| *value);
+                let reach = if *original == 0.0 { 1.0 } else { original.abs() * 3.0 };
+                let range = if *original > 0.0 { 0.0..=reach } else { -reach..=reach };
+                let mut slider = egui::Slider::new(&mut value, range).text(name.as_str());
+                if *whole {
+                    slider = slider.step_by(1.0);
+                }
+                if ui.add(slider).changed() {
+                    look.params.retain(|(known, _)| known != name);
+                    if value != *original {
+                        look.params.push((name.clone(), value));
+                    }
+                }
+            }
+        });
+        // The code itself, for what sliders cannot reach: shapes, sprites, everything.
+        let (mut apply, mut revert, mut close, mut open) = (false, false, false, false);
+        match &mut self.code {
+            Some((shown, text, error)) if *shown == entry => {
+                egui::ScrollArea::vertical().id_salt("code").max_height(300.0).show(ui, |ui| {
+                    ui.add(egui::TextEdit::multiline(text).code_editor().desired_rows(14).desired_width(f32::INFINITY));
+                });
+                ui.horizontal(|ui| {
+                    apply = ui.button("Apply").on_hover_text("Compile, and keep as an edited copy if it compiles").clicked();
+                    revert = ui.add_enabled(edited, egui::Button::new("Back to the original")).clicked();
+                    close = ui.button("Close code").clicked();
+                });
+                if let Some(error) = error {
+                    ui.colored_label(RED, error.as_str());
+                }
+            }
+            _ => open = ui.button("Edit code").clicked(),
+        }
+        if open {
+            self.code = Some((entry, self.source_text(entry).unwrap_or_default(), None));
+        }
+        if apply {
+            let text = self.code.as_ref().map(|(_, text, _)| text.clone()).unwrap_or_default();
+            let kept = self.build_text(entry, &text).and_then(|program| {
+                self.gfx.delete(program);
+                let path = self.edited_path(entry);
+                std::fs::create_dir_all(path.parent().unwrap_or(&self.root))?;
+                Ok(std::fs::write(path, &text)?)
+            });
+            let failed = kept.err().map(|error| format!("{error:#}"));
+            let compiled = failed.is_none();
+            if let Some((_, _, error)) = &mut self.code {
+                *error = failed;
+            }
+            if compiled {
+                self.declared = None;
+                self.refresh_cells(entry);
+                actions.push(Action::Preview(entry));
+            }
+        }
+        if revert {
+            let _ = std::fs::remove_file(self.edited_path(entry));
+            self.code = Some((entry, self.source_text(entry).unwrap_or_default(), None));
+            self.declared = None;
+            self.refresh_cells(entry);
+            actions.push(Action::Preview(entry));
+        }
+        if close {
+            self.code = None;
+        }
+        if look != before {
+            if look.params != before.params {
+                // Numbers are written into the code, so it compiles again; soon, not on every step of a drag.
+                self.rebuild_at = Some(Instant::now());
+            }
+            if look == Look::default() {
+                self.looks.remove(&entry);
+            } else {
+                self.looks.insert(entry, look);
+            }
+        }
     }
     fn source_name(&self, source: &Source) -> String {
         match source {
@@ -1203,6 +1746,8 @@ impl App {
                         audio: &audio,
                         flow: &[6.0; 4],
                         spec_flow: &[3.0; 32],
+                        canvas: [1.0, 0.0, 0.0, 0.0],
+                        zoom: 1.0,
                     },
                 );
                 let texture = frame.register_native_glow_texture(target.texture);
@@ -1324,7 +1869,7 @@ impl App {
             gfx.discard(std::mem::replace(old, made));
             Ok(())
         };
-        for target in self.stack.iter_mut().chain(&mut self.scratch).chain([&mut self.out_target]) {
+        for target in self.stack.iter_mut().chain(&mut self.scratch).chain([&mut self.out_target, &mut self.graded, &mut self.pre_out]) {
             fresh(target, &self.gfx)?;
         }
         for layer in self.layers.iter_mut().chain([&mut self.auto, &mut self.pre]) {
@@ -1421,6 +1966,11 @@ impl App {
                     } else {
                         self.favorites.remove(&entry);
                     }
+                }
+            }
+            Action::Reviewed(entries) => {
+                for entry in entries {
+                    self.review.remove(&entry);
                 }
             }
             Action::Remove(entries, on) => {
@@ -1542,10 +2092,12 @@ impl App {
             }
             let Some(cell) = layer.active.and_then(|column| layer.cells[column].as_ref()) else { continue };
             match (&cell.source, &cell.program) {
-                (Source::Shader(_), Some(program)) => {
+                (Source::Shader(entry), Some(program)) => {
                     let react = cell.react.unwrap_or(layer.react);
-                    let audio = layer.reactor.apply(react, dt, &moving);
+                    let look = self.looks.get(entry);
+                    let audio = scaled(&layer.reactor.apply(react, dt, &moving), look.map_or(1.0, |look| look.react));
                     layer.flash = layer.reactor.flash(react);
+                    layer.time += dt * look.map_or(1.0, |look| look.speed);
                     for (clock, energy) in layer.flow.iter_mut().zip([audio.volume, audio.bass, audio.mid, audio.treble]) {
                         *clock += dt * (FLOW_RATE.0 + energy * FLOW_RATE.1);
                     }
@@ -1556,7 +2108,18 @@ impl App {
                     self.gfx.shader_pass(
                         program,
                         &layer.target,
-                        &gfx::Frame { time, dt, frame, bpm, tempo, audio: &audio, flow: &layer.flow, spec_flow: &layer.spec_flow },
+                        &gfx::Frame {
+                            time: layer.time,
+                            dt,
+                            frame,
+                            bpm,
+                            tempo,
+                            audio: &audio,
+                            flow: &layer.flow,
+                            spec_flow: &layer.spec_flow,
+                            canvas: look.map_or([1.0, 0.0, 0.0, 0.0], Look::canvas),
+                            zoom: look.map_or(1.0, |look| look.zoom),
+                        },
                     );
                     layer.drawn = true;
                 }
@@ -1577,11 +2140,12 @@ impl App {
         // The stack, bottom layer first, each laid over what is below it.
         let (mut below, mut next) = (None, 0);
         for layer in self.layers.iter().chain([&self.auto]).filter(|layer| layer.drawn && !layer.bypass) {
+            let picture = graded(&self.gfx, &self.looks, layer, &self.graded);
             self.gfx.mix(
                 &self.stack[next],
                 &gfx::Mix {
                     base: below,
-                    top: Some(run_effects(&self.gfx, &self.scratch, layer.target.texture, &layer.effects, time, moving.onset, moving.bass)),
+                    top: Some(run_effects(&self.gfx, &self.scratch, picture, &layer.effects, time, moving.onset, moving.bass)),
                     opacity: layer.opacity,
                     mode: layer.blend as i32,
                     fx: 0,
@@ -1598,6 +2162,12 @@ impl App {
                 self.gfx.mix(&self.out_target, &gfx::Mix::copy(picture));
             }
             None => self.gfx.clear(&self.out_target),
+        }
+        // The preview is not part of the output; it gets its shader's colours and a
+        // picture of its own.
+        if self.pre.drawn {
+            let picture = graded(&self.gfx, &self.looks, &self.pre, &self.graded);
+            self.gfx.mix(&self.pre_out, &gfx::Mix::copy(picture));
         }
         // Layers on Sequence or Shuffle, and the library's checked list, move on.
         for index in 0..self.layers.len() {
@@ -1709,6 +2279,8 @@ impl App {
             "favorites": self.favorites.iter().map(|entry| self.library[*entry].id.as_str()).collect::<Vec<_>>(),
             "removed": self.removed.iter().map(|entry| self.library[*entry].id.as_str()).collect::<Vec<_>>(),
             "master": effects_json(&self.master),
+            "looks": self.looks.iter().map(|(entry, look)| (self.library[*entry].id.clone(), look.json())).collect::<serde_json::Map<_, _>>(),
+            "review": self.review.iter().map(|entry| self.library[*entry].id.as_str()).collect::<Vec<_>>(),
             "detached": self.detached,
             "led": self.led,
             "apc": self.apc,
@@ -1819,6 +2391,12 @@ impl App {
         };
         (self.favorites, self.removed) = (entries(&state["favorites"]), entries(&state["removed"]));
         self.master = effects_from(&state["master"]);
+        self.review = entries(&state["review"]);
+        for (id, saved) in state["looks"].as_object().into_iter().flatten() {
+            if let Some(entry) = self.index_of.get(id) {
+                self.looks.insert(*entry, Look::from(saved));
+            }
+        }
         self.detached = state["detached"].as_bool().unwrap_or(false);
         if let Some(led) = state["led"].as_array().filter(|led| led.len() == 5) {
             self.led = std::array::from_fn(|index| (whole(&led[index]) as u8).min(127));
@@ -2013,6 +2591,7 @@ impl App {
         ui.horizontal(|ui| {
             ui.selectable_value(&mut self.tab, 0, egui::RichText::new("Shaders").heading());
             ui.selectable_value(&mut self.tab, 1, egui::RichText::new("Effects").heading());
+            ui.toggle_value(&mut self.download_open, "Download…").on_hover_text("Get shaders from Shadertoy by link or id");
         });
         if self.tab == 1 {
             self.effects_panel(ui, actions);
@@ -2066,11 +2645,12 @@ impl App {
                 0 => "All groups".to_owned(),
                 1 => format!("Favourites {}", count(self.favorites.len())),
                 2 => format!("Removed {}", count(self.removed.len())),
-                group => format!("{} {}", self.groups[group - 3].0, count(self.groups[group - 3].1.len())),
+                3 => format!("New, to review {}", count(self.review.len())),
+                group => format!("{} {}", self.groups[group - 4].0, count(self.groups[group - 4].1.len())),
             };
             let mut group = self.group;
             egui::ComboBox::from_id_salt("group").width(190.0).height(500.0).selected_text(name(group)).show_ui(ui, |ui| {
-                for choice in 0..self.groups.len() + 3 {
+                for choice in 0..self.groups.len() + 4 {
                     ui.selectable_value(&mut group, choice, name(choice));
                 }
             });
@@ -2244,6 +2824,10 @@ impl App {
                     let starred = self.favorites.contains(&index);
                     if ui.button(if starred { "Remove from favourites" } else { "Favourite" }).clicked() {
                         actions.push(Action::Favorite(picked.clone(), !starred));
+                        ui.close_menu();
+                    }
+                    if self.review.contains(&index) && ui.button("Mark as reviewed").clicked() {
+                        actions.push(Action::Reviewed(picked.clone()));
                         ui.close_menu();
                     }
                     let gone = self.removed.contains(&index);
@@ -2700,6 +3284,7 @@ impl App {
             ui.colored_label(RED, message);
         }
         egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
+            self.editor(ui, actions);
             let layer = self.selected_layer.min(self.layers.len().saturating_sub(1));
             let title = format!("{} effects", self.layers[layer].name);
             self.chain_rows(ui, Some(layer), title, actions);
@@ -2769,6 +3354,15 @@ impl App {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
         }
+        if self.options.download.is_some() {
+            let lines = self.download.as_ref().and_then(|job| job.log.lock().ok().map(|lines| lines.clone())).unwrap_or_default();
+            if lines.last().is_some_and(|line| line == "Done." || line.ends_with("failed")) || self.download.is_none() {
+                println!("{}", lines.join("\n"));
+                println!("review {:?} library {}", self.review, self.library.len());
+                self.options.download = None;
+                ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+            }
+        }
         if self.options.exit_after.is_some_and(|seconds| self.start.elapsed().as_secs_f32() >= seconds) {
             let errors: Vec<&String> = self
                 .layers
@@ -2835,9 +3429,18 @@ impl eframe::App for App {
             self.out_texture = Some(frame.register_native_glow_texture(self.out_target.texture));
         }
         if self.pre_texture.is_none() {
-            self.pre_texture = Some(frame.register_native_glow_texture(self.pre.target.texture));
+            self.pre_texture = Some(frame.register_native_glow_texture(self.pre_out.texture));
         }
         self.make_thumbs(ctx);
+        self.finish_download();
+        // A changed number of the previewed shader: compile it again once the drag rests.
+        if self.rebuild_at.is_some_and(|at| at.elapsed() > Duration::from_millis(150)) {
+            self.rebuild_at = None;
+            if let Some(entry) = self.previewed() {
+                self.apply(Action::Preview(entry));
+                self.refresh_cells(entry);
+            }
+        }
         self.take_dropped_files(ctx);
         self.handle_midi();
         self.light();
@@ -2848,6 +3451,7 @@ impl eframe::App for App {
         if self.detached && self.preview_window(ctx) {
             self.detached = false;
         }
+        self.download_window(ctx);
         egui::CentralPanel::default().show(ctx, |ui| self.grid(ui, &mut actions));
         // In MIDI learn every bindable control gets a frame: yellow for the one waiting
         // for its knob or pad, blue for one that is bound, grey for one that is free.
