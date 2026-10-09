@@ -93,7 +93,12 @@ pub fn idle_audio(frame: &AudioFrame, time: f32, amount: f32) -> AudioFrame {
     out
 }
 /// The ways shaders can follow the music, in the order the key steps through them.
-pub const REACT_MODES: [&str; 5] = ["PUMP", "STROBE", "STEP", "RIDE", "TWIST"];
+pub const REACT_MODES: [&str; 6] = ["PUMP", "STROBE", "STEP", "RIDE", "TWIST", "AUTO"];
+/// AUTO is not a way of its own: it moves through the others.
+const REACT_AUTO: u8 = 5;
+/// AUTO moves on after this many beats, or after this many seconds when beats are scarce.
+const AUTO_BEATS: u32 = 32;
+const AUTO_SECONDS: f32 = 30.0;
 /// Share of the zoom and of the turn in each pose that STEP walks through.
 const STEP_POSES: [(f32, f32); 4] = [(1.0, 0.2), (0.3, 1.0), (0.7, 0.5), (0.1, 0.8)];
 /// Reshapes the levels handed to the shaders, so one shader answers the music in
@@ -104,6 +109,8 @@ const STEP_POSES: [(f32, f32); 4] = [(1.0, 0.2), (0.3, 1.0), (0.7, 0.5), (0.1, 0
 /// - STEP: each beat snaps to a new pose, which holds until the next beat.
 /// - RIDE: a steady travel in and out whose speed and depth follow the energy.
 /// - TWIST: bass and mids trade places, so kicks turn the picture and melody pumps it.
+/// - AUTO: one of the above at a time, moving to another every `AUTO_BEATS` beats and
+///   when the song enters a new section, never to the same one twice in a row.
 #[derive(Clone, Debug, Default)]
 pub struct Reactor {
     /// Followers of bass, mid, treble, volume, sub, low mid and high mid.
@@ -119,12 +126,31 @@ pub struct Reactor {
     flash: f32,
     hue: f32,
     beating: f32,
+    /// AUTO: the way in use, and the beats and seconds it has had.
+    auto: u8,
+    auto_beats: u32,
+    auto_time: f32,
 }
 impl Reactor {
+    fn resolve(&self, mode: u8) -> u8 {
+        if mode == REACT_AUTO { self.auto } else { mode }
+    }
+    /// AUTO: move to another way, picked unevenly so the order does not read as a loop.
+    fn advance(&mut self) {
+        let skip = (self.steps as u32).wrapping_mul(2_654_435_761) >> 16;
+        self.auto = (self.auto + 1 + (skip % u32::from(REACT_AUTO - 1)) as u8) % REACT_AUTO;
+        (self.auto_beats, self.auto_time) = (0, 0.0);
+    }
+    /// The song entered a new section: AUTO moves on, unless it only just did.
+    pub fn new_section(&mut self) {
+        if self.auto_time > 5.0 {
+            self.advance();
+        }
+    }
     /// For the compositor: brightness, colour wash, hue turn (0..1), and 1 while STROBE
     /// is on. Without a beat the picture is left as it is rather than held dark.
     pub fn flash(&self, mode: u8) -> [f32; 4] {
-        if mode != 1 {
+        if self.resolve(mode) != 1 {
             return [1.0, 0.0, 0.0, 0.0];
         }
         let lit = 0.25 + 1.5 * self.flash;
@@ -162,6 +188,14 @@ impl Reactor {
         for (shown, held) in self.shown.iter_mut().zip(self.held) {
             *shown += (held - *shown) * (1.0 - (-dt / 0.05).exp());
         }
+        if mode == REACT_AUTO {
+            self.auto_time += dt;
+            self.auto_beats += u32::from(beat);
+            if (beat && self.auto_beats >= AUTO_BEATS) || self.auto_time > AUTO_SECONDS {
+                self.advance();
+            }
+        }
+        let mode = self.resolve(mode);
         let energy = glide[3].max(glide[0]);
         self.phase = (self.phase + dt * (0.05 + 0.45 * energy)).rem_euclid(1000.0);
         let levels = match mode {
@@ -625,12 +659,42 @@ mod tests {
         assert!((reactor.flash(1)[0] - 1.0).abs() < 0.02);
     }
     #[test]
+    fn auto_moves_through_every_way_on_the_beat_and_without_one() {
+        let (dt, beat) = (1.0 / 60.0, 60.0 / 128.0);
+        for beats in [true, false] {
+            let mut reactor = Reactor::default();
+            let (mut used, mut held, mut longest) = (vec![0u8], 0.0f32, 0.0f32);
+            for frame in 0..(240.0 / dt) as usize {
+                let time = frame as f32 * dt;
+                let onset = if beats && (time / beat).fract() < dt / beat { 1.0 } else { 0.0 };
+                reactor.apply(REACT_AUTO, dt, &AudioFrame { volume: 0.5, bass: 0.5, onset, ..AudioFrame::default() });
+                held += dt;
+                if reactor.auto != *used.last().unwrap() {
+                    used.push(reactor.auto);
+                    (longest, held) = (longest.max(held), 0.0);
+                }
+            }
+            assert!((0..REACT_AUTO).all(|mode| used.contains(&mode)), "{used:?}");
+            let limit = if beats { AUTO_BEATS as f32 * beat } else { AUTO_SECONDS };
+            assert!(longest < limit + 0.5 && used.len() > 6, "{longest} {used:?}");
+            // A new section moves it on at once, but not twice in a breath.
+            for _ in 0..360 {
+                reactor.apply(REACT_AUTO, dt, &AudioFrame::default());
+            }
+            let before = reactor.auto;
+            reactor.new_section();
+            let after = reactor.auto;
+            reactor.new_section();
+            assert!(before != after && reactor.auto == after);
+        }
+    }
+    #[test]
     fn react_modes_reshape_how_the_levels_move() {
         let pump = react(0);
         assert!(roughest(&pump) > 0.5 && pump.iter().any(|frame| frame.1 > 0.9));
         // An unknown mode is the plain one.
         assert_eq!(react(200), pump);
-        for mode in 1..REACT_MODES.len() as u8 {
+        for mode in 1..REACT_AUTO {
             let run = react(mode);
             assert!(run.iter().all(|frame| frame.1 == 0.0), "mode {mode} passes hits on");
             assert!(run[300..].iter().any(|frame| frame.0 > 0.15), "mode {mode} stays flat");

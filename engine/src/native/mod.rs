@@ -219,6 +219,7 @@ pub fn run(
         let heard = audio.clone();
         if sections.tick(idle_dt, &heard) {
             section_count = section_count.wrapping_add(1);
+            reactor.new_section();
         }
         let moving = crate::audio::idle_audio(&heard, idle_clock.elapsed().as_secs_f32(), idle);
         let moving = reactor.apply(state.react, idle_dt, &moving);
