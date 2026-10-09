@@ -1,6 +1,7 @@
-//! RPi-VJ Desktop, phase 2: a composition of layers, each a row of cells holding shaders
-//! or video clips; a library with folders to fill it from by drag and drop; per-layer
-//! opacity, blend, effect and react mode; a small preview; projection on a chosen monitor.
+//! RPi-VJ Desktop, phase 3: a composition of layers, each a row of cells holding shaders
+//! or video clips with a play time each, played by hand, in sequence or shuffled; a
+//! library with folders and a checked list that plays by itself; per-layer opacity,
+//! blend, effect and react mode; a small preview; projection on a chosen monitor.
 mod audio_in;
 mod gfx;
 mod library;
@@ -25,8 +26,12 @@ use std::{
 
 const RENDER_SIZES: [(u32, u32); 3] = [(1280, 720), (1920, 1080), (2560, 1440)];
 const THUMB: (u32, u32) = (192, 108);
-const CELL: egui::Vec2 = egui::vec2(128.0, 90.0);
-const CELL_PICTURE: f32 = 72.0;
+const CELL: egui::Vec2 = egui::vec2(128.0, 96.0);
+const CELL_PICTURE: f32 = 78.0;
+/// How a layer moves on by itself, in the order of `Layer::auto`.
+const AUTO_MODES: [&str; 3] = ["Manual", "Sequence", "Shuffle"];
+/// A change of song section moves on only after this long on one cell, seconds.
+const SECTION_MIN: f32 = 4.0;
 const HEADER_WIDTH: f32 = 250.0;
 const CLIP_TYPES: [&str; 6] = ["mp4", "mov", "mkv", "webm", "avi", "m4v"];
 /// A render target's first row is its bottom one; this turns it the right way up.
@@ -49,6 +54,10 @@ struct Options {
     fill: usize,
     /// Effect number for the second layer.
     fx: usize,
+    /// Play the second layer in sequence, a second per cell.
+    sequence: bool,
+    /// Check this many shaders of the Pi bank and play them from the library, a second each.
+    autoplay: usize,
     /// Save the output picture, or a picture of the app window, here after `frames`
     /// frames and leave.
     snapshot: Option<PathBuf>,
@@ -75,6 +84,8 @@ impl Options {
                 "--clip" => options.clip = Some(value().into()),
                 "--fill" => options.fill = value().parse().unwrap_or(0),
                 "--fx" => options.fx = value().parse().unwrap_or(0),
+                "--sequence" => options.sequence = true,
+                "--autoplay" => options.autoplay = value().parse().unwrap_or(0),
                 "--snapshot" => options.snapshot = Some(value().into()),
                 "--ui-snapshot" => options.ui_snapshot = Some(value().into()),
                 "--gain" => options.gain = value().parse().ok(),
@@ -92,6 +103,7 @@ impl Options {
             || self.live.is_some()
             || self.clip.is_some()
             || self.fill > 0
+            || self.autoplay > 0
             || self.snapshot.is_some()
             || self.ui_snapshot.is_some()
             || self.exit_after.is_some()
@@ -136,10 +148,14 @@ struct Cell {
     thumb: Option<(gfx::Target, egui::TextureId)>,
     prepared: bool,
     error: Option<String>,
+    /// How long it plays before a layer on Sequence or Shuffle moves on.
+    seconds: f32,
+    /// Its own react mode; `None` takes the layer's.
+    react: Option<u8>,
 }
 impl Cell {
     fn new(source: Source) -> Self {
-        Self { source, program: None, thumb: None, prepared: false, error: None }
+        Self { source, program: None, thumb: None, prepared: false, error: None, seconds: 20.0, react: None }
     }
 }
 struct Layer {
@@ -152,6 +168,13 @@ struct Layer {
     fx_amount: f32,
     react: u8,
     bypass: bool,
+    /// Index into `AUTO_MODES`.
+    auto: usize,
+    /// Move on at a new section of the song as well as when the time is up.
+    on_sections: bool,
+    /// When the live cell was launched, and the cells played since the last shuffle round.
+    launched: Instant,
+    played: Vec<usize>,
     reactor: Reactor,
     clock: BeatClock,
     flow: [f32; 4],
@@ -184,9 +207,18 @@ enum Action {
     AddLayer,
     RemoveLayer(usize),
     Send(usize),
+    SetSeconds(usize, usize, f32),
+    SetReact(usize, usize, Option<u8>),
     AddToFolder(usize, Vec<usize>),
     RemoveFromFolder(usize, Vec<usize>),
     DeleteFolder(usize),
+}
+/// The checked shaders of the library being played one after another.
+struct AutoPlay {
+    order: Vec<usize>,
+    at: usize,
+    /// The next shader, compiled ahead so the change does not stall a frame.
+    ready: Option<(usize, gfx::Program)>,
 }
 struct CompileRun {
     next: usize,
@@ -210,6 +242,15 @@ struct App {
     new_folder: String,
     selection: BTreeSet<usize>,
     anchor: Option<usize>,
+    // Library autoplay: the checked shaders, on a layer of their own above the composition.
+    checked: BTreeSet<usize>,
+    autoplay: Option<AutoPlay>,
+    auto: Layer,
+    auto_shuffle: bool,
+    auto_seconds: f32,
+    auto_sections: bool,
+    auto_changes: u32,
+    seed: u64,
     // Composition.
     layers: Vec<Layer>,
     columns: usize,
@@ -251,6 +292,32 @@ struct App {
     fps: f32,
     compile: Option<CompileRun>,
 }
+fn new_layer(gfx: &gfx::Gfx, name: String, columns: usize, size: usize) -> Result<Layer> {
+    Ok(Layer {
+        name,
+        cells: (0..columns).map(|_| None).collect(),
+        active: None,
+        opacity: 1.0,
+        blend: 0,
+        fx: 0,
+        fx_amount: 0.5,
+        react: 0,
+        bypass: false,
+        auto: 0,
+        on_sections: false,
+        launched: Instant::now(),
+        played: Vec::new(),
+        reactor: Reactor::default(),
+        clock: BeatClock::default(),
+        flow: [0.0; 4],
+        spec_flow: [0.0; 32],
+        flash: [1.0, 0.0, 0.0, 0.0],
+        target: gfx.target(RENDER_SIZES[size])?,
+        drawn: false,
+        player: None,
+        error: None,
+    })
+}
 /// A stand-in for music, for a shader's still picture.
 fn still_audio() -> AudioFrame {
     AudioFrame {
@@ -280,7 +347,17 @@ impl App {
         let kept = std::env::var_os("APPDATA").map(|folder| PathBuf::from(folder).join("RPi-VJ/desktop.json"));
         let state_path = options.state.clone().or(kept.filter(|_| !options.testing()));
         let now = Instant::now();
+        let mut auto = new_layer(&gfx, "Library".into(), 1, size)?;
+        auto.blend = 2;
         let mut app = Self {
+            checked: BTreeSet::new(),
+            autoplay: None,
+            auto,
+            auto_shuffle: false,
+            auto_seconds: 20.0,
+            auto_sections: true,
+            auto_changes: 0,
+            seed: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(1, |t| t.as_nanos() as u64) | 1,
             stack: [gfx.target(RENDER_SIZES[size])?, gfx.target(RENDER_SIZES[size])?],
             out_target: gfx.target(RENDER_SIZES[size])?,
             out_texture: None,
@@ -368,6 +445,17 @@ impl App {
             app.place(0, 0, vec![Source::Clip(clip)]);
             app.launch(0, 0);
         }
+        if app.options.sequence {
+            app.layers[1].auto = 1;
+            for cell in app.layers[1].cells.iter_mut().flatten() {
+                cell.seconds = 1.0;
+            }
+        }
+        if app.options.autoplay > 0 {
+            app.checked = app.bank.iter().take(app.options.autoplay).copied().collect();
+            app.auto_seconds = 1.0;
+            app.start_autoplay();
+        }
         if let Some(display) = app.options.output {
             app.output_on = true;
             app.output_display = display.saturating_sub(1).min(app.displays.len().saturating_sub(1));
@@ -378,26 +466,117 @@ impl App {
         Ok(app)
     }
     fn make_layer(&self, name: String) -> Result<Layer> {
-        Ok(Layer {
-            name,
-            cells: (0..self.columns).map(|_| None).collect(),
-            active: None,
-            opacity: 1.0,
-            blend: 0,
-            fx: 0,
-            fx_amount: 0.5,
-            react: 0,
-            bypass: false,
-            reactor: Reactor::default(),
-            clock: BeatClock::default(),
-            flow: [0.0; 4],
-            spec_flow: [0.0; 32],
-            flash: [1.0, 0.0, 0.0, 0.0],
-            target: self.gfx.target(RENDER_SIZES[self.size])?,
-            drawn: false,
-            player: None,
-            error: None,
-        })
+        new_layer(&self.gfx, name, self.columns, self.size)
+    }
+    fn random(&mut self) -> usize {
+        self.seed ^= self.seed << 13;
+        self.seed ^= self.seed >> 7;
+        self.seed ^= self.seed << 17;
+        (self.seed >> 16) as usize
+    }
+    /// Begin playing the checked shaders, in library order or shuffled.
+    fn start_autoplay(&mut self) {
+        let mut order: Vec<usize> = self.checked.iter().copied().filter(|entry| self.library[*entry].runnable()).collect();
+        if order.is_empty() {
+            return;
+        }
+        if self.auto_shuffle {
+            self.shuffle(&mut order);
+        }
+        // One before the start, so the first change lands on the first shader.
+        self.autoplay = Some(AutoPlay { at: order.len() - 1, order, ready: None });
+        self.auto.active = None;
+    }
+    fn shuffle(&mut self, order: &mut [usize]) {
+        for last in (1..order.len()).rev() {
+            let other = self.random() % (last + 1);
+            order.swap(last, other);
+        }
+    }
+    fn stop_autoplay(&mut self) {
+        if let Some((_, program)) = self.autoplay.take().and_then(|play| play.ready) {
+            self.gfx.delete(program);
+        }
+        self.auto.active = None;
+        if let Some(old) = self.auto.cells[0].take() {
+            self.release(old);
+        }
+    }
+    /// Put the next checked shader on the library layer. One that does not compile is
+    /// passed over.
+    fn autoplay_next(&mut self) {
+        let Some(mut play) = self.autoplay.take() else { return };
+        for _ in 0..play.order.len() {
+            play.at = (play.at + 1) % play.order.len();
+            if play.at == 0 && self.auto_shuffle {
+                self.shuffle(&mut play.order);
+            }
+            let entry = play.order[play.at];
+            let built = match play.ready.take() {
+                Some((ready, program)) if ready == entry => Ok(program),
+                other => {
+                    if let Some((_, program)) = other {
+                        self.gfx.delete(program);
+                    }
+                    self.build(entry)
+                }
+            };
+            match built {
+                Ok(program) => {
+                    let mut cell = Cell::new(Source::Shader(entry));
+                    (cell.program, cell.prepared) = (Some(program), true);
+                    if let Some(old) = self.auto.cells[0].replace(cell) {
+                        self.release(old);
+                    }
+                    self.auto.active = Some(0);
+                    self.auto.launched = Instant::now();
+                    self.auto_changes += 1;
+                    break;
+                }
+                Err(error) => self.message = Some(format!("{}: {error:#}", self.library[entry].title())),
+            }
+        }
+        self.autoplay = Some(play);
+    }
+    /// Compile the shader after the current one, a moment after a change.
+    fn autoplay_ahead(&mut self) {
+        let Some(play) = &self.autoplay else { return };
+        if play.ready.is_some() || play.order.len() < 2 || self.auto.launched.elapsed() < Duration::from_secs(1) {
+            return;
+        }
+        let at = (play.at + 1) % play.order.len();
+        // A shuffle redeals at the end of a round, so the next one is not known there.
+        if at == 0 && self.auto_shuffle {
+            return;
+        }
+        let entry = play.order[at];
+        let ready = self.build(entry).ok().map(|program| (entry, program));
+        if let Some(play) = &mut self.autoplay {
+            play.ready = ready;
+        }
+    }
+    /// Where a layer on Sequence or Shuffle goes next, if its live cell has had its time.
+    fn layer_next(&mut self, index: usize, new_section: bool) -> Option<usize> {
+        let layer = &self.layers[index];
+        let active = layer.active?;
+        let cell = layer.cells[active].as_ref()?;
+        let elapsed = layer.launched.elapsed().as_secs_f32();
+        let due = elapsed >= cell.seconds || (layer.on_sections && new_section && elapsed > SECTION_MIN);
+        let filled: Vec<usize> = (0..layer.cells.len()).filter(|column| layer.cells[*column].is_some()).collect();
+        if layer.auto == 0 || !due || filled.len() < 2 {
+            return None;
+        }
+        if layer.auto == 1 {
+            return filled.iter().copied().find(|column| *column > active).or(filled.first().copied());
+        }
+        // Shuffle: every cell once before any comes round again.
+        let mut fresh: Vec<usize> = filled.iter().copied().filter(|column| !layer.played.contains(column)).collect();
+        if fresh.is_empty() {
+            self.layers[index].played.clear();
+            fresh = filled.into_iter().filter(|column| *column != active).collect();
+        }
+        let pick = self.random() % fresh.len();
+        Some(fresh[pick])
     }
     fn listen(&mut self, source: usize) {
         self.capture = None;
@@ -531,6 +710,8 @@ impl App {
             }
         }
         layer.active = Some(column);
+        layer.launched = Instant::now();
+        layer.played.push(column);
     }
     /// Put a library shader on the selected layer's first free cell and launch it.
     fn send(&mut self, entry: usize) {
@@ -548,7 +729,7 @@ impl App {
         for target in self.stack.iter_mut().chain([&mut self.out_target]) {
             fresh(target, &self.gfx)?;
         }
-        for layer in &mut self.layers {
+        for layer in self.layers.iter_mut().chain([&mut self.auto]) {
             fresh(&mut layer.target, &self.gfx)?;
         }
         self.out_texture = None;
@@ -576,6 +757,16 @@ impl App {
                 }
             }
             Action::Send(entry) => self.send(entry),
+            Action::SetSeconds(layer, column, seconds) => {
+                if let Some(cell) = &mut self.layers[layer].cells[column] {
+                    cell.seconds = seconds.clamp(1.0, 36000.0);
+                }
+            }
+            Action::SetReact(layer, column, react) => {
+                if let Some(cell) = &mut self.layers[layer].cells[column] {
+                    cell.react = react;
+                }
+            }
             Action::AddToFolder(folder, entries) => {
                 for entry in entries {
                     let id = &self.library[entry].id;
@@ -633,7 +824,7 @@ impl App {
         let found = self.predictor.bpm();
         let bpm = if found > 0.0 { found } else { 128.0 };
         let (time, frame) = (self.start.elapsed().as_secs_f32(), self.frames as i32);
-        for layer in &mut self.layers {
+        for layer in self.layers.iter_mut().chain([&mut self.auto]) {
             layer.drawn = false;
             if new_section {
                 layer.reactor.new_section();
@@ -641,8 +832,9 @@ impl App {
             let Some(cell) = layer.active.and_then(|column| layer.cells[column].as_ref()) else { continue };
             match (&cell.source, &cell.program) {
                 (Source::Shader(_), Some(program)) => {
-                    let audio = layer.reactor.apply(layer.react, dt, &moving);
-                    layer.flash = layer.reactor.flash(layer.react);
+                    let react = cell.react.unwrap_or(layer.react);
+                    let audio = layer.reactor.apply(react, dt, &moving);
+                    layer.flash = layer.reactor.flash(react);
                     for (clock, energy) in layer.flow.iter_mut().zip([audio.volume, audio.bass, audio.mid, audio.treble]) {
                         *clock += dt * (FLOW_RATE.0 + energy * FLOW_RATE.1);
                     }
@@ -673,7 +865,7 @@ impl App {
         }
         // The stack, bottom layer first, each laid over what is below it.
         let (mut below, mut next) = (None, 0);
-        for layer in self.layers.iter().filter(|layer| layer.drawn && !layer.bypass) {
+        for layer in self.layers.iter().chain([&self.auto]).filter(|layer| layer.drawn && !layer.bypass) {
             self.gfx.mix(
                 &self.stack[next],
                 &gfx::Mix {
@@ -692,6 +884,21 @@ impl App {
         match below {
             Some(picture) => self.gfx.mix(&self.out_target, &gfx::Mix::copy(picture)),
             None => self.gfx.clear(&self.out_target),
+        }
+        // Layers on Sequence or Shuffle, and the library's checked list, move on.
+        for index in 0..self.layers.len() {
+            if let Some(column) = self.layer_next(index, new_section) {
+                self.launch(index, column);
+            }
+        }
+        if self.autoplay.is_some() {
+            let elapsed = self.auto.launched.elapsed().as_secs_f32();
+            let due = elapsed >= self.auto_seconds || (self.auto_sections && new_section && elapsed > SECTION_MIN);
+            if self.auto.active.is_none() || due {
+                self.autoplay_next();
+            } else {
+                self.autoplay_ahead();
+            }
         }
     }
     /// A few shaders per frame, so the window stays alive while the whole library compiles.
@@ -744,6 +951,14 @@ impl App {
             Some(Source::Clip(clip)) => serde_json::json!({ "clip": clip }),
             None => serde_json::Value::Null,
         };
+        let cell = |saved: &Option<Cell>| {
+            let mut value = cell(saved);
+            if let (Some(kept), Some(map)) = (saved, value.as_object_mut()) {
+                map.insert("seconds".into(), kept.seconds.into());
+                map.insert("react".into(), kept.react.into());
+            }
+            value
+        };
         let layers: Vec<_> = self
             .layers
             .iter()
@@ -755,6 +970,8 @@ impl App {
                     "fx": layer.fx,
                     "fx_amount": layer.fx_amount,
                     "react": layer.react,
+                    "auto": layer.auto,
+                    "on_sections": layer.on_sections,
                     "cells": layer.cells.iter().map(cell).collect::<Vec<_>>(),
                 })
             })
@@ -770,6 +987,15 @@ impl App {
             "lead_ms": self.lead_ms,
             "size": self.size,
             "output_display": self.output_display,
+            "checked": self.checked.iter().map(|entry| self.library[*entry].id.as_str()).collect::<Vec<_>>(),
+            "auto": {
+                "shuffle": self.auto_shuffle,
+                "seconds": self.auto_seconds,
+                "on_sections": self.auto_sections,
+                "react": self.auto.react,
+                "opacity": self.auto.opacity,
+                "blend": self.auto.blend,
+            },
             "audio": self.source.map(|index| self.sources[index].label()),
         })
     }
@@ -803,14 +1029,22 @@ impl App {
             layer.blend = (saved["blend"].as_u64().unwrap_or(0) as usize).min(gfx::BLENDS.len() - 1);
             layer.fx = (saved["fx"].as_u64().unwrap_or(0) as usize).min(gfx::EFFECTS.len() - 1);
             layer.fx_amount = number(&saved["fx_amount"], 0.5).clamp(0.0, 1.0);
-            layer.react = (saved["react"].as_u64().unwrap_or(0) as u8).min(REACT_MODES.len() as u8 - 1);
+            let react = |value: &serde_json::Value| value.as_u64().map(|mode| (mode as u8).min(REACT_MODES.len() as u8 - 1));
+            layer.react = react(&saved["react"]).unwrap_or(0);
+            layer.auto = (saved["auto"].as_u64().unwrap_or(0) as usize).min(AUTO_MODES.len() - 1);
+            layer.on_sections = saved["on_sections"].as_bool().unwrap_or(false);
             for (column, cell) in saved["cells"].as_array().into_iter().flatten().enumerate() {
                 let source = match (cell["shader"].as_str(), cell["clip"].as_str()) {
                     (Some(id), _) => self.index_of.get(id).map(|entry| Source::Shader(*entry)),
                     (_, Some(clip)) => Some(Source::Clip(clip.into())),
                     _ => None,
                 };
-                layer.cells[column] = source.map(Cell::new);
+                layer.cells[column] = source.map(|source| {
+                    let mut kept = Cell::new(source);
+                    kept.seconds = number(&cell["seconds"], 20.0).clamp(1.0, 36000.0);
+                    kept.react = react(&cell["react"]);
+                    kept
+                });
             }
             self.layers.push(layer);
         }
@@ -820,6 +1054,15 @@ impl App {
                 ids: folder["ids"].as_array().into_iter().flatten().filter_map(|id| id.as_str().map(str::to_owned)).collect(),
             });
         }
+        let checked = state["checked"].as_array().into_iter().flatten();
+        self.checked = checked.filter_map(|id| self.index_of.get(id.as_str()?).copied()).collect();
+        let auto = &state["auto"];
+        self.auto_shuffle = auto["shuffle"].as_bool().unwrap_or(false);
+        self.auto_seconds = number(&auto["seconds"], 20.0).clamp(1.0, 36000.0);
+        self.auto_sections = auto["on_sections"].as_bool().unwrap_or(true);
+        self.auto.react = (auto["react"].as_u64().unwrap_or(0) as u8).min(REACT_MODES.len() as u8 - 1);
+        self.auto.opacity = number(&auto["opacity"], 1.0).clamp(0.0, 1.0);
+        self.auto.blend = (auto["blend"].as_u64().unwrap_or(2) as usize).min(gfx::BLENDS.len() - 1);
         self.gain = number(&state["gain"], 1.0).clamp(0.05, 16.0);
         self.lead_ms = number(&state["lead_ms"], BEAT_LEAD * 1000.0).clamp(0.0, 250.0);
         let size = (state["size"].as_u64().unwrap_or(1) as usize).min(RENDER_SIZES.len() - 1);
@@ -964,17 +1207,66 @@ impl App {
         });
         let shown = self.shown();
         ui.weak(format!("{} shown, {} selected. Drag to a layer or a folder; double-click to launch.", shown.len(), self.selection.len()));
+        // The checked shaders play by themselves, on a layer of their own above the composition.
+        ui.horizontal(|ui| {
+            let mut all = !shown.is_empty() && shown.iter().all(|entry| self.checked.contains(entry));
+            if ui.checkbox(&mut all, format!("all  ({} checked)", self.checked.len())).changed() {
+                for entry in &shown {
+                    if all && self.library[*entry].runnable() {
+                        self.checked.insert(*entry);
+                    } else {
+                        self.checked.remove(entry);
+                    }
+                }
+            }
+            if self.autoplay.is_some() {
+                if ui.button("Stop").clicked() {
+                    self.stop_autoplay();
+                }
+            } else if ui.add_enabled(!self.checked.is_empty(), egui::Button::new("Play checked")).clicked() {
+                self.start_autoplay();
+            }
+            ui.checkbox(&mut self.auto_shuffle, "shuffle");
+        });
+        ui.horizontal(|ui| {
+            egui::ComboBox::from_id_salt("auto-react").width(66.0).selected_text(REACT_MODES[usize::from(self.auto.react)]).show_ui(ui, |ui| {
+                for (mode, name) in REACT_MODES.iter().enumerate() {
+                    ui.selectable_value(&mut self.auto.react, mode as u8, *name);
+                }
+            });
+            ui.add(egui::DragValue::new(&mut self.auto_seconds).range(1.0..=36000.0).suffix(" s each"));
+            ui.checkbox(&mut self.auto_sections, "and on song sections");
+        });
+        let playing = self.autoplay.as_ref().map(|play| play.order[play.at]).filter(|_| self.auto.active.is_some());
+        if let Some(play) = &self.autoplay {
+            ui.horizontal(|ui| {
+                ui.spacing_mut().slider_width = 70.0;
+                ui.add(egui::Slider::new(&mut self.auto.opacity, 0.0..=1.0).show_value(false)).on_hover_text("Opacity");
+                egui::ComboBox::from_id_salt("auto-blend").width(84.0).selected_text(gfx::BLENDS[self.auto.blend]).show_ui(ui, |ui| {
+                    for (mode, name) in gfx::BLENDS.iter().enumerate() {
+                        ui.selectable_value(&mut self.auto.blend, mode, *name);
+                    }
+                });
+                ui.colored_label(GREEN, format!("{} of {}", play.at + 1, play.order.len()));
+            });
+        }
+        let mut toggled = Vec::new();
         let modifiers = ui.input(|input| input.modifiers);
         let selection = self.selection.clone();
         // What a row asked for: (place in `shown`, library index, whether it was a click).
         let mut asked = None;
-        let row = ui.text_style_height(&egui::TextStyle::Body) + 4.0;
+        let row = ui.spacing().interact_size.y.max(ui.text_style_height(&egui::TextStyle::Body) + 4.0);
         egui::ScrollArea::vertical().auto_shrink([false, false]).show_rows(ui, row, shown.len(), |ui, rows| {
             // One line each: the list is drawn by row height.
             ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Truncate);
             for place in rows {
+              ui.horizontal(|ui| {
                 let index = shown[place];
                 let entry = &self.library[index];
+                let mut check = self.checked.contains(&index);
+                if ui.add_enabled(entry.runnable(), egui::Checkbox::without_text(&mut check)).changed() {
+                    toggled.push(index);
+                }
                 let mut text = egui::RichText::new(if entry.author.is_empty() {
                     entry.title().to_owned()
                 } else {
@@ -982,6 +1274,9 @@ impl App {
                 });
                 if !entry.runnable() {
                     text = text.weak();
+                }
+                if playing == Some(index) {
+                    text = text.color(GREEN).strong();
                 }
                 let selected = selection.contains(&index);
                 let response = ui
@@ -1022,8 +1317,14 @@ impl App {
                         }
                     }
                 });
+              });
             }
         });
+        for index in toggled {
+            if !self.checked.remove(&index) {
+                self.checked.insert(index);
+            }
+        }
         if let Some((place, index, clicked)) = asked {
             let anchor = self.anchor.and_then(|anchor| shown.iter().position(|entry| *entry == anchor));
             match (clicked, modifiers.shift, modifiers.command, anchor) {
@@ -1083,6 +1384,21 @@ impl App {
                 ui.add_enabled(layer.fx > 0, egui::Slider::new(&mut layer.fx_amount, 0.0..=1.0).show_value(false))
                     .on_hover_text("Effect amount");
             });
+            ui.horizontal(|ui| {
+                let before = layer.auto;
+                egui::ComboBox::from_id_salt(("auto", index)).width(84.0).selected_text(AUTO_MODES[layer.auto]).show_ui(ui, |ui| {
+                    for (mode, name) in AUTO_MODES.iter().enumerate() {
+                        ui.selectable_value(&mut layer.auto, mode, *name);
+                    }
+                });
+                ui.checkbox(&mut layer.on_sections, "on sections");
+                // Switched on with nothing playing: start at the first cell.
+                if before == 0 && layer.auto != 0 && layer.active.is_none() {
+                    if let Some(first) = layer.cells.iter().position(Option::is_some) {
+                        actions.push(Action::Launch(index, first));
+                    }
+                }
+            });
         })
         .response
         .context_menu(|ui| {
@@ -1126,6 +1442,21 @@ impl App {
                 egui::FontId::proportional(11.0),
                 egui::Color32::from_gray(220),
             );
+            let tag = |at: egui::Pos2, align: egui::Align2, text: String| {
+                let size = painter.text(at, align, &text, egui::FontId::proportional(10.0), egui::Color32::TRANSPARENT);
+                painter.rect_filled(size.expand(2.0), 2.0, egui::Color32::from_black_alpha(170));
+                painter.text(at, align, text, egui::FontId::proportional(10.0), egui::Color32::WHITE);
+            };
+            tag(rect.right_top() + egui::vec2(-5.0, 4.0), egui::Align2::RIGHT_TOP, format!("{:.0} s", cell.seconds));
+            if let Some(react) = cell.react {
+                tag(rect.left_top() + egui::vec2(5.0, 4.0), egui::Align2::LEFT_TOP, REACT_MODES[usize::from(react)].to_owned());
+            }
+            if layer.active == Some(column) && layer.auto != 0 {
+                // How much of its time the live cell has had.
+                let had = (layer.launched.elapsed().as_secs_f32() / cell.seconds).clamp(0.0, 1.0);
+                let bar = egui::Rect::from_min_size(picture.left_bottom() - egui::vec2(0.0, 3.0), egui::vec2(CELL.x * had, 3.0));
+                painter.rect_filled(bar, 0.0, GREEN);
+            }
         }
         let stroke = if response.dnd_hover_payload::<Dragged>().is_some() {
             (2.0, egui::Color32::from_rgb(240, 200, 60))
@@ -1143,8 +1474,28 @@ impl App {
         if let Some(error) = cell.and_then(|cell| cell.error.as_ref()) {
             response.clone().on_hover_text(error);
         }
-        if cell.is_some() {
+        if let Some(cell) = cell {
             response.context_menu(|ui| {
+                let mut seconds = cell.seconds;
+                ui.horizontal(|ui| {
+                    ui.label("Plays for");
+                    if ui.add(egui::DragValue::new(&mut seconds).range(1.0..=36000.0).suffix(" s")).changed() {
+                        actions.push(Action::SetSeconds(layer_index, column, seconds));
+                    }
+                });
+                ui.menu_button("React mode", |ui| {
+                    if ui.selectable_label(cell.react.is_none(), "as the layer").clicked() {
+                        actions.push(Action::SetReact(layer_index, column, None));
+                        ui.close_menu();
+                    }
+                    for (mode, name) in REACT_MODES.iter().enumerate() {
+                        if ui.selectable_label(cell.react == Some(mode as u8), *name).clicked() {
+                            actions.push(Action::SetReact(layer_index, column, Some(mode as u8)));
+                            ui.close_menu();
+                        }
+                    }
+                });
+                ui.separator();
                 if ui.button("Clear cell").clicked() {
                     actions.push(Action::ClearCell(layer_index, column));
                     ui.close_menu();
@@ -1197,7 +1548,7 @@ impl App {
             ui.add(egui::Image::new(egui::load::SizedTexture::new(texture, size)).uv(FLIPPED));
         }
         ui.add_space(6.0);
-        for layer in self.layers.iter().rev() {
+        for layer in [&self.auto].into_iter().filter(|_| self.autoplay.is_some()).chain(self.layers.iter().rev()) {
             let playing = layer.active.and_then(|column| layer.cells[column].as_ref()).map(|cell| self.source_name(&cell.source));
             ui.horizontal(|ui| {
                 ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Truncate);
@@ -1287,7 +1638,7 @@ impl App {
                 .flat_map(|layer| layer.error.iter().chain(layer.cells.iter().flatten().filter_map(|cell| cell.error.as_ref())))
                 .collect();
             println!(
-                "frames={} seconds={:.1} fps={:.1} tempo={:.1} sure={:.2} | audio {:?} rate {:?} error {:?} peak {:.4} | cells {} folders {} | layers drawn {:?} errors {:?} | output {:?}",
+                "frames={} seconds={:.1} fps={:.1} tempo={:.1} sure={:.2} | audio {:?} rate {:?} error {:?} peak {:.4} | cells {} folders {} | library changes {} drawn {} | layers live {:?} drawn {:?} errors {:?} | output {:?}",
                 self.frames,
                 self.start.elapsed().as_secs_f32(),
                 self.frames as f32 / self.start.elapsed().as_secs_f32(),
@@ -1299,6 +1650,9 @@ impl App {
                 self.held.0,
                 self.layers.iter().map(|layer| layer.cells.iter().flatten().count()).sum::<usize>(),
                 self.folders.len(),
+                self.auto_changes,
+                self.auto.drawn,
+                self.layers.iter().map(|layer| layer.active).collect::<Vec<_>>(),
                 self.layers.iter().map(|layer| layer.drawn).collect::<Vec<_>>(),
                 errors,
                 self.output_rect.get()

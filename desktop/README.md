@@ -1,7 +1,7 @@
 # RPi-VJ Desktop
 
 A Windows VJ app that shares the Pi engine's audio analysis, beat prediction, react
-modes and shader format. Phase 2 of five: a composition of layers filled from a
+modes and shader format. Phase 3 of five: a composition of layers filled from a
 shader library and video clips.
 
 ## Run
@@ -36,6 +36,16 @@ written every 20 seconds and on exit.
   "Add clips to selected layer…" or dropping video files on the window adds clips.
   Click a cell to launch it; the live cell has a green frame. Right-click a cell to
   clear it, a layer's controls to clear or remove the layer.
+- **Play times:** every cell has a play time (20 s unless changed; right-click the cell).
+  A layer set to Sequence or Shuffle moves on by itself when the live cell's time is
+  up, and with "on sections" ticked also when the song changes section. Shuffle plays
+  every cell once before any comes round again. A cell can have its own react mode
+  (right-click), shown on its corner; otherwise it takes the layer's.
+- **Library autoplay:** tick shaders in the library's checkbox column ("all" ticks
+  everything the list shows), then "Play checked". They play one after another on a
+  layer of their own above the composition, in list order or shuffled, each for the
+  time set, with the react mode chosen beside it, optionally also changing on song
+  sections. The one playing is green in the list.
 - **Per layer:** opacity, blend mode (Add, Screen, Mix, Multiply, Lighten, Difference),
   react mode (PUMP, STROBE, STEP, RIDE, TWIST, AUTO), one effect with an amount
   (Mirror, Pixelate, RGB split, Invert, Mono, Hue, Kaleido), Bypass and Eject. The top
