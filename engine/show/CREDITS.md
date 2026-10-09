@@ -64,7 +64,6 @@ The textures in `bank-v2/assets/` are Shadertoy's stock inputs.
 | `DdBGDh` | GM Shaders: Noise Example | Xor | https://www.shadertoy.com/view/DdBGDh |
 | `DdjfRV` | Dreamscapes | Shrey_0703 | https://www.shadertoy.com/view/DdjfRV |
 | `ddVfzd` | GM Shaders: Tonemaps | Xor | https://www.shadertoy.com/view/ddVfzd |
-| `deep_drift` | Ambient drift field. Calm, but visible - luminosity and colour breathe with the low end. | (this project) | |
 | `dlBBzw` | Kuroki Fractal | Kuroki | https://www.shadertoy.com/view/dlBBzw |
 | `dldfWH` | rainbow wavessss | irisdogg | https://www.shadertoy.com/view/dldfWH |
 | `DlGXRw` | Fractals, sweet fractals X | TastelessPledge | https://www.shadertoy.com/view/DlGXRw |
@@ -119,7 +118,6 @@ The textures in `bank-v2/assets/` are Shadertoy's stock inputs.
 | `lXyXDy` | Dancing patterns | mike2367 | https://www.shadertoy.com/view/lXyXDy |
 | `M3KcRy` | FBM Plasma Outlines | diatribes | https://www.shadertoy.com/view/M3KcRy |
 | `McBcz3` | Sierpiński Triangle Fractals | rikr | https://www.shadertoy.com/view/McBcz3 |
-| `McjGDD` | Newton fractals | megaleo | https://www.shadertoy.com/view/McjGDD |
 | `McS3Dh` | ewdlop's KIFS Fractals | ewdlop | https://www.shadertoy.com/view/McS3Dh |
 | `MctcR2` | Cool fractals | tdkski | https://www.shadertoy.com/view/MctcR2 |
 | `md3fDX` | Electric fields | felipetovarhenao | https://www.shadertoy.com/view/md3fDX |
@@ -159,7 +157,6 @@ The textures in `bank-v2/assets/` are Shadertoy's stock inputs.
 | `sfVXzG` | mezzanesque | purplarious | https://www.shadertoy.com/view/sfVXzG |
 | `sl2yRK` | Tubes 2 [215 chars] | Xor | https://www.shadertoy.com/view/sl2yRK |
 | `slffRX` | Eclipse 3 [167 chars] | Xor | https://www.shadertoy.com/view/slffRX |
-| `slfyWs` | miniverse | 4eckme | https://www.shadertoy.com/view/slfyWs |
 | `sljGRW` | Windows 10 [160 Chars] | Xor | https://www.shadertoy.com/view/sljGRW |
 | `slsfRB` | Shuffling Mosaic [337 chars] | Xor | https://www.shadertoy.com/view/slsfRB |
 | `sltfR7` | Portal [176 chars] | Xor | https://www.shadertoy.com/view/sltfR7 |
@@ -217,7 +214,6 @@ The textures in `bank-v2/assets/` are Shadertoy's stock inputs.
 | `XfcyWN` | Fractal Spiral Pulse | Secretstar | https://www.shadertoy.com/view/XfcyWN |
 | `XfKGDm` | Trying to learn shaders properly | OATMILK | https://www.shadertoy.com/view/XfKGDm |
 | `XsBfRW` | Pretty Hip | Hadyn | https://www.shadertoy.com/view/XsBfRW |
-| `XsVXWc` | Sine Wave Zion | tomachi | https://www.shadertoy.com/view/XsVXWc |
 | `XtBBzw` | The Beauty of Fractals | hypothete | https://www.shadertoy.com/view/XtBBzw |
 | `XXGyWR` | Red Blue Plasma Noise | diatribes | https://www.shadertoy.com/view/XXGyWR |
 | `XXtBRr` | Balatro Background Shaders | xxidbr9 | https://www.shadertoy.com/view/XXtBRr |

@@ -286,14 +286,6 @@
    "thumbnail": "bank-v2/thumbs/audio_oscilloscope.jpg"
   },
   {
-   "label": "deep_drift",
-   "path": "bank-v2/deep_drift.fs",
-   "blend": "Additive",
-   "opacity": 0.9,
-   "render_height": 1080,
-   "thumbnail": "bank-v2/thumbs/deep_drift.jpg"
-  },
-  {
    "label": "liquid_metal",
    "path": "bank-v2/liquid_metal.fs",
    "blend": "Additive",
@@ -1706,14 +1698,6 @@
    "thumbnail": "bank-v2/thumbs/lXyXDy.jpg"
   },
   {
-   "label": "McjGDD",
-   "path": "bank-v2/McjGDD.fs",
-   "blend": "Additive",
-   "opacity": 0.9,
-   "render_height": 720,
-   "thumbnail": "bank-v2/thumbs/McjGDD.jpg"
-  },
-  {
    "label": "McS3Dh",
    "path": "bank-v2/McS3Dh.fs",
    "blend": "Additive",
@@ -1794,14 +1778,6 @@
    "opacity": 0.9,
    "render_height": 720,
    "thumbnail": "bank-v2/thumbs/sfVXzG.jpg"
-  },
-  {
-   "label": "slfyWs",
-   "path": "bank-v2/slfyWs.fs",
-   "blend": "Additive",
-   "opacity": 0.9,
-   "render_height": 1080,
-   "thumbnail": "bank-v2/thumbs/slfyWs.jpg"
   },
   {
    "label": "sssXRs",
@@ -1980,14 +1956,6 @@
    "thumbnail": "bank-v2/thumbs/XfKGDm.jpg"
   },
   {
-   "label": "XsVXWc",
-   "path": "bank-v2/XsVXWc.fs",
-   "blend": "Additive",
-   "opacity": 0.9,
-   "render_height": 1080,
-   "thumbnail": "bank-v2/thumbs/XsVXWc.jpg"
-  },
-  {
    "label": "XtBBzw",
    "path": "bank-v2/XtBBzw.fs",
    "blend": "Additive",
@@ -2117,7 +2085,7 @@
      "label": "Shader Art Coding Introduction",
      "command": {
       "type": "TriggerShader",
-      "shader": 87
+      "shader": 86
      },
      "color": [
       25,
@@ -2182,7 +2150,7 @@
      "label": "Molecules 2 [284 chars]",
      "command": {
       "type": "TriggerShader",
-      "shader": 37
+      "shader": 36
      },
      "color": [
       25,
@@ -2195,7 +2163,7 @@
      "label": "Truchet [137]",
      "command": {
       "type": "TriggerShader",
-      "shader": 42
+      "shader": 41
      },
      "color": [
       25,
@@ -2208,7 +2176,7 @@
      "label": "Binary [128]",
      "command": {
       "type": "TriggerShader",
-      "shader": 51
+      "shader": 50
      },
      "color": [
       25,
@@ -2221,7 +2189,7 @@
      "label": "Chromatic Aberration [229 chars]",
      "command": {
       "type": "TriggerShader",
-      "shader": 54
+      "shader": 53
      },
      "color": [
       25,
@@ -2234,7 +2202,7 @@
      "label": "GM Shaders: Lights",
      "command": {
       "type": "TriggerShader",
-      "shader": 61
+      "shader": 60
      },
      "color": [
       25,
@@ -2247,7 +2215,7 @@
      "label": "Eclipse 2",
      "command": {
       "type": "TriggerShader",
-      "shader": 66
+      "shader": 65
      },
      "color": [
       25,
@@ -2260,7 +2228,7 @@
      "label": "Double Mod",
      "command": {
       "type": "TriggerShader",
-      "shader": 71
+      "shader": 70
      },
      "color": [
       25,
@@ -2273,7 +2241,7 @@
      "label": "Dth Str",
      "command": {
       "type": "TriggerShader",
-      "shader": 77
+      "shader": 76
      },
      "color": [
       25,
@@ -2286,7 +2254,7 @@
      "label": "glowingMarblingBlack",
      "command": {
       "type": "TriggerShader",
-      "shader": 85
+      "shader": 84
      },
      "color": [
       25,
@@ -2299,7 +2267,7 @@
      "label": "Balatro Background Shaders",
      "command": {
       "type": "TriggerShader",
-      "shader": 88
+      "shader": 87
      },
      "color": [
       25,
@@ -2312,7 +2280,111 @@
      "label": "fractalskew",
      "command": {
       "type": "TriggerShader",
-      "shader": 92
+      "shader": 91
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 16,
+     "label": "Mini: Squircle 2",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 0
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 17,
+     "label": "Constructing SDFs",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 1
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 18,
+     "label": "Breaking Repetition",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 3
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 19,
+     "label": "Fire [326]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 4
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 20,
+     "label": "Paramed KIFS Fractals Example",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 5
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 21,
+     "label": "Sacred geometries",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 7
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 22,
+     "label": "kaleidoscope mirror",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 8
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 23,
+     "label": "Perlin Texture Blending",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 9
      },
      "color": [
       25,
@@ -2327,110 +2399,6 @@
    "bindings": [
     {
      "key": 0,
-     "label": "Mini: Squircle 2",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 0
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 1,
-     "label": "Constructing SDFs",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 1
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 2,
-     "label": "Breaking Repetition",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 3
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 3,
-     "label": "Fire [326]",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 4
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 4,
-     "label": "Paramed KIFS Fractals Example",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 5
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 5,
-     "label": "Sacred geometries",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 7
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 6,
-     "label": "kaleidoscope mirror",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 8
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 7,
-     "label": "Perlin Texture Blending",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 9
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 8,
      "label": "Geode",
      "command": {
       "type": "TriggerShader",
@@ -2443,7 +2411,7 @@
      ]
     },
     {
-     "key": 9,
+     "key": 1,
      "label": "Fork Fractal An NikolaErce 712",
      "command": {
       "type": "TriggerShader",
@@ -2456,7 +2424,7 @@
      ]
     },
     {
-     "key": 10,
+     "key": 2,
      "label": "Simple Worley",
      "command": {
       "type": "TriggerShader",
@@ -2469,7 +2437,7 @@
      ]
     },
     {
-     "key": 11,
+     "key": 3,
      "label": "Mini: Hillside",
      "command": {
       "type": "TriggerShader",
@@ -2482,7 +2450,7 @@
      ]
     },
     {
-     "key": 12,
+     "key": 4,
      "label": "Music - Pirates",
      "command": {
       "type": "TriggerShader",
@@ -2495,7 +2463,7 @@
      ]
     },
     {
-     "key": 13,
+     "key": 5,
      "label": "Turbulent Dark",
      "command": {
       "type": "TriggerShader",
@@ -2508,7 +2476,7 @@
      ]
     },
     {
-     "key": 14,
+     "key": 6,
      "label": "Turbulent Flame",
      "command": {
       "type": "TriggerShader",
@@ -2521,7 +2489,7 @@
      ]
     },
     {
-     "key": 15,
+     "key": 7,
      "label": "One-Pass Fire",
      "command": {
       "type": "TriggerShader",
@@ -2534,7 +2502,7 @@
      ]
     },
     {
-     "key": 16,
+     "key": 8,
      "label": "Cheap Turbulence",
      "command": {
       "type": "TriggerShader",
@@ -2547,7 +2515,7 @@
      ]
     },
     {
-     "key": 17,
+     "key": 9,
      "label": "UI noise halo",
      "command": {
       "type": "TriggerShader",
@@ -2560,7 +2528,7 @@
      ]
     },
     {
-     "key": 18,
+     "key": 10,
      "label": "Color oil",
      "command": {
       "type": "TriggerShader",
@@ -2573,7 +2541,7 @@
      ]
     },
     {
-     "key": 19,
+     "key": 11,
      "label": "audio oscilloscope",
      "command": {
       "type": "TriggerShader",
@@ -2586,8 +2554,8 @@
      ]
     },
     {
-     "key": 20,
-     "label": "deep drift",
+     "key": 12,
+     "label": "liquid metal",
      "command": {
       "type": "TriggerShader",
       "shader": 24
@@ -2599,8 +2567,8 @@
      ]
     },
     {
-     "key": 21,
-     "label": "liquid metal",
+     "key": 13,
+     "label": "FBM Plasma Outlines",
      "command": {
       "type": "TriggerShader",
       "shader": 25
@@ -2612,8 +2580,8 @@
      ]
     },
     {
-     "key": 22,
-     "label": "FBM Plasma Outlines",
+     "key": 14,
+     "label": "Electric fields",
      "command": {
       "type": "TriggerShader",
       "shader": 26
@@ -2625,11 +2593,115 @@
      ]
     },
     {
-     "key": 23,
-     "label": "Electric fields",
+     "key": 15,
+     "label": "plasma flow",
      "command": {
       "type": "TriggerShader",
       "shader": 27
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 16,
+     "label": "Red Blue Plasma Noise",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 28
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 17,
+     "label": "Spiral [127 Chars]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 29
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 18,
+     "label": "coherence",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 30
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 19,
+     "label": "beat tunnel",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 31
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 20,
+     "label": "neon tunnel",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 32
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 21,
+     "label": "vs cyber wormhole",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 33
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 22,
+     "label": "The Entry",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 34
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 23,
+     "label": "Gathering [177]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 35
      },
      "color": [
       25,
@@ -2644,10 +2716,10 @@
    "bindings": [
     {
      "key": 0,
-     "label": "plasma flow",
+     "label": "Molecules [281 chars]",
      "command": {
       "type": "TriggerShader",
-      "shader": 28
+      "shader": 37
      },
      "color": [
       25,
@@ -2657,111 +2729,7 @@
     },
     {
      "key": 1,
-     "label": "Red Blue Plasma Noise",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 29
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 2,
-     "label": "Spiral [127 Chars]",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 30
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 3,
-     "label": "coherence",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 31
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 4,
-     "label": "beat tunnel",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 32
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 5,
-     "label": "neon tunnel",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 33
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 6,
-     "label": "vs cyber wormhole",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 34
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 7,
-     "label": "The Entry",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 35
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 8,
-     "label": "Gathering [177]",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 36
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 9,
-     "label": "Molecules [281 chars]",
+     "label": "Tubes 2 [215 chars]",
      "command": {
       "type": "TriggerShader",
       "shader": 38
@@ -2773,8 +2741,8 @@
      ]
     },
     {
-     "key": 10,
-     "label": "Tubes 2 [215 chars]",
+     "key": 2,
+     "label": "Fractal Golfing [86 chars]",
      "command": {
       "type": "TriggerShader",
       "shader": 39
@@ -2786,8 +2754,8 @@
      ]
     },
     {
-     "key": 11,
-     "label": "Fractal Golfing [86 chars]",
+     "key": 3,
+     "label": "Wordle [240 chars]",
      "command": {
       "type": "TriggerShader",
       "shader": 40
@@ -2799,11 +2767,11 @@
      ]
     },
     {
-     "key": 12,
-     "label": "Wordle [240 chars]",
+     "key": 4,
+     "label": "Gyroid Slice [158]",
      "command": {
       "type": "TriggerShader",
-      "shader": 41
+      "shader": 42
      },
      "color": [
       25,
@@ -2812,8 +2780,8 @@
      ]
     },
     {
-     "key": 13,
-     "label": "Gyroid Slice [158]",
+     "key": 5,
+     "label": "Truchet Blobs [250 chars]",
      "command": {
       "type": "TriggerShader",
       "shader": 43
@@ -2825,8 +2793,8 @@
      ]
     },
     {
-     "key": 14,
-     "label": "Truchet Blobs [250 chars]",
+     "key": 6,
+     "label": "Windows 10 [160 Chars]",
      "command": {
       "type": "TriggerShader",
       "shader": 44
@@ -2838,8 +2806,8 @@
      ]
     },
     {
-     "key": 15,
-     "label": "Windows 10 [160 Chars]",
+     "key": 7,
+     "label": "Rainbow [108 Chars]",
      "command": {
       "type": "TriggerShader",
       "shader": 45
@@ -2851,8 +2819,8 @@
      ]
     },
     {
-     "key": 16,
-     "label": "Rainbow [108 Chars]",
+     "key": 8,
+     "label": "Final Storm",
      "command": {
       "type": "TriggerShader",
       "shader": 46
@@ -2864,8 +2832,8 @@
      ]
     },
     {
-     "key": 17,
-     "label": "Final Storm",
+     "key": 9,
+     "label": "Xor - Triangles",
      "command": {
       "type": "TriggerShader",
       "shader": 47
@@ -2877,8 +2845,8 @@
      ]
     },
     {
-     "key": 18,
-     "label": "Xor - Triangles",
+     "key": 10,
+     "label": "Hurricane Twist",
      "command": {
       "type": "TriggerShader",
       "shader": 48
@@ -2890,8 +2858,8 @@
      ]
     },
     {
-     "key": 19,
-     "label": "Hurricane Twist",
+     "key": 11,
+     "label": "Add vs Screen",
      "command": {
       "type": "TriggerShader",
       "shader": 49
@@ -2903,11 +2871,11 @@
      ]
     },
     {
-     "key": 20,
-     "label": "Add vs Screen",
+     "key": 12,
+     "label": "Semi-Circle Wave [254]",
      "command": {
       "type": "TriggerShader",
-      "shader": 50
+      "shader": 51
      },
      "color": [
       25,
@@ -2916,8 +2884,8 @@
      ]
     },
     {
-     "key": 21,
-     "label": "Semi-Circle Wave [254]",
+     "key": 13,
+     "label": "Stripy Anti-aliasing",
      "command": {
       "type": "TriggerShader",
       "shader": 52
@@ -2929,11 +2897,128 @@
      ]
     },
     {
-     "key": 22,
-     "label": "Stripy Anti-aliasing",
+     "key": 14,
+     "label": "GM Shaders: Tonemaps",
      "command": {
       "type": "TriggerShader",
-      "shader": 53
+      "shader": 54
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 15,
+     "label": "Tixy Land",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 55
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 16,
+     "label": "GM Shaders: Shading",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 56
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 17,
+     "label": "Gravity [170]",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 57
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 18,
+     "label": "Quadicube in 456 chars",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 58
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 19,
+     "label": "Mini: Mosaic",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 59
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 20,
+     "label": "Mini: Nova",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 61
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 21,
+     "label": "𝕏",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 62
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 22,
+     "label": "Photon Transmission",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 63
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 23,
+     "label": "Glowing Spheres",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 64
      },
      "color": [
       25,
@@ -2948,10 +3033,10 @@
    "bindings": [
     {
      "key": 0,
-     "label": "GM Shaders: Tonemaps",
+     "label": "Eclipse 3 [167 chars]",
      "command": {
       "type": "TriggerShader",
-      "shader": 55
+      "shader": 66
      },
      "color": [
       25,
@@ -2961,124 +3046,7 @@
     },
     {
      "key": 1,
-     "label": "Tixy Land",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 56
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 2,
-     "label": "GM Shaders: Shading",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 57
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 3,
-     "label": "Gravity [170]",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 58
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 4,
-     "label": "Quadicube in 456 chars",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 59
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 5,
-     "label": "Mini: Mosaic",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 60
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 6,
-     "label": "Mini: Nova",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 62
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 7,
-     "label": "\ud835\udd4f",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 63
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 8,
-     "label": "Photon Transmission",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 64
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 9,
-     "label": "Glowing Spheres",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 65
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 10,
-     "label": "Eclipse 3 [167 chars]",
+     "label": "Perspective Demo",
      "command": {
       "type": "TriggerShader",
       "shader": 67
@@ -3090,8 +3058,8 @@
      ]
     },
     {
-     "key": 11,
-     "label": "Perspective Demo",
+     "key": 2,
+     "label": "2D Rotation Demo",
      "command": {
       "type": "TriggerShader",
       "shader": 68
@@ -3103,8 +3071,8 @@
      ]
     },
     {
-     "key": 12,
-     "label": "2D Rotation Demo",
+     "key": 3,
+     "label": "Sliding Spheres [239 bytes]",
      "command": {
       "type": "TriggerShader",
       "shader": 69
@@ -3116,11 +3084,11 @@
      ]
     },
     {
-     "key": 13,
-     "label": "Sliding Spheres [239 bytes]",
+     "key": 4,
+     "label": "Shuffling Mosaic [337 chars]",
      "command": {
       "type": "TriggerShader",
-      "shader": 70
+      "shader": 71
      },
      "color": [
       25,
@@ -3129,8 +3097,8 @@
      ]
     },
     {
-     "key": 14,
-     "label": "Shuffling Mosaic [337 chars]",
+     "key": 5,
+     "label": "Wire",
      "command": {
       "type": "TriggerShader",
       "shader": 72
@@ -3142,8 +3110,8 @@
      ]
     },
     {
-     "key": 15,
-     "label": "Wire",
+     "key": 6,
+     "label": "Mini: Squircle",
      "command": {
       "type": "TriggerShader",
       "shader": 73
@@ -3155,8 +3123,8 @@
      ]
     },
     {
-     "key": 16,
-     "label": "Mini: Squircle",
+     "key": 7,
+     "label": "Portal [176 chars]",
      "command": {
       "type": "TriggerShader",
       "shader": 74
@@ -3168,8 +3136,8 @@
      ]
     },
     {
-     "key": 17,
-     "label": "Portal [176 chars]",
+     "key": 8,
+     "label": "GM Shaders: Gamma",
      "command": {
       "type": "TriggerShader",
       "shader": 75
@@ -3181,11 +3149,11 @@
      ]
     },
     {
-     "key": 18,
-     "label": "GM Shaders: Gamma",
+     "key": 9,
+     "label": "Pretty Hip",
      "command": {
       "type": "TriggerShader",
-      "shader": 76
+      "shader": 77
      },
      "color": [
       25,
@@ -3194,8 +3162,8 @@
      ]
     },
     {
-     "key": 19,
-     "label": "Pretty Hip",
+     "key": 10,
+     "label": "Wolfenstein-like Raytracing",
      "command": {
       "type": "TriggerShader",
       "shader": 78
@@ -3207,8 +3175,8 @@
      ]
     },
     {
-     "key": 20,
-     "label": "Wolfenstein-like Raytracing",
+     "key": 11,
+     "label": "Polar_coordinates_sample",
      "command": {
       "type": "TriggerShader",
       "shader": 79
@@ -3220,8 +3188,8 @@
      ]
     },
     {
-     "key": 21,
-     "label": "Polar_coordinates_sample",
+     "key": 12,
+     "label": "Xor - Infinite Worley Noise",
      "command": {
       "type": "TriggerShader",
       "shader": 80
@@ -3233,8 +3201,8 @@
      ]
     },
     {
-     "key": 22,
-     "label": "Xor - Infinite Worley Noise",
+     "key": 13,
+     "label": "Grok [111]",
      "command": {
       "type": "TriggerShader",
       "shader": 81
@@ -3246,11 +3214,128 @@
      ]
     },
     {
-     "key": 23,
-     "label": "Grok [111]",
+     "key": 14,
+     "label": "Emissive Square",
      "command": {
       "type": "TriggerShader",
       "shader": 82
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 15,
+     "label": "crumpledWave",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 83
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 16,
+     "label": "Oil spill.",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 85
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 17,
+     "label": "Rounded Box - CSS-like",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 88
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 18,
+     "label": "For Beginners",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 89
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 19,
+     "label": "Palettes",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 90
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 20,
+     "label": "Bouncing ball, basic as it gets!",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 92
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 21,
+     "label": "Koch Snowflake Kaleidoscope",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 93
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 22,
+     "label": "Fractals: MRS",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 94
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 23,
+     "label": "baby's first go",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 95
      },
      "color": [
       25,
@@ -3265,124 +3350,7 @@
    "bindings": [
     {
      "key": 0,
-     "label": "Emissive Square",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 83
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 1,
-     "label": "crumpledWave",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 84
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 2,
-     "label": "Oil spill.",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 86
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 3,
-     "label": "Rounded Box - CSS-like",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 89
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 4,
-     "label": "For Beginners",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 90
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 5,
-     "label": "Palettes",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 91
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 6,
-     "label": "Bouncing ball, basic as it gets!",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 93
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 7,
-     "label": "Koch Snowflake Kaleidoscope",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 94
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 8,
-     "label": "Fractals: MRS",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 95
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 9,
-     "label": "baby's first go",
+     "label": "audio wave rings",
      "command": {
       "type": "TriggerShader",
       "shader": 96
@@ -3394,8 +3362,8 @@
      ]
     },
     {
-     "key": 10,
-     "label": "audio wave rings",
+     "key": 1,
+     "label": "-1+i base & twindragon figure",
      "command": {
       "type": "TriggerShader",
       "shader": 97
@@ -3407,8 +3375,8 @@
      ]
     },
     {
-     "key": 11,
-     "label": "-1+i base & twindragon figure",
+     "key": 2,
+     "label": "Simple Fractal for All",
      "command": {
       "type": "TriggerShader",
       "shader": 98
@@ -3420,8 +3388,8 @@
      ]
     },
     {
-     "key": 12,
-     "label": "Simple Fractal for All",
+     "key": 3,
+     "label": "WhateverThisIsâ„¢",
      "command": {
       "type": "TriggerShader",
       "shader": 99
@@ -3433,8 +3401,8 @@
      ]
     },
     {
-     "key": 13,
-     "label": "WhateverThisIs\u00e2\u201e\u00a2",
+     "key": 4,
+     "label": "mature crew sux fractals",
      "command": {
       "type": "TriggerShader",
       "shader": 100
@@ -3446,8 +3414,8 @@
      ]
     },
     {
-     "key": 14,
-     "label": "mature crew sux fractals",
+     "key": 5,
+     "label": "Fractalsq",
      "command": {
       "type": "TriggerShader",
       "shader": 101
@@ -3459,8 +3427,8 @@
      ]
     },
     {
-     "key": 15,
-     "label": "Fractalsq",
+     "key": 6,
+     "label": "multiband rings",
      "command": {
       "type": "TriggerShader",
       "shader": 102
@@ -3472,8 +3440,8 @@
      ]
     },
     {
-     "key": 16,
-     "label": "multiband rings",
+     "key": 7,
+     "label": "spectrum flow",
      "command": {
       "type": "TriggerShader",
       "shader": 103
@@ -3485,8 +3453,8 @@
      ]
     },
     {
-     "key": 17,
-     "label": "spectrum flow",
+     "key": 8,
+     "label": "strobe geometry",
      "command": {
       "type": "TriggerShader",
       "shader": 104
@@ -3498,8 +3466,8 @@
      ]
     },
     {
-     "key": 18,
-     "label": "strobe geometry",
+     "key": 9,
+     "label": "Neon Chill",
      "command": {
       "type": "TriggerShader",
       "shader": 105
@@ -3511,8 +3479,8 @@
      ]
     },
     {
-     "key": 19,
-     "label": "Neon Chill",
+     "key": 10,
+     "label": "Base fractal with smooth count",
      "command": {
       "type": "TriggerShader",
       "shader": 106
@@ -3524,8 +3492,8 @@
      ]
     },
     {
-     "key": 20,
-     "label": "Base fractal with smooth count",
+     "key": 11,
+     "label": "Distance fractals",
      "command": {
       "type": "TriggerShader",
       "shader": 107
@@ -3537,8 +3505,8 @@
      ]
     },
     {
-     "key": 21,
-     "label": "Distance fractals",
+     "key": 12,
+     "label": "Patterned lights",
      "command": {
       "type": "TriggerShader",
       "shader": 108
@@ -3550,8 +3518,8 @@
      ]
     },
     {
-     "key": 22,
-     "label": "Patterned lights",
+     "key": 13,
+     "label": "Flickering plaid",
      "command": {
       "type": "TriggerShader",
       "shader": 109
@@ -3563,11 +3531,128 @@
      ]
     },
     {
-     "key": 23,
-     "label": "Flickering plaid",
+     "key": 14,
+     "label": "Fractal Bang",
      "command": {
       "type": "TriggerShader",
       "shader": 110
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 15,
+     "label": "Optical Pulse",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 111
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 16,
+     "label": "Fractal Hallways",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 112
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 17,
+     "label": "FractalsExperiment",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 113
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 18,
+     "label": "GrayFractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 114
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 19,
+     "label": "Fractals, sweet fractals X",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 115
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 20,
+     "label": "fractals_center",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 116
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 21,
+     "label": "Mandelbrot and other fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 117
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 22,
+     "label": "10 Line Tricorn",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 118
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 23,
+     "label": "Sierpiński Triangle Fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 119
      },
      "color": [
       25,
@@ -3582,124 +3667,7 @@
    "bindings": [
     {
      "key": 0,
-     "label": "Fractal Bang",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 111
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 1,
-     "label": "Optical Pulse",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 112
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 2,
-     "label": "Fractal Hallways",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 113
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 3,
-     "label": "FractalsExperiment",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 114
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 4,
-     "label": "GrayFractals",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 115
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 5,
-     "label": "Fractals, sweet fractals X",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 116
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 6,
-     "label": "fractals_center",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 117
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 7,
-     "label": "Mandelbrot and other fractals",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 118
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 8,
-     "label": "10 Line Tricorn",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 119
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 9,
-     "label": "Sierpi\u0144ski Triangle Fractals",
+     "label": "Curve Fractals? v.0.0.1",
      "command": {
       "type": "TriggerShader",
       "shader": 120
@@ -3711,8 +3679,8 @@
      ]
     },
     {
-     "key": 10,
-     "label": "Curve Fractals? v.0.0.1",
+     "key": 1,
+     "label": "Escape Time Sierpinski Triangle",
      "command": {
       "type": "TriggerShader",
       "shader": 121
@@ -3724,8 +3692,8 @@
      ]
     },
     {
-     "key": 11,
-     "label": "Escape Time Sierpinski Triangle",
+     "key": 2,
+     "label": "koch00",
      "command": {
       "type": "TriggerShader",
       "shader": 122
@@ -3737,8 +3705,8 @@
      ]
     },
     {
-     "key": 12,
-     "label": "koch00",
+     "key": 3,
+     "label": "fractals without name",
      "command": {
       "type": "TriggerShader",
       "shader": 123
@@ -3750,8 +3718,8 @@
      ]
     },
     {
-     "key": 13,
-     "label": "fractals without name",
+     "key": 4,
+     "label": "Fork Lyapunov rsiqueira 526",
      "command": {
       "type": "TriggerShader",
       "shader": 124
@@ -3763,8 +3731,8 @@
      ]
     },
     {
-     "key": 14,
-     "label": "Fork Lyapunov rsiqueira 526",
+     "key": 5,
+     "label": "Day7: Fractals 101",
      "command": {
       "type": "TriggerShader",
       "shader": 125
@@ -3776,8 +3744,8 @@
      ]
     },
     {
-     "key": 15,
-     "label": "Day7: Fractals 101",
+     "key": 6,
+     "label": "ps_SierpinskisCarpet",
      "command": {
       "type": "TriggerShader",
       "shader": 126
@@ -3789,8 +3757,8 @@
      ]
     },
     {
-     "key": 16,
-     "label": "ps_SierpinskisCarpet",
+     "key": 7,
+     "label": "Pinwheel Fractals",
      "command": {
       "type": "TriggerShader",
       "shader": 127
@@ -3802,8 +3770,8 @@
      ]
     },
     {
-     "key": 17,
-     "label": "Pinwheel Fractals",
+     "key": 8,
+     "label": "Into the TV",
      "command": {
       "type": "TriggerShader",
       "shader": 128
@@ -3815,8 +3783,8 @@
      ]
     },
     {
-     "key": 18,
-     "label": "Into the TV",
+     "key": 9,
+     "label": "Tie-Dye Squares",
      "command": {
       "type": "TriggerShader",
       "shader": 129
@@ -3828,8 +3796,8 @@
      ]
     },
     {
-     "key": 19,
-     "label": "Tie-Dye Squares",
+     "key": 10,
+     "label": "Week 06E - Fractals 5",
      "command": {
       "type": "TriggerShader",
       "shader": 130
@@ -3841,8 +3809,8 @@
      ]
     },
     {
-     "key": 20,
-     "label": "Week 06E - Fractals 5",
+     "key": 11,
+     "label": "bit fractals",
      "command": {
       "type": "TriggerShader",
       "shader": 131
@@ -3854,8 +3822,8 @@
      ]
     },
     {
-     "key": 21,
-     "label": "bit fractals",
+     "key": 12,
+     "label": "Hypersymmetrical Fractions",
      "command": {
       "type": "TriggerShader",
       "shader": 132
@@ -3867,8 +3835,8 @@
      ]
     },
     {
-     "key": 22,
-     "label": "Hypersymmetrical Fractions",
+     "key": 13,
+     "label": "Reuleaux triangle fractal",
      "command": {
       "type": "TriggerShader",
       "shader": 133
@@ -3880,11 +3848,128 @@
      ]
     },
     {
-     "key": 23,
-     "label": "Reuleaux triangle fractal",
+     "key": 14,
+     "label": "Hyperdimensional fractions",
      "command": {
       "type": "TriggerShader",
       "shader": 134
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 15,
+     "label": "Mediterranean tiles",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 135
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 16,
+     "label": "Week 06D - Fractals 4",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 136
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 17,
+     "label": "even more fun with fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 137
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 18,
+     "label": "more fun with fractals (colored)",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 138
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 19,
+     "label": "Banach-Tarski Paradox!",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 139
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 20,
+     "label": "Animated Lyapunov Flames",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 140
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 21,
+     "label": "Falling into fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 141
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 22,
+     "label": "Use IFS to Construct Fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 142
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 23,
+     "label": "Complex function 1",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 143
      },
      "color": [
       25,
@@ -3899,124 +3984,7 @@
    "bindings": [
     {
      "key": 0,
-     "label": "Hyperdimensional fractions",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 135
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 1,
-     "label": "Mediterranean tiles",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 136
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 2,
-     "label": "Week 06D - Fractals 4",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 137
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 3,
-     "label": "even more fun with fractals",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 138
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 4,
-     "label": "more fun with fractals (colored)",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 139
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 5,
-     "label": "Banach-Tarski Paradox!",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 140
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 6,
-     "label": "Animated Lyapunov Flames",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 141
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 7,
-     "label": "Falling into fractals",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 142
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 8,
-     "label": "Use IFS to Construct Fractals",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 143
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 9,
-     "label": "Complex function 1",
+     "label": "fractalized Circuit Diagram2",
      "command": {
       "type": "TriggerShader",
       "shader": 144
@@ -4028,8 +3996,8 @@
      ]
     },
     {
-     "key": 10,
-     "label": "fractalized Circuit Diagram2",
+     "key": 1,
+     "label": "Julia - Dendrite",
      "command": {
       "type": "TriggerShader",
       "shader": 145
@@ -4041,8 +4009,8 @@
      ]
     },
     {
-     "key": 11,
-     "label": "Julia - Dendrite",
+     "key": 2,
+     "label": "evolution",
      "command": {
       "type": "TriggerShader",
       "shader": 146
@@ -4054,8 +4022,8 @@
      ]
     },
     {
-     "key": 12,
-     "label": "evolution",
+     "key": 3,
+     "label": "First Fractal Shader",
      "command": {
       "type": "TriggerShader",
       "shader": 147
@@ -4067,8 +4035,8 @@
      ]
     },
     {
-     "key": 13,
-     "label": "First Fractal Shader",
+     "key": 4,
+     "label": "Stackathon",
      "command": {
       "type": "TriggerShader",
       "shader": 148
@@ -4080,8 +4048,8 @@
      ]
     },
     {
-     "key": 14,
-     "label": "Stackathon",
+     "key": 5,
+     "label": "learning shaders youtube",
      "command": {
       "type": "TriggerShader",
       "shader": 149
@@ -4093,8 +4061,8 @@
      ]
     },
     {
-     "key": 15,
-     "label": "learning shaders youtube",
+     "key": 6,
+     "label": "galois field",
      "command": {
       "type": "TriggerShader",
       "shader": 150
@@ -4106,8 +4074,8 @@
      ]
     },
     {
-     "key": 16,
-     "label": "galois field",
+     "key": 7,
+     "label": "Dreamscapes",
      "command": {
       "type": "TriggerShader",
       "shader": 151
@@ -4119,8 +4087,8 @@
      ]
     },
     {
-     "key": 17,
-     "label": "Dreamscapes",
+     "key": 8,
+     "label": "Kuroki Fractal",
      "command": {
       "type": "TriggerShader",
       "shader": 152
@@ -4132,8 +4100,8 @@
      ]
     },
     {
-     "key": 18,
-     "label": "Kuroki Fractal",
+     "key": 9,
+     "label": "rainbow wavessss",
      "command": {
       "type": "TriggerShader",
       "shader": 153
@@ -4145,8 +4113,8 @@
      ]
     },
     {
-     "key": 19,
-     "label": "rainbow wavessss",
+     "key": 10,
+     "label": "Fractals - Silviu",
      "command": {
       "type": "TriggerShader",
       "shader": 154
@@ -4158,8 +4126,8 @@
      ]
     },
     {
-     "key": 20,
-     "label": "Fractals - Silviu",
+     "key": 11,
+     "label": "fractlee",
      "command": {
       "type": "TriggerShader",
       "shader": 155
@@ -4171,8 +4139,8 @@
      ]
     },
     {
-     "key": 21,
-     "label": "fractlee",
+     "key": 12,
+     "label": "fractals 00",
      "command": {
       "type": "TriggerShader",
       "shader": 156
@@ -4184,8 +4152,8 @@
      ]
     },
     {
-     "key": 22,
-     "label": "fractals 00",
+     "key": 13,
+     "label": "InitiationShader",
      "command": {
       "type": "TriggerShader",
       "shader": 157
@@ -4197,11 +4165,128 @@
      ]
     },
     {
-     "key": 23,
-     "label": "InitiationShader",
+     "key": 14,
+     "label": "Hello World - Shadertoy",
      "command": {
       "type": "TriggerShader",
       "shader": 158
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 15,
+     "label": "SDF Fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 159
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 16,
+     "label": "Fork Initiation sklbz 497",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 160
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 17,
+     "label": "Basic shader helper functions",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 161
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 18,
+     "label": "Una wea Azul",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 162
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 19,
+     "label": "quasiflower",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 163
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 20,
+     "label": "Julia of Tricorn",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 164
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 21,
+     "label": "Trianglotron",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 165
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 22,
+     "label": "Colorful fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 166
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 23,
+     "label": "Acid fractal stuff",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 167
      },
      "color": [
       25,
@@ -4216,124 +4301,7 @@
    "bindings": [
     {
      "key": 0,
-     "label": "Hello World - Shadertoy",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 159
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 1,
-     "label": "SDF Fractals",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 160
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 2,
-     "label": "Fork Initiation sklbz 497",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 161
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 3,
-     "label": "Basic shader helper functions",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 162
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 4,
-     "label": "Una wea Azul",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 163
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 5,
-     "label": "quasiflower",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 164
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 6,
-     "label": "Julia of Tricorn",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 165
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 7,
-     "label": "Trianglotron",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 166
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 8,
-     "label": "Colorful fractals",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 167
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 9,
-     "label": "Acid fractal stuff",
+     "label": "Fun with Fractals",
      "command": {
       "type": "TriggerShader",
       "shader": 168
@@ -4345,8 +4313,8 @@
      ]
     },
     {
-     "key": 10,
-     "label": "Fun with Fractals",
+     "key": 1,
+     "label": "Julia Set Rotator",
      "command": {
       "type": "TriggerShader",
       "shader": 169
@@ -4358,8 +4326,8 @@
      ]
     },
     {
-     "key": 11,
-     "label": "Julia Set Rotator",
+     "key": 2,
+     "label": "Dancing patterns",
      "command": {
       "type": "TriggerShader",
       "shader": 170
@@ -4371,8 +4339,8 @@
      ]
     },
     {
-     "key": 12,
-     "label": "Dancing patterns",
+     "key": 3,
+     "label": "ewdlop's KIFS Fractals",
      "command": {
       "type": "TriggerShader",
       "shader": 171
@@ -4384,8 +4352,8 @@
      ]
     },
     {
-     "key": 13,
-     "label": "Newton fractals",
+     "key": 4,
+     "label": "Cool fractals",
      "command": {
       "type": "TriggerShader",
       "shader": 172
@@ -4397,8 +4365,8 @@
      ]
     },
     {
-     "key": 14,
-     "label": "ewdlop's KIFS Fractals",
+     "key": 5,
+     "label": "Bridge to Infinity || ft DoMa",
      "command": {
       "type": "TriggerShader",
       "shader": 173
@@ -4410,8 +4378,8 @@
      ]
     },
     {
-     "key": 15,
-     "label": "Cool fractals",
+     "key": 6,
+     "label": "Fractals II",
      "command": {
       "type": "TriggerShader",
       "shader": 174
@@ -4423,8 +4391,8 @@
      ]
     },
     {
-     "key": 16,
-     "label": "Bridge to Infinity || ft DoMa",
+     "key": 7,
+     "label": "Week 06B - Fractals 2",
      "command": {
       "type": "TriggerShader",
       "shader": 175
@@ -4436,8 +4404,8 @@
      ]
     },
     {
-     "key": 17,
-     "label": "Fractals II",
+     "key": 8,
+     "label": "amateur attempt at julia set",
      "command": {
       "type": "TriggerShader",
       "shader": 176
@@ -4449,8 +4417,8 @@
      ]
     },
     {
-     "key": 18,
-     "label": "Week 06B - Fractals 2",
+     "key": 9,
+     "label": "mezzanesque",
      "command": {
       "type": "TriggerShader",
       "shader": 177
@@ -4462,8 +4430,8 @@
      ]
     },
     {
-     "key": 19,
-     "label": "amateur attempt at julia set",
+     "key": 10,
+     "label": "KIFS Fractals Koch Snowflake",
      "command": {
       "type": "TriggerShader",
       "shader": 178
@@ -4475,8 +4443,8 @@
      ]
     },
     {
-     "key": 20,
-     "label": "mezzanesque",
+     "key": 11,
+     "label": "Fractal Idea e",
      "command": {
       "type": "TriggerShader",
       "shader": 179
@@ -4488,8 +4456,8 @@
      ]
     },
     {
-     "key": 21,
-     "label": "miniverse",
+     "key": 12,
+     "label": "Day13-ever",
      "command": {
       "type": "TriggerShader",
       "shader": 180
@@ -4501,8 +4469,8 @@
      ]
     },
     {
-     "key": 22,
-     "label": "KIFS Fractals Koch Snowflake",
+     "key": 13,
+     "label": "Rainbow snowflake",
      "command": {
       "type": "TriggerShader",
       "shader": 181
@@ -4514,11 +4482,128 @@
      ]
     },
     {
-     "key": 23,
-     "label": "Fractal Idea e",
+     "key": 14,
+     "label": "Trees of Circles II",
      "command": {
       "type": "TriggerShader",
       "shader": 182
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 15,
+     "label": "Hello Wook World",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 183
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 16,
+     "label": "sphere fractals",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 184
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 17,
+     "label": "square tile fractal",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 185
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 18,
+     "label": "Wooden Chessboard Pattern",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 186
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 19,
+     "label": "Week 06C - Fractals 3",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 187
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 20,
+     "label": "Infinite Loop Spiral Sierpinski",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 188
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 21,
+     "label": "circle in circle",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 189
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 22,
+     "label": "kifs 2d _5",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 190
+     },
+     "color": [
+      25,
+      75,
+      120
+     ]
+    },
+    {
+     "key": 23,
+     "label": "Week 06A - Fractals 1",
+     "command": {
+      "type": "TriggerShader",
+      "shader": 191
      },
      "color": [
       25,
@@ -4533,124 +4618,7 @@
    "bindings": [
     {
      "key": 0,
-     "label": "Day13-ever",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 183
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 1,
-     "label": "Rainbow snowflake",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 184
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 2,
-     "label": "Trees of Circles II",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 185
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 3,
-     "label": "Hello Wook World",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 186
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 4,
-     "label": "sphere fractals",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 187
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 5,
-     "label": "square tile fractal",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 188
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 6,
-     "label": "Wooden Chessboard Pattern",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 189
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 7,
-     "label": "Week 06C - Fractals 3",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 190
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 8,
-     "label": "Infinite Loop Spiral Sierpinski",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 191
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 9,
-     "label": "circle in circle",
+     "label": "fun with fractals",
      "command": {
       "type": "TriggerShader",
       "shader": 192
@@ -4662,8 +4630,8 @@
      ]
     },
     {
-     "key": 10,
-     "label": "kifs 2d _5",
+     "key": 1,
+     "label": "Fractal Spiral Pulse",
      "command": {
       "type": "TriggerShader",
       "shader": 193
@@ -4675,8 +4643,8 @@
      ]
     },
     {
-     "key": 11,
-     "label": "Week 06A - Fractals 1",
+     "key": 2,
+     "label": "Trying to learn shaders properly",
      "command": {
       "type": "TriggerShader",
       "shader": 194
@@ -4688,8 +4656,8 @@
      ]
     },
     {
-     "key": 12,
-     "label": "fun with fractals",
+     "key": 3,
+     "label": "The Beauty of Fractals",
      "command": {
       "type": "TriggerShader",
       "shader": 195
@@ -4701,8 +4669,8 @@
      ]
     },
     {
-     "key": 13,
-     "label": "Fractal Spiral Pulse",
+     "key": 4,
+     "label": "angle fractals",
      "command": {
       "type": "TriggerShader",
       "shader": 196
@@ -4714,8 +4682,8 @@
      ]
     },
     {
-     "key": 14,
-     "label": "Trying to learn shaders properly",
+     "key": 5,
+     "label": "Radial Fractal",
      "command": {
       "type": "TriggerShader",
       "shader": 197
@@ -4727,8 +4695,8 @@
      ]
     },
     {
-     "key": 15,
-     "label": "Sine Wave Zion",
+     "key": 6,
+     "label": "Mandelbrot Sunset",
      "command": {
       "type": "TriggerShader",
       "shader": 198
@@ -4740,8 +4708,8 @@
      ]
     },
     {
-     "key": 16,
-     "label": "The Beauty of Fractals",
+     "key": 7,
+     "label": "Simple Fractal 4 All (03)",
      "command": {
       "type": "TriggerShader",
       "shader": 199
@@ -4753,8 +4721,8 @@
      ]
     },
     {
-     "key": 17,
-     "label": "angle fractals",
+     "key": 8,
+     "label": "quick fractals",
      "command": {
       "type": "TriggerShader",
       "shader": 200
@@ -4766,8 +4734,8 @@
      ]
     },
     {
-     "key": 18,
-     "label": "Radial Fractal",
+     "key": 9,
+     "label": "Colorized Simple Fractal For All",
      "command": {
       "type": "TriggerShader",
       "shader": 201
@@ -4779,8 +4747,8 @@
      ]
     },
     {
-     "key": 19,
-     "label": "Mandelbrot Sunset",
+     "key": 10,
+     "label": "Experimental Harmonic Frac",
      "command": {
       "type": "TriggerShader",
       "shader": 202
@@ -4792,8 +4760,8 @@
      ]
     },
     {
-     "key": 20,
-     "label": "Simple Fractal 4 All (03)",
+     "key": 11,
+     "label": "Julia set simulation",
      "command": {
       "type": "TriggerShader",
       "shader": 203
@@ -4805,8 +4773,8 @@
      ]
     },
     {
-     "key": 21,
-     "label": "quick fractals",
+     "key": 12,
+     "label": "AK FYP14: Basic Fractal",
      "command": {
       "type": "TriggerShader",
       "shader": 204
@@ -4818,8 +4786,8 @@
      ]
     },
     {
-     "key": 22,
-     "label": "Colorized Simple Fractal For All",
+     "key": 13,
+     "label": "Some kind of alien life",
      "command": {
       "type": "TriggerShader",
       "shader": 205
@@ -4831,8 +4799,8 @@
      ]
     },
     {
-     "key": 23,
-     "label": "Experimental Harmonic Frac",
+     "key": 14,
+     "label": "Glilia Julitchy",
      "command": {
       "type": "TriggerShader",
       "shader": 206
@@ -4842,15 +4810,10 @@
       75,
       120
      ]
-    }
-   ]
-  },
-  {
-   "name": "SHADERS 10",
-   "bindings": [
+    },
     {
-     "key": 0,
-     "label": "Julia set simulation",
+     "key": 15,
+     "label": "Fractals Explorer",
      "command": {
       "type": "TriggerShader",
       "shader": 207
@@ -4862,8 +4825,8 @@
      ]
     },
     {
-     "key": 1,
-     "label": "AK FYP14: Basic Fractal",
+     "key": 16,
+     "label": "Prismatic Noise Ripple V2",
      "command": {
       "type": "TriggerShader",
       "shader": 208
@@ -4875,63 +4838,11 @@
      ]
     },
     {
-     "key": 2,
-     "label": "Some kind of alien life",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 209
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 3,
-     "label": "Glilia Julitchy",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 210
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 4,
-     "label": "Fractals Explorer",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 211
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 5,
-     "label": "Prismatic Noise Ripple V2",
-     "command": {
-      "type": "TriggerShader",
-      "shader": 212
-     },
-     "color": [
-      25,
-      75,
-      120
-     ]
-    },
-    {
-     "key": 6,
+     "key": 17,
      "label": "Radiant Furnace",
      "command": {
       "type": "TriggerShader",
-      "shader": 213
+      "shader": 209
      },
      "color": [
       25,
