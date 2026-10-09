@@ -367,6 +367,11 @@ struct Look {
     /// Colorize: how far the picture is taken to one tint, and the tint.
     colorize: f32,
     tint: [f32; 3],
+    /// What it is coloured with (`COLORIZES`), how many times a second the hues go
+    /// round, and how many times they repeat over the picture.
+    colorize_with: usize,
+    colorize_speed: f32,
+    colorize_bands: f32,
     /// How the picture fills the frame when zoomed out or moved (`TILINGS`), and for the
     /// seamless kind how far in from a tile's edge the blend reaches.
     tile: usize,
@@ -395,6 +400,9 @@ impl Default for Look {
             invert: false,
             colorize: 0.0,
             tint: [1.0, 0.45, 0.1],
+            colorize_with: 1,
+            colorize_speed: 0.1,
+            colorize_bands: 1.0,
             tile: 0,
             tile_blend: 0.15,
             mods: [0; 11],
@@ -407,7 +415,7 @@ impl Look {
     /// The look as it stands this frame: every slider at its setting, moved by the
     /// music where its boxes are ticked. `signals` are pump (the bass), strobe (the
     /// beat's flash), twist (the mids) and auto (one of those, changing with the music).
-    fn live(&self, signals: [f32; 4]) -> Live {
+    fn live(&self, signals: [f32; 4], time: f32) -> Live {
         let follow = |slider: usize| -> f32 {
             (0..4).filter(|bit| self.mods[slider] & (1 << bit) != 0).map(|bit| signals[bit]).sum::<f32>().min(1.5)
         };
@@ -432,6 +440,7 @@ impl Look {
             // The colour settings, when any of them is off its neutral value.
             grade: (grade != NEUTRAL || colorize[3] > 0.0).then_some(grade),
             colorize,
+            rainbow: [self.colorize_with as f32, (time * self.colorize_speed).fract(), self.colorize_bands],
             tile: tiled.then_some([self.tile as f32, canvas[0], canvas[1], canvas[2], canvas[3], zoom, self.tile_blend]),
         }
     }
@@ -439,7 +448,8 @@ impl Look {
         serde_json::json!({
             "zoom": self.zoom, "rotate": self.rotate, "pan": self.pan, "speed": self.speed, "react": self.react,
             "hue": self.hue, "saturation": self.saturation, "brightness": self.brightness, "contrast": self.contrast,
-            "gamma": self.gamma, "invert": self.invert, "react_mode": self.react_mode, "tile": TILINGS[self.tile.min(TILINGS.len() - 1)], "tile_blend": self.tile_blend, "colorize": self.colorize, "tint": self.tint, "mods": self.mods, "params": self.params,
+            "gamma": self.gamma, "invert": self.invert, "react_mode": self.react_mode, "tile": TILINGS[self.tile.min(TILINGS.len() - 1)], "tile_blend": self.tile_blend, "colorize": self.colorize, "tint": self.tint, "colorize_with": COLORIZES[self.colorize_with.min(COLORIZES.len() - 1)],
+            "colorize_speed": self.colorize_speed, "colorize_bands": self.colorize_bands, "mods": self.mods, "params": self.params,
         })
     }
     fn from(saved: &serde_json::Value) -> Self {
@@ -460,6 +470,9 @@ impl Look {
             tile: TILINGS.iter().position(|name| Some(*name) == saved["tile"].as_str()).unwrap_or(0),
             tile_blend: number("tile_blend", 0.15).clamp(0.01, 0.5),
             colorize: number("colorize", 0.0).clamp(0.0, 1.0),
+            colorize_with: COLORIZES.iter().position(|name| Some(*name) == saved["colorize_with"].as_str()).unwrap_or(0),
+            colorize_speed: number("colorize_speed", 0.1).clamp(0.0, 4.0),
+            colorize_bands: number("colorize_bands", 1.0).clamp(0.1, 12.0),
             tint: std::array::from_fn(|channel| saved["tint"][channel].as_f64().map_or([1.0, 0.45, 0.1][channel], |value| value as f32)),
             mods: std::array::from_fn(|slider| saved["mods"][slider].as_u64().unwrap_or(0) as u8 & 15),
             react_mode: saved["react_mode"].as_u64().map(|mode| (mode as u8).min(REACT_MODES.len() as u8 - 1)),
@@ -475,9 +488,13 @@ struct Live {
     grade: Option<[f32; 6]>,
     /// The tint and its amount; an amount of 0 leaves the colours alone.
     colorize: [f32; 4],
+    /// The travelling hue for `gfx::Gfx::grade`.
+    rainbow: [f32; 3],
     /// The tiling for `gfx::Gfx::grade`, when the look tiles.
     tile: Option<[f32; 7]>,
 }
+/// What colorize colours a picture with.
+const COLORIZES: [&str; 6] = ["One colour", "Hue cycle", "Rainbow across", "Rainbow diagonal", "Rainbow rings", "Rainbow by brightness"];
 /// Colour settings that change nothing.
 const NEUTRAL: [f32; 6] = [0.0, 1.0, 1.0, 1.0, 1.0, 0.0];
 /// How a shader's picture fills the frame when it is zoomed out or moved.
@@ -562,10 +579,10 @@ fn playing(layer: &Layer) -> Option<usize> {
     }
 }
 /// A layer's picture with its shader's colour settings applied, if it has any.
-fn graded(gfx: &gfx::Gfx, looks: &HashMap<usize, Look>, signals: [f32; 4], layer: &Layer, into: &gfx::Target) -> glow::Texture {
-    match playing(layer).and_then(|entry| looks.get(&entry)).map(|look| look.live(signals)) {
+fn graded(gfx: &gfx::Gfx, looks: &HashMap<usize, Look>, signals: [f32; 4], time: f32, layer: &Layer, into: &gfx::Target) -> glow::Texture {
+    match playing(layer).and_then(|entry| looks.get(&entry)).map(|look| look.live(signals, time)) {
         Some(live) if live.grade.is_some() || live.tile.is_some() => {
-            gfx.grade(into, layer.target.texture, live.grade.unwrap_or(NEUTRAL), live.tile.unwrap_or([0.0; 7]), live.colorize);
+            gfx.grade(into, layer.target.texture, live.grade.unwrap_or(NEUTRAL), live.tile.unwrap_or([0.0; 7]), live.colorize, live.rainbow);
             into.texture
         }
         _ => layer.target.texture,
@@ -1344,7 +1361,7 @@ impl App {
                     app.place(1, 0, vec![Source::Shader(entry)]);
                     app.launch(1, 0);
                     if app.options.tile > 0 {
-                        app.looks.insert(entry, Look { tile: app.options.tile.min(3), zoom: if app.options.tile > 3 { 1.0 } else { 0.4 }, colorize: if app.options.tile > 3 { 0.9 } else { 0.0 }, ..Look::default() });
+                        app.looks.insert(entry, Look { tile: if app.options.tile > 3 { 0 } else { app.options.tile }, zoom: if app.options.tile > 3 { 1.0 } else { 0.4 }, colorize: if app.options.tile > 3 { 1.0 } else { 0.0 }, colorize_with: app.options.tile.saturating_sub(3).min(5), colorize_bands: 1.5, ..Look::default() });
                     }
                 }
                 None => eprintln!("no shader {id} in the library"),
@@ -2461,8 +2478,34 @@ impl App {
                 if double_clicked(ui, &moved) {
                     look.colorize = 0.0;
                 }
-                ui.color_edit_button_rgb(&mut look.tint).on_hover_text("The colour the picture is taken to");
+                if look.colorize_with == 0 {
+                    ui.color_edit_button_rgb(&mut look.tint).on_hover_text("The colour the picture is taken to");
+                }
             });
+            ui.horizontal(|ui| {
+                egui::ComboBox::from_id_salt("look-colorize").width(170.0).selected_text(COLORIZES[look.colorize_with]).show_ui(ui, |ui| {
+                    for (kind, name) in COLORIZES.iter().enumerate() {
+                        ui.selectable_value(&mut look.colorize_with, kind, *name);
+                    }
+                });
+                ui.label("colour with").on_hover_text(
+                    "One colour: a fixed tint. Hue cycle: the whole picture travels round the colours. \
+                     Rainbow: the colours also run over the picture, across, diagonally, in rings, or by how bright each part is. \
+                     All of them come round without a jump.",
+                );
+            });
+            if look.colorize_with > 0 {
+                let moved = ui.add(egui::Slider::new(&mut look.colorize_speed, 0.0..=2.0).text("cycles a second"));
+                if double_clicked(ui, &moved) {
+                    look.colorize_speed = 0.1;
+                }
+            }
+            if look.colorize_with > 1 {
+                let moved = ui.add(egui::Slider::new(&mut look.colorize_bands, 0.25..=8.0).text("rainbows across"));
+                if double_clicked(ui, &moved) {
+                    look.colorize_bands = 1.0;
+                }
+            }
             ui.checkbox(&mut look.invert, "invert");
         });
         // Folded, this section still offers the shader's first number; opened, all of them.
@@ -3015,7 +3058,7 @@ impl App {
                     let react = look.and_then(|look| look.react_mode).or(cell.react).unwrap_or(layer.react);
                     let audio = scaled(&layer.reactor.apply(react, dt, &moving), look.map_or(1.0, |look| look.react));
                     layer.flash = layer.reactor.flash(react);
-                    let live = look.map(|look| look.live(self.signals));
+                    let live = look.map(|look| look.live(self.signals, time));
                     layer.time += dt * live.as_ref().map_or(1.0, |live| live.speed);
                     for (clock, energy) in layer.flow.iter_mut().zip([audio.volume, audio.bass, audio.mid, audio.treble]) {
                         *clock += dt * (FLOW_RATE.0 + energy * FLOW_RATE.1);
@@ -3060,7 +3103,7 @@ impl App {
         let (mut below, mut next) = (None, 0);
         for layer in self.layers.iter().chain([&self.auto]).filter(|layer| layer.drawn && !layer.bypass) {
             // Colours, the cell's own effects, the change from the cell before, the layer's effects.
-            let picture = graded(&self.gfx, &self.looks, self.signals, layer, &self.graded);
+            let picture = graded(&self.gfx, &self.looks, self.signals, time, layer, &self.graded);
             let own = layer.active.and_then(|column| layer.cells[column].as_ref()).map(|cell| cell.effects.as_slice()).unwrap_or(&[]);
             let (mut picture, first) = run_effects(&self.gfx, &self.scratch, picture, own, 0, time, moving.onset, moving.bass);
             let since = layer.switched.elapsed().as_secs_f32();
@@ -3094,7 +3137,7 @@ impl App {
         // The preview is not part of the output; it gets its shader's colours and a
         // picture of its own.
         if self.pre.drawn {
-            let picture = graded(&self.gfx, &self.looks, self.signals, &self.pre, &self.graded);
+            let picture = graded(&self.gfx, &self.looks, self.signals, time, &self.pre, &self.graded);
             self.gfx.mix(&self.pre_out, &gfx::Mix::copy(picture));
         }
         // Layers on Sequence or Shuffle, and the library's checked list, move on.

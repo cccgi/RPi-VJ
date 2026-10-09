@@ -147,6 +147,7 @@ uniform float u_gamma;
 uniform float u_invert;
 uniform float u_tile[7];
 uniform vec4 u_colorize;
+uniform vec3 u_rainbow;
 in vec2 uv;
 out vec4 color;
 const float ASPECT = 16.0 / 9.0;
@@ -179,7 +180,19 @@ void main() {
     c = ((c - 0.5) * u_contrast + 0.5) * u_brightness;
     c = pow(max(c, 0.0), vec3(1.0 / max(u_gamma, 0.05)));
     // Colorize: the picture's light and dark kept, its colours swapped for one tint.
-    c = mix(c, u_colorize.rgb * dot(c, vec3(0.2126, 0.7152, 0.0722)) * 1.6, u_colorize.a);
+    float light = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    vec3 tint = u_colorize.rgb;
+    int rainbow = int(u_rainbow.x + 0.5);
+    if (rainbow > 0) {
+        // A hue that comes round again without a jump: over time, and over the picture.
+        float hue = u_rainbow.y;
+        if (rainbow == 2) hue += uv.x * u_rainbow.z;
+        if (rainbow == 3) hue += (uv.x + uv.y) * 0.5 * u_rainbow.z;
+        if (rainbow == 4) hue += length((uv - 0.5) * vec2(ASPECT, 1.0)) * u_rainbow.z;
+        if (rainbow == 5) hue += light * u_rainbow.z;
+        tint = 0.5 + 0.5 * cos(6.2831853 * (hue + vec3(0.0, 0.33, 0.67)));
+    }
+    c = mix(c, tint * light * 1.6, u_colorize.a);
     c = mix(c, 1.0 - c, u_invert);
     color = vec4(clamp(c, 0.0, 1.0), 1.0);
 }
@@ -679,7 +692,11 @@ impl Gfx {
     /// 3 seamless), turn as cos and sin, move across and up in picture heights, zoom,
     /// and how far in from a tile's edge the seamless blend reaches.
     /// `colorize` is a tint (red, green, blue) and how far the picture is taken to it.
-    pub fn grade(&self, target: &Target, source: glow::Texture, grade: [f32; 6], tile: [f32; 7], colorize: [f32; 4]) {
+    /// `rainbow` replaces the tint with a hue that travels: kind (0 none, 1 the whole
+    /// picture cycling, 2 across, 3 diagonal, 4 rings, 5 by brightness), where the cycle
+    /// stands (0..1), and how many times the hues repeat over the picture.
+    #[allow(clippy::too_many_arguments)]
+    pub fn grade(&self, target: &Target, source: glow::Texture, grade: [f32; 6], tile: [f32; 7], colorize: [f32; 4], rainbow: [f32; 3]) {
         let (gl, p) = (&self.gl, &self.grade);
         // SAFETY: as in `new`; locations belong to the grade program.
         unsafe {
@@ -692,6 +709,7 @@ impl Gfx {
             }
             gl.uniform_1_f32_slice(p.uniforms.get("u_tile"), &tile);
             gl.uniform_4_f32(p.uniforms.get("u_colorize"), colorize[0], colorize[1], colorize[2], colorize[3]);
+            gl.uniform_3_f32(p.uniforms.get("u_rainbow"), rainbow[0], rainbow[1], rainbow[2]);
             gl.draw_arrays(glow::TRIANGLES, 0, 3);
             self.end();
         }
