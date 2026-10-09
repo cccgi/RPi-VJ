@@ -37,6 +37,50 @@ fn is_media(path: &std::path::Path) -> bool {
     let kind = path.extension().and_then(|kind| kind.to_str()).unwrap_or("").to_lowercase();
     CLIP_TYPES.contains(&kind.as_str()) || IMAGE_TYPES.contains(&kind.as_str())
 }
+/// What was dropped on a widget, if it is of this kind. Asking egui for a payload of
+/// one kind throws away a payload of another, so the kind is looked at first.
+fn dropped<T: std::any::Any + Send + Sync>(response: &egui::Response) -> Option<Arc<T>> {
+    if egui::DragAndDrop::has_payload_of_type::<T>(&response.ctx) {
+        response.dnd_release_payload::<T>()
+    } else {
+        None
+    }
+}
+/// A still picture of a file for the Assets tab, as RGB of the given size: pictures are
+/// read directly, clips through `ffmpeg` if it is installed. Kept on disk once made.
+fn asset_thumb(cache: &std::path::Path, path: &std::path::Path) -> Option<(Vec<u8>, usize, usize)> {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    path.hash(&mut hasher);
+    std::fs::metadata(path).ok()?.modified().ok()?.hash(&mut hasher);
+    let kept = cache.join(format!("{:016x}.jpg", hasher.finish()));
+    if !kept.is_file() {
+        std::fs::create_dir_all(cache).ok()?;
+        let kind = path.extension().and_then(|kind| kind.to_str()).unwrap_or("").to_lowercase();
+        if IMAGE_TYPES.contains(&kind.as_str()) {
+            image::open(path).ok()?.thumbnail(192, 108).to_rgb8().save(&kept).ok()?;
+        } else {
+            // A frame from a second in; a clip shorter than that gives its first frame.
+            let grab = |seek: &str| {
+                std::process::Command::new("ffmpeg")
+                    .args(["-v", "error", "-y", "-ss", seek, "-i"])
+                    .arg(path)
+                    .args(["-frames:v", "1", "-vf", "scale=192:-2"])
+                    .arg(&kept)
+                    .stdin(std::process::Stdio::null())
+                    .status()
+                    .is_ok_and(|status| status.success())
+                    && kept.is_file()
+            };
+            if !grab("1") && !grab("0") {
+                return None;
+            }
+        }
+    }
+    let picture = image::open(&kept).ok()?.to_rgb8();
+    let size = (picture.width() as usize, picture.height() as usize);
+    Some((picture.into_raw(), size.0, size.1))
+}
 /// Whether a slider was double-clicked. A slider itself only notices drags, so this
 /// lays a click over it; drags still reach the slider.
 fn double_clicked(ui: &egui::Ui, slider: &egui::Response) -> bool {
@@ -89,6 +133,11 @@ struct Options {
     preview: Option<String>,
     detach: bool,
     thumbs: bool,
+    /// Drag the first row of the left panel's list onto the first cell of the second
+    /// layer with a scripted pointer.
+    drag_test: bool,
+    /// Show the Assets tab as thumbnails, with its first folder opened.
+    tiles: bool,
     /// Put an effect on the first cell of the second layer.
     cell_fx: bool,
     /// Move two of the filled cells to the top layer.
@@ -132,6 +181,8 @@ impl Options {
                 "--midi-test" => options.midi_test = true,
                 "--open" => options.open = Some(value().into()),
                 "--cell-fx" => options.cell_fx = true,
+                "--drag-test" => options.drag_test = true,
+                "--tiles" => options.tiles = true,
                 "--move-test" => options.move_test = true,
                 "--download" => options.download = Some(value()),
                 "--look-test" => options.look_test = true,
@@ -773,6 +824,11 @@ struct App {
     declared: Option<(usize, Vec<(String, f32, bool)>)>,
     code: Option<(usize, String, Option<String>)>,
     rebuild_at: Option<Instant>,
+    /// For the scripted pointer: where the first list row and the first cell of the
+    /// second layer were drawn, and what the drag reported.
+    seen_row: std::cell::Cell<Option<egui::Rect>>,
+    seen_cell: std::cell::Cell<Option<egui::Rect>>,
+    drag_notes: std::cell::RefCell<Vec<String>>,
     /// Where the editor is folded away; whether an effect goes to the layer (it was
     /// highlighted last) or to the highlighted cells; a target for transitions.
     editor_open: bool,
@@ -781,7 +837,15 @@ struct App {
     /// Assets: the folder being looked at and what is in it (path, is a folder), the
     /// files picked there, and the collections.
     assets_dir: PathBuf,
-    assets_list: Vec<(PathBuf, bool)>,
+    /// What each folder read so far holds (path, is a folder); the folders opened in
+    /// the tree; list or thumbnails; and the thumbnails made, asked for (`None`), and
+    /// the two ends of the line to the thread that makes them.
+    assets_cache: HashMap<PathBuf, Vec<(PathBuf, bool)>>,
+    assets_open: BTreeSet<PathBuf>,
+    assets_tiles: bool,
+    asset_thumbs: HashMap<PathBuf, Option<egui::TextureHandle>>,
+    thumb_ask: std::sync::mpsc::Sender<PathBuf>,
+    thumb_got: std::sync::mpsc::Receiver<(PathBuf, Option<(Vec<u8>, usize, usize)>)>,
     assets_stale: bool,
     assets_picked: BTreeSet<PathBuf>,
     assets_anchor: Option<usize>,
@@ -909,6 +973,18 @@ impl App {
         let kept = std::env::var_os("APPDATA").map(|folder| PathBuf::from(folder).join("RPi-VJ/desktop.json"));
         let state_path = options.state.clone().or(kept.filter(|_| !options.testing()));
         let now = Instant::now();
+        // Asset thumbnails are made on a thread of their own, one at a time.
+        let (thumb_ask, asked) = std::sync::mpsc::channel::<PathBuf>();
+        let (made, thumb_got) = std::sync::mpsc::channel();
+        let cache = root.join("target/desktop/asset-thumbs");
+        std::thread::spawn(move || {
+            while let Ok(path) = asked.recv() {
+                let thumb = asset_thumb(&cache, &path);
+                if made.send((path, thumb)).is_err() {
+                    break;
+                }
+            }
+        });
         let mut auto = new_layer(&gfx, "Library".into(), 1, size)?;
         auto.blend = 2;
         let mut app = Self {
@@ -938,11 +1014,19 @@ impl App {
             master: Vec::new(),
             scratch: [gfx.target(RENDER_SIZES[size])?, gfx.target(RENDER_SIZES[size])?],
             looks: HashMap::new(),
+            seen_row: std::cell::Cell::new(None),
+            seen_cell: std::cell::Cell::new(None),
+            drag_notes: std::cell::RefCell::new(Vec::new()),
             editor_open: true,
             focus_layer: true,
             crossing: gfx.target(RENDER_SIZES[size])?,
             assets_dir: std::env::var_os("USERPROFILE").map(PathBuf::from).map(|home| if home.join("Videos").is_dir() { home.join("Videos") } else { home }).unwrap_or_else(|| PathBuf::from("/")),
-            assets_list: Vec::new(),
+            assets_cache: HashMap::new(),
+            assets_open: BTreeSet::new(),
+            assets_tiles: false,
+            asset_thumbs: HashMap::new(),
+            thumb_ask,
+            thumb_got,
             assets_stale: true,
             assets_picked: BTreeSet::new(),
             assets_anchor: None,
@@ -1077,6 +1161,7 @@ impl App {
             }
         }
         app.tab = app.options.tab.min(2);
+        app.assets_tiles = app.options.tiles;
         if let Some(wanted) = app.options.download.clone() {
             app.download_text = wanted;
             app.start_download();
@@ -1345,33 +1430,66 @@ impl App {
             self.pick_anchor.into_iter().filter(filled).collect()
         }
     }
-    /// Read the folder the Assets tab is looking at: folders first, then media files.
-    fn list_assets(&mut self) {
-        self.assets_stale = false;
-        let mut found: Vec<(PathBuf, bool)> = std::fs::read_dir(&self.assets_dir)
-            .into_iter()
-            .flatten()
-            .flatten()
-            .filter_map(|entry| {
-                let path = entry.path();
-                let name = path.file_name()?.to_string_lossy().into_owned();
-                let folder = path.is_dir();
-                let hidden = name.starts_with('.') || name.starts_with('$');
-                (!hidden && (folder || is_media(&path))).then_some((path, folder))
-            })
-            .collect();
-        found.sort_by_key(|(path, folder)| (!*folder, path.file_name().map(|name| name.to_string_lossy().to_lowercase())));
-        self.assets_list = found;
-        self.assets_picked.clear();
-        self.assets_anchor = None;
+    /// What a folder holds, folders first, then media files; read once and remembered.
+    /// The empty path stands for the computer: its drives.
+    fn folder(&mut self, folder: &PathBuf) -> Vec<(PathBuf, bool)> {
+        if let Some(known) = self.assets_cache.get(folder) {
+            return known.clone();
+        }
+        let mut found: Vec<(PathBuf, bool)> = if folder.as_os_str().is_empty() {
+            (b'A'..=b'Z').map(|letter| PathBuf::from(format!("{}:/", letter as char))).filter(|drive| drive.is_dir()).map(|drive| (drive, true)).collect()
+        } else {
+            std::fs::read_dir(folder)
+                .into_iter()
+                .flatten()
+                .flatten()
+                .filter_map(|entry| {
+                    let path = entry.path();
+                    let name = path.file_name()?.to_string_lossy().into_owned();
+                    let is_folder = path.is_dir();
+                    let hidden = name.starts_with('.') || name.starts_with('$');
+                    (!hidden && (is_folder || is_media(&path))).then_some((path, is_folder))
+                })
+                .collect()
+        };
+        found.sort_by_key(|(path, is_folder)| (!*is_folder, path.file_name().map(|name| name.to_string_lossy().to_lowercase())));
+        self.assets_cache.insert(folder.clone(), found.clone());
+        found
+    }
+    /// The rows of the tree under `folder`: its entries, and under each opened folder its own.
+    fn tree(&mut self, folder: &PathBuf, depth: usize, rows: &mut Vec<(PathBuf, bool, usize)>) {
+        for (path, is_folder) in self.folder(folder) {
+            rows.push((path.clone(), is_folder, depth));
+            if is_folder && depth < 12 && self.assets_open.contains(&path) {
+                self.tree(&path, depth + 1, rows);
+            }
+        }
+    }
+    /// Take in the thumbnails the thread has finished.
+    fn take_thumbs(&mut self, ctx: &egui::Context) {
+        while let Ok((path, thumb)) = self.thumb_got.try_recv() {
+            let texture = thumb.map(|(rgb, width, height)| {
+                let image = egui::ColorImage::from_rgb([width, height], &rgb);
+                ctx.load_texture(format!("asset-{}", path.display()), image, egui::TextureOptions::LINEAR)
+            });
+            self.asset_thumbs.insert(path, texture);
+        }
     }
     /// The Assets tab: collections on top, then either a collection's files or the
-    /// folder being browsed. Files are picked like shaders and dragged to the grid.
+    /// folder being browsed, as a tree or as thumbnails. Files are picked like shaders
+    /// and dragged to the grid.
     fn assets_panel(&mut self, ui: &mut egui::Ui, actions: &mut Vec<Action>) {
         if self.assets_stale {
-            self.list_assets();
+            self.assets_stale = false;
+            self.assets_cache.clear();
+            self.assets_picked.clear();
+            self.assets_anchor = None;
         }
-        let name_of = |path: &PathBuf| path.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_else(|| path.display().to_string());
+        self.take_thumbs(ui.ctx());
+        let name_of = |path: &PathBuf| match path.file_name() {
+            Some(name) => name.to_string_lossy().into_owned(),
+            None => path.display().to_string(),
+        };
         // Collections: click to open, drag onto the grid to place everything in one, drop files on one to add them.
         ui.strong("Collections");
         for (index, collection) in self.collections.iter().enumerate() {
@@ -1384,7 +1502,7 @@ impl App {
             if response.dragged() {
                 response.dnd_set_drag_payload(Dragged(collection.items.iter().cloned().map(Source::Clip).collect()));
             }
-            if let Some(dropped) = response.dnd_release_payload::<Dragged>() {
+            if let Some(dropped) = dropped::<Dragged>(&response) {
                 let files = dropped.0.iter().filter_map(|source| match source {
                     Source::Clip(path) => Some(path.clone()),
                     Source::Shader(_) => None,
@@ -1409,12 +1527,16 @@ impl App {
             }
         });
         ui.separator();
-        // What the list below shows: a collection's files, or the folder.
+        // What is shown below: a collection's files, or the folder with what is opened under it.
         let viewing = self.collection_view.filter(|index| *index < self.collections.len());
-        let rows: Vec<(PathBuf, bool)> = match viewing {
-            Some(index) => self.collections[index].items.iter().map(|path| (path.clone(), false)).collect(),
-            None => self.assets_list.clone(),
-        };
+        let mut rows: Vec<(PathBuf, bool, usize)> = Vec::new();
+        match viewing {
+            Some(index) => rows.extend(self.collections[index].items.iter().map(|path| (path.clone(), false, 0))),
+            None => {
+                let top = self.assets_dir.clone();
+                self.tree(&top, 0, &mut rows);
+            }
+        }
         match viewing {
             Some(index) => {
                 ui.horizontal(|ui| {
@@ -1422,104 +1544,174 @@ impl App {
                     if ui.button("Back to folders").clicked() {
                         self.collection_view = None;
                     }
+                    ui.checkbox(&mut self.assets_tiles, "thumbnails");
                 });
             }
             None => {
                 ui.horizontal(|ui| {
-                    if ui.button("Up").clicked() {
-                        if let Some(parent) = self.assets_dir.parent() {
-                            self.assets_dir = parent.to_owned();
-                            self.assets_stale = true;
+                    if ui.button("Up").on_hover_text("The folder above; above a drive, the list of drives").clicked() {
+                        self.assets_dir = self.assets_dir.parent().map(PathBuf::from).unwrap_or_default();
+                        self.assets_picked.clear();
+                    }
+                    if ui.button("Drives").clicked() {
+                        self.assets_dir = PathBuf::new();
+                        self.assets_picked.clear();
+                    }
+                    if ui.button("Choose…").clicked() {
+                        if let Some(folder) = rfd::FileDialog::new().set_directory(&self.assets_dir).pick_folder() {
+                            self.assets_dir = folder;
+                            self.assets_picked.clear();
                         }
                     }
                     if ui.button("Refresh").clicked() {
                         self.assets_stale = true;
                     }
-                    ui.menu_button("Drive", |ui| {
-                        for letter in b'A'..=b'Z' {
-                            let drive = PathBuf::from(format!("{}:/", letter as char));
-                            if drive.is_dir() && ui.button(format!("{}:", letter as char)).clicked() {
-                                self.assets_dir = drive;
-                                self.assets_stale = true;
-                                ui.close_menu();
-                            }
-                        }
-                    });
-                    if ui.button("Choose…").clicked() {
-                        if let Some(folder) = rfd::FileDialog::new().set_directory(&self.assets_dir).pick_folder() {
-                            self.assets_dir = folder;
-                            self.assets_stale = true;
-                        }
-                    }
+                    ui.checkbox(&mut self.assets_tiles, "thumbnails");
                 });
-                ui.add(egui::Label::new(egui::RichText::new(self.assets_dir.display().to_string()).weak()).truncate());
+                let place = if self.assets_dir.as_os_str().is_empty() { "This computer".to_owned() } else { self.assets_dir.display().to_string() };
+                ui.add(egui::Label::new(egui::RichText::new(place).weak()).truncate());
             }
         }
-        ui.weak(format!("{} picked. Drag to a cell or a collection; double-click a file to launch it.", self.assets_picked.len()));
+        ui.weak(format!("{} picked. Drag to a cell, a layer or a collection; double-click a file to launch it, a folder to go into it.", self.assets_picked.len()));
         let modifiers = ui.input(|input| input.modifiers);
         let picked = self.assets_picked.clone();
-        let (mut asked, mut enter) = (None, None);
-        let row = ui.spacing().interact_size.y.max(ui.text_style_height(&egui::TextStyle::Body) + 4.0);
-        egui::ScrollArea::vertical().auto_shrink([false, false]).show_rows(ui, row, rows.len(), |ui, shown| {
-            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Truncate);
-            for place in shown {
-                let (path, folder) = &rows[place];
-                let selected = picked.contains(path);
-                let text = if *folder { format!("▶ {}", name_of(path)) } else { name_of(path) };
-                let response = ui.selectable_label(selected, text).interact(egui::Sense::click_and_drag()).on_hover_text(path.display().to_string());
-                if *folder {
-                    if response.double_clicked() {
-                        enter = Some(path.clone());
-                    }
-                    continue;
-                }
+        let (mut asked, mut enter, mut toggle, mut wanted) = (None, None, None, Vec::new());
+        // What a file or folder does when clicked, dragged or right-clicked; the same in both views.
+        let mut handle = |response: egui::Response, place: usize, actions: &mut Vec<Action>| {
+            let (path, is_folder, _) = &rows[place];
+            let selected = picked.contains(path);
+            if *is_folder {
                 if response.double_clicked() {
-                    actions.push(Action::SendClip(path.clone()));
-                } else if response.clicked() {
-                    asked = Some((place, true));
-                } else if response.drag_started() && !selected {
-                    asked = Some((place, false));
+                    enter = Some(path.clone());
                 }
-                if response.dragged() {
-                    let carried: Vec<Source> = if selected {
-                        rows.iter().filter(|(path, _)| picked.contains(path)).map(|(path, _)| Source::Clip(path.clone())).collect()
-                    } else {
-                        vec![Source::Clip(path.clone())]
-                    };
-                    response.dnd_set_drag_payload(Dragged(carried));
-                }
-                response.context_menu(|ui| {
-                    let files: Vec<PathBuf> = if selected { picked.iter().cloned().collect() } else { vec![path.clone()] };
-                    ui.menu_button("Add to collection", |ui| {
-                        for (index, collection) in self.collections.iter().enumerate() {
-                            if ui.button(&collection.name).clicked() {
-                                actions.push(Action::AddToCollection(index, files.clone()));
-                                ui.close_menu();
-                            }
-                        }
-                        if self.collections.is_empty() {
-                            ui.weak("no collections yet");
-                        }
-                    });
-                    if let Some(index) = viewing {
-                        if ui.button("Remove from this collection").clicked() {
-                            actions.push(Action::RemoveFromCollection(index, files.clone()));
+                return;
+            }
+            if response.double_clicked() {
+                actions.push(Action::SendClip(path.clone()));
+            } else if response.clicked() {
+                asked = Some((place, true));
+            } else if response.drag_started() && !selected {
+                asked = Some((place, false));
+            }
+            if response.dragged() {
+                let carried: Vec<Source> = if selected {
+                    rows.iter().filter(|(path, _, _)| picked.contains(path)).map(|(path, _, _)| Source::Clip(path.clone())).collect()
+                } else {
+                    vec![Source::Clip(path.clone())]
+                };
+                response.dnd_set_drag_payload(Dragged(carried));
+            }
+            response.context_menu(|ui| {
+                let files: Vec<PathBuf> = if selected { picked.iter().cloned().collect() } else { vec![path.clone()] };
+                ui.menu_button("Add to collection", |ui| {
+                    for (index, collection) in self.collections.iter().enumerate() {
+                        if ui.button(&collection.name).clicked() {
+                            actions.push(Action::AddToCollection(index, files.clone()));
                             ui.close_menu();
                         }
                     }
+                    if self.collections.is_empty() {
+                        ui.weak("no collections yet");
+                    }
                 });
+                if let Some(index) = viewing {
+                    if ui.button("Remove from this collection").clicked() {
+                        actions.push(Action::RemoveFromCollection(index, files.clone()));
+                        ui.close_menu();
+                    }
+                }
+            });
+        };
+        if self.assets_tiles {
+            // Thumbnails: a tile each, made as they scroll into view.
+            let tile = egui::vec2(104.0, 78.0);
+            egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
+                ui.horizontal_wrapped(|ui| {
+                    ui.spacing_mut().item_spacing = egui::vec2(4.0, 4.0);
+                    for place in 0..rows.len() {
+                        let (path, is_folder, _) = &rows[place];
+                        let (rect, response) = ui.allocate_exact_size(tile, egui::Sense::click_and_drag());
+                        if ui.is_rect_visible(rect) {
+                            let painter = ui.painter_at(rect);
+                            let picture = egui::Rect::from_min_size(rect.min, egui::vec2(tile.x, 58.5));
+                            painter.rect_filled(rect, 3.0, egui::Color32::from_gray(if *is_folder { 52 } else { 34 }));
+                            match self.asset_thumbs.get(path) {
+                                Some(Some(texture)) => {
+                                    // Fit the picture into the tile, whatever its shape.
+                                    let size = texture.size_vec2();
+                                    let fit = (picture.width() / size.x).min(picture.height() / size.y);
+                                    let shown = egui::Rect::from_center_size(picture.center(), size * fit);
+                                    painter.image(texture.id(), shown, egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)), egui::Color32::WHITE);
+                                }
+                                Some(None) => {}
+                                None if !*is_folder => wanted.push(path.clone()),
+                                None => {
+                                    painter.text(picture.center(), egui::Align2::CENTER_CENTER, "folder", egui::FontId::proportional(12.0), egui::Color32::from_gray(170));
+                                }
+                            }
+                            painter.text(
+                                rect.left_bottom() + egui::vec2(3.0, -3.0),
+                                egui::Align2::LEFT_BOTTOM,
+                                name_of(path),
+                                egui::FontId::proportional(10.0),
+                                egui::Color32::from_gray(220),
+                            );
+                            let stroke = if picked.contains(path) { (2.0, egui::Color32::from_rgb(70, 140, 255)) } else { (1.0, egui::Color32::from_gray(60)) };
+                            painter.rect_stroke(rect, 3.0, stroke, egui::StrokeKind::Inside);
+                        }
+                        handle(response.on_hover_text(path.display().to_string()), place, actions);
+                    }
+                });
+            });
+        } else {
+            let row = ui.spacing().interact_size.y.max(ui.text_style_height(&egui::TextStyle::Body) + 4.0);
+            egui::ScrollArea::vertical().auto_shrink([false, false]).show_rows(ui, row, rows.len(), |ui, shown| {
+                ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Truncate);
+                for place in shown {
+                    let (path, is_folder, depth) = &rows[place];
+                    ui.horizontal(|ui| {
+                        ui.add_space(*depth as f32 * 14.0);
+                        if *is_folder {
+                            // The triangle opens the folder in place; a double-click on its name goes into it.
+                            let open = self.assets_open.contains(path);
+                            if ui.small_button(if open { "▼" } else { "▶" }).clicked() {
+                                toggle = Some(path.clone());
+                            }
+                        } else {
+                            ui.add_space(22.0);
+                        }
+                        let label = if path.file_name().is_none() { path.display().to_string() } else { name_of(path) };
+                        let response = ui.selectable_label(picked.contains(path), label).interact(egui::Sense::click_and_drag());
+                        if rows.iter().position(|row| !row.1) == Some(place) {
+                            self.seen_row.set(Some(response.rect));
+                        }
+                        handle(response.on_hover_text(path.display().to_string()), place, actions);
+                    });
+                }
+            });
+        }
+        drop(handle);
+        for path in wanted {
+            // Asked once; `None` stands for "on its way" until the thread answers.
+            if self.thumb_ask.send(path.clone()).is_ok() {
+                self.asset_thumbs.insert(path, None);
             }
-        });
+        }
+        if let Some(folder) = toggle {
+            if !self.assets_open.remove(&folder) {
+                self.assets_open.insert(folder);
+            }
+        }
         if let Some(folder) = enter {
             self.assets_dir = folder;
-            self.assets_stale = true;
+            self.assets_picked.clear();
         }
         if let Some((place, clicked)) = asked {
             let path = rows[place].0.clone();
             match (clicked, modifiers.shift, modifiers.command, self.assets_anchor.filter(|anchor| *anchor < rows.len())) {
                 (true, true, _, Some(anchor)) => {
-                    let run = rows[anchor.min(place)..=anchor.max(place)].iter().filter(|(_, folder)| !folder);
-                    self.assets_picked.extend(run.map(|(path, _)| path.clone()));
+                    let run = rows[anchor.min(place)..=anchor.max(place)].iter().filter(|(_, is_folder, _)| !is_folder);
+                    self.assets_picked.extend(run.map(|(path, _, _)| path.clone()));
                 }
                 (true, _, true, _) => {
                     if !self.assets_picked.remove(&path) {
@@ -3005,7 +3197,6 @@ impl App {
             ui.selectable_value(&mut self.tab, 0, egui::RichText::new("Shaders").heading());
             ui.selectable_value(&mut self.tab, 1, egui::RichText::new("Effects").heading());
             ui.selectable_value(&mut self.tab, 2, egui::RichText::new("Assets").heading());
-            ui.toggle_value(&mut self.download_open, "Download…").on_hover_text("Get shaders from Shadertoy by link or id");
         });
         if self.tab == 1 {
             self.effects_panel(ui, actions);
@@ -3026,7 +3217,7 @@ impl App {
                 self.selection.clear();
             }
             if let View::Folder(folder) = view {
-                if let Some(dropped) = response.dnd_release_payload::<Dragged>() {
+                if let Some(dropped) = dropped::<Dragged>(&response) {
                     let entries = dropped.0.iter().filter_map(|source| match source {
                         Source::Shader(entry) => Some(*entry),
                         Source::Clip(_) => None,
@@ -3083,6 +3274,7 @@ impl App {
                     }
                 }
             }
+            ui.toggle_value(&mut self.download_open, "Download…").on_hover_text("Get shaders from Shadertoy by link or id");
         });
         let shown = self.shown();
         ui.weak(format!("{} shown, {} selected. Drag to a layer or a folder; double-click to preview.", shown.len(), self.selection.len()));
@@ -3099,16 +3291,6 @@ impl App {
                 }
             }
             let learn = self.learn;
-            let label = if self.autoplay.is_some() { "Stop" } else { "Play checked" };
-            let toggle = ui.add_enabled(self.autoplay.is_some() || !self.checked.is_empty(), egui::Button::new(label));
-            spot(actions, learn, &toggle, Control::AutoToggle);
-            if toggle.clicked() && !learn {
-                if self.autoplay.is_some() {
-                    self.stop_autoplay();
-                } else {
-                    self.start_autoplay();
-                }
-            }
             let next = ui.add_enabled(self.autoplay.is_some(), egui::Button::new("Next"));
             spot(actions, learn, &next, Control::AutoNext);
             if next.clicked() && !learn {
@@ -3117,6 +3299,20 @@ impl App {
             ui.checkbox(&mut self.auto_shuffle, "shuffle");
         });
         ui.horizontal(|ui| {
+            // Play: the ticked shaders one after another, with the mode and time beside it.
+            let learn = self.learn;
+            let playing = self.autoplay.is_some();
+            let toggle = ui
+                .add_enabled(playing || !self.checked.is_empty(), egui::Button::new(if playing { "■" } else { "▶" }))
+                .on_hover_text(if playing { "Stop the autoplay" } else { "Play the ticked shaders one after another" });
+            spot(actions, learn, &toggle, Control::AutoToggle);
+            if toggle.clicked() && !learn {
+                if playing {
+                    self.stop_autoplay();
+                } else {
+                    self.start_autoplay();
+                }
+            }
             egui::ComboBox::from_id_salt("auto-react").width(66.0).selected_text(REACT_MODES[usize::from(self.auto.react)]).show_ui(ui, |ui| {
                 for (mode, name) in REACT_MODES.iter().enumerate() {
                     ui.selectable_value(&mut self.auto.react, mode as u8, *name);
@@ -3220,6 +3416,19 @@ impl App {
                     asked = Some((place, index, true));
                 } else if response.drag_started() && !selected {
                     asked = Some((place, index, false));
+                }
+                if place == 0 {
+                    self.seen_row.set(Some(response.rect));
+                    if self.options.drag_test && (104..=130).contains(&self.frames) {
+                        self.drag_notes.borrow_mut().push(format!(
+                            "f{} row dragged={} started={} down_on={} hovered={}",
+                            self.frames,
+                            response.dragged(),
+                            response.drag_started(),
+                            response.is_pointer_button_down_on(),
+                            response.hovered()
+                        ));
+                    }
                 }
                 if response.dragged() {
                     // A selected row carries the selection; a ticked row, everything ticked.
@@ -3372,7 +3581,7 @@ impl App {
                 }
             })
             .response;
-        if let Some(dropped) = zone.dnd_release_payload::<DraggedEffect>() {
+        if let Some(dropped) = dropped::<DraggedEffect>(&zone) {
             actions.push(Action::AddEffect(target, dropped.0));
         }
         if zone.dnd_hover_payload::<DraggedEffect>().is_some() {
@@ -3429,6 +3638,25 @@ impl App {
                 }
             });
             ui.horizontal(|ui| {
+                // Play: this layer's cells one after another, from the first if none is live.
+                let running = layer.auto != 0 && layer.active.is_some();
+                let play = ui
+                    .small_button(if running { "■" } else { "▶" })
+                    .on_hover_text(if running { "Stop moving on by itself" } else { "Play this layer's cells one after another" });
+                if play.clicked() {
+                    if running {
+                        layer.auto = 0;
+                    } else {
+                        if layer.auto == 0 {
+                            layer.auto = 1;
+                        }
+                        if layer.active.is_none() {
+                            if let Some(first) = layer.cells.iter().position(Option::is_some) {
+                                actions.push(Action::Launch(index, first));
+                            }
+                        }
+                    }
+                }
                 let before = layer.auto;
                 egui::ComboBox::from_id_salt(("auto", index)).width(84.0).selected_text(AUTO_MODES[layer.auto]).show_ui(ui, |ui| {
                     for (mode, name) in AUTO_MODES.iter().enumerate() {
@@ -3455,8 +3683,15 @@ impl App {
         })
         .response
         .interact(egui::Sense::click());
-        if let Some(dropped) = header.dnd_release_payload::<DraggedEffect>() {
+        if let Some(dropped) = dropped::<DraggedEffect>(&header) {
             actions.push(Action::AddEffect(ChainAt::Layer(index), dropped.0));
+        }
+        if let Some(dropped) = dropped::<Dragged>(&header) {
+            let free = self.layers[index].cells.iter().position(Option::is_none).unwrap_or(self.columns);
+            actions.push(Action::Place(index, free, dropped.0.clone()));
+        }
+        if header.dnd_hover_payload::<Dragged>().is_some() {
+            ui.painter().rect_stroke(header.rect, 3.0, (2.0, egui::Color32::from_rgb(240, 200, 60)), egui::StrokeKind::Inside);
         }
         if header.dnd_hover_payload::<DraggedEffect>().is_some() {
             ui.painter().rect_stroke(header.rect, 3.0, (2.0, GREEN), egui::StrokeKind::Inside);
@@ -3523,11 +3758,23 @@ impl App {
                 painter.rect_filled(bar, 0.0, GREEN);
             }
         }
-        if let Some(dropped) = response.dnd_release_payload::<DraggedEffect>() {
+        if let Some(dropped) = dropped::<DraggedEffect>(&response) {
             actions.push(Action::AddEffect(ChainAt::Cell(layer_index, column), dropped.0));
         }
+        if (layer_index, column) == (1, 0) {
+            self.seen_cell.set(Some(rect));
+            if self.options.drag_test && (120..=130).contains(&self.frames) {
+                self.drag_notes.borrow_mut().push(format!(
+                    "f{} cell contains={} payload={} released={}",
+                    self.frames,
+                    response.contains_pointer(),
+                    egui::DragAndDrop::has_payload_of_type::<Dragged>(ui.ctx()),
+                    ui.input(|input| input.pointer.any_released())
+                ));
+            }
+        }
         let picked = self.picked.contains(&(layer_index, column));
-        if let Some(dropped) = response.dnd_release_payload::<DraggedCells>() {
+        if let Some(dropped) = dropped::<DraggedCells>(&response) {
             actions.push(Action::MoveCells(dropped.0.clone(), layer_index, column));
         }
         let carrying = response.dnd_hover_payload::<Dragged>().is_some()
@@ -3544,7 +3791,7 @@ impl App {
         if picked {
             painter.rect_stroke(rect.shrink(3.0), 2.0, (2.0, egui::Color32::from_rgb(70, 140, 255)), egui::StrokeKind::Inside);
         }
-        if let Some(dropped) = response.dnd_release_payload::<Dragged>() {
+        if let Some(dropped) = dropped::<Dragged>(&response) {
             actions.push(Action::Place(layer_index, column, dropped.0.clone()));
         } else if self.learn {
             spot(actions, true, &response, Control::Cell(layer_index, column));
@@ -3814,7 +4061,7 @@ impl App {
                 .flat_map(|layer| layer.error.iter().chain(layer.cells.iter().flatten().filter_map(|cell| cell.error.as_ref())))
                 .collect();
             println!(
-                "frames={} seconds={:.1} fps={:.1} tempo={:.1} sure={:.2} | audio {:?} rate {:?} error {:?} peak {:.4} | cells {} folders {} | library changes {} drawn {} | layers live {:?} drawn {:?} errors {:?} | output {:?} | midi {:?} out {:?} sent {} bound {} opacity {:.2} presets {} checked {} | groups {} pictures failed {} run {:?} preview {} | filled {:?} picked {:?} | cell fx {} layer fx {}",
+                "frames={} seconds={:.1} fps={:.1} tempo={:.1} sure={:.2} | audio {:?} rate {:?} error {:?} peak {:.4} | cells {} folders {} | library changes {} drawn {} | layers live {:?} drawn {:?} errors {:?} | output {:?} | midi {:?} out {:?} sent {} bound {} opacity {:.2} presets {} checked {} | groups {} pictures failed {} run {:?} preview {} | filled {:?} picked {:?} | cell fx {} layer fx {} | drag {:#?}",
                 self.frames,
                 self.start.elapsed().as_secs_f32(),
                 self.frames as f32 / self.start.elapsed().as_secs_f32(),
@@ -3846,7 +4093,8 @@ impl App {
                 self.layers.iter().map(|layer| (0..self.columns).filter(|at| layer.cells[*at].is_some()).collect::<Vec<_>>()).collect::<Vec<_>>(),
                 self.picked,
                 self.layers.iter().flat_map(|layer| layer.cells.iter().flatten()).map(|cell| cell.effects.len()).sum::<usize>(),
-                self.layers.iter().map(|layer| layer.effects.len()).sum::<usize>()
+                self.layers.iter().map(|layer| layer.effects.len()).sum::<usize>(),
+                self.drag_notes.borrow()
             );
             self.options.exit_after = None;
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
@@ -3936,6 +4184,28 @@ impl eframe::App for App {
         }
         self.tests(ctx);
         ctx.request_repaint();
+    }
+    /// The scripted pointer of `--drag-test`: press on the first list row, travel to the
+    /// first cell of the second layer, let go.
+    fn raw_input_hook(&mut self, _ctx: &egui::Context, raw: &mut egui::RawInput) {
+        if !self.options.drag_test {
+            return;
+        }
+        let (Some(row), Some(cell)) = (self.seen_row.get(), self.seen_cell.get()) else { return };
+        let (from, to) = (row.center(), cell.center());
+        let button = |pressed| egui::Event::PointerButton {
+            pos: if pressed { from } else { to },
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: egui::Modifiers::NONE,
+        };
+        match self.frames {
+            100 => raw.events.push(egui::Event::PointerMoved(from)),
+            104 => raw.events.push(button(true)),
+            105..=124 => raw.events.push(egui::Event::PointerMoved(from + (to - from) * ((self.frames - 104) as f32 / 20.0))),
+            128 => raw.events.push(button(false)),
+            _ => {}
+        }
     }
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
         // Leave the controllers dark, not showing a composition that is gone.
