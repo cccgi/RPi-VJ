@@ -66,6 +66,8 @@ struct Options {
     preview: Option<String>,
     detach: bool,
     thumbs: bool,
+    /// Move two of the filled cells to the top layer.
+    move_test: bool,
     /// Open this composition file at start.
     open: Option<PathBuf>,
     /// Bind and send a few MIDI messages, and take the checked list through a preset.
@@ -100,6 +102,7 @@ impl Options {
                 "--autoplay" => options.autoplay = value().parse().unwrap_or(0),
                 "--midi-test" => options.midi_test = true,
                 "--open" => options.open = Some(value().into()),
+                "--move-test" => options.move_test = true,
                 "--tab" => options.tab = value().parse().unwrap_or(0),
                 "--preview" => options.preview = Some(value()),
                 "--detach" => options.detach = true,
@@ -162,6 +165,8 @@ enum Source {
 }
 /// What is being dragged: from the library, or files chosen for a layer.
 struct Dragged(Vec<Source>);
+/// Cells of the composition being dragged to another place, as (layer, column).
+struct DraggedCells(Vec<(usize, usize)>);
 /// An effect being dragged from the Effects tab, by its number.
 struct DraggedEffect(usize);
 /// One link of an effect chain.
@@ -377,6 +382,11 @@ enum Action {
     DeleteFolder(usize),
     /// MIDI learn: a control's place, whether it was picked, whether to forget its binding.
     Spot(egui::Rect, Control, bool, bool),
+    /// Composition cells: add to or take from the selection (Ctrl) or select a run of
+    /// one layer (Shift); move cells to start at a layer and column; clear cells.
+    PickCell(usize, usize, bool),
+    MoveCells(Vec<(usize, usize)>, usize, usize),
+    ClearCells(Vec<(usize, usize)>),
     /// Effect chains: of a layer, or of the whole composition for `None`.
     AddEffect(Option<usize>, usize),
     RemoveEffect(Option<usize>, usize),
@@ -469,6 +479,9 @@ struct App {
     layers: Vec<Layer>,
     columns: usize,
     selected_layer: usize,
+    /// Cells picked with Ctrl- or Shift-click, as (layer, column), and where a Shift run starts.
+    picked: BTreeSet<(usize, usize)>,
+    pick_anchor: Option<(usize, usize)>,
     size: usize,
     stack: [gfx::Target; 2],
     out_target: gfx::Target,
@@ -617,6 +630,8 @@ impl App {
             layers: Vec::new(),
             columns: 8,
             selected_layer: 1,
+            picked: BTreeSet::new(),
+            pick_anchor: None,
             size,
             sources: audio_in::sources(),
             source: None,
@@ -712,6 +727,13 @@ impl App {
         if let Some(entry) = app.options.preview.as_ref().and_then(|id| app.index_of.get(id).copied()) {
             app.apply(Action::Preview(entry));
             app.favorites.insert(entry);
+        }
+        if app.options.move_test {
+            // Pick the first and third cells of the second layer and move them to the top layer.
+            app.apply(Action::PickCell(1, 0, false));
+            app.apply(Action::PickCell(1, 2, false));
+            let cells = app.picked.iter().copied().collect();
+            app.apply(Action::MoveCells(cells, 2, 1));
         }
         if app.options.midi_test {
             // A knob on the second layer's opacity, a pad on its third cell, and the
@@ -1208,6 +1230,38 @@ impl App {
             }
         }
     }
+    /// Lift cells out of the composition and set them down in one layer from `column`
+    /// on, in their order, keeping their programs, pictures, times and react modes.
+    fn move_cells(&mut self, mut cells: Vec<(usize, usize)>, layer: usize, column: usize) {
+        cells.sort_unstable();
+        cells.dedup();
+        cells.retain(|(from, at)| self.layers.get(*from).is_some_and(|row| row.cells.get(*at).is_some_and(Option::is_some)));
+        if layer >= self.layers.len() || cells.is_empty() {
+            return;
+        }
+        let mut lifted = Vec::new();
+        for (from, at) in &cells {
+            if self.layers[*from].active == Some(*at) {
+                self.eject(*from);
+            }
+            lifted.extend(self.layers[*from].cells[*at].take());
+        }
+        while self.columns < column + lifted.len() {
+            self.add_column();
+        }
+        self.picked.clear();
+        for (offset, cell) in lifted.into_iter().enumerate() {
+            let at = column + offset;
+            if self.layers[layer].active == Some(at) {
+                self.eject(layer);
+            }
+            if let Some(old) = self.layers[layer].cells[at].replace(cell) {
+                self.release(old);
+            }
+            self.picked.insert((layer, at));
+        }
+        self.selected_layer = layer;
+    }
     fn add_column(&mut self) {
         self.columns += 1;
         for layer in &mut self.layers {
@@ -1283,7 +1337,35 @@ impl App {
     }
     fn apply(&mut self, action: Action) {
         match action {
-            Action::Launch(layer, column) => self.launch(layer, column),
+            Action::Launch(layer, column) => {
+                self.picked.clear();
+                self.pick_anchor = Some((layer, column));
+                self.launch(layer, column);
+            }
+            Action::PickCell(layer, column, run) => {
+                self.selected_layer = layer;
+                match self.pick_anchor.filter(|anchor| run && anchor.0 == layer) {
+                    Some((_, from)) => {
+                        let filled = (from.min(column)..=from.max(column)).filter(|at| self.layers[layer].cells[*at].is_some());
+                        self.picked.extend(filled.map(|at| (layer, at)));
+                    }
+                    None => {
+                        if !self.picked.remove(&(layer, column)) {
+                            self.picked.insert((layer, column));
+                        }
+                        self.pick_anchor = Some((layer, column));
+                    }
+                }
+            }
+            Action::MoveCells(cells, layer, column) => self.move_cells(cells, layer, column),
+            Action::ClearCells(cells) => {
+                for (layer, column) in cells {
+                    if layer < self.layers.len() && column < self.columns {
+                        self.clear_cell(layer, column);
+                    }
+                }
+                self.picked.clear();
+            }
             Action::Eject(layer) => self.eject(layer),
             Action::Place(layer, column, sources) => self.place(layer, column, sources),
             Action::ClearCell(layer, column) => self.clear_cell(layer, column),
@@ -1296,6 +1378,7 @@ impl App {
             Action::RemoveLayer(layer) => {
                 if self.layers.len() > 1 {
                     (0..self.columns).for_each(|column| self.clear_cell(layer, column));
+                    self.picked.clear();
                     let removed = self.layers.remove(layer);
                     self.gfx.discard(removed.target);
                     self.selected_layer = self.selected_layer.min(self.layers.len() - 1);
@@ -1403,6 +1486,7 @@ impl App {
                 if self.load_layers(&saved) {
                     let opened = std::mem::replace(&mut self.layers, before.0);
                     self.clear_composition();
+                    self.picked.clear();
                     self.layers = opened;
                     self.selected_layer = self.selected_layer.min(self.layers.len() - 1);
                 } else {
@@ -2418,7 +2502,14 @@ impl App {
         if let Some(dropped) = response.dnd_release_payload::<DraggedEffect>() {
             actions.push(Action::AddEffect(Some(layer_index), dropped.0));
         }
-        let stroke = if response.dnd_hover_payload::<Dragged>().is_some() || response.dnd_hover_payload::<DraggedEffect>().is_some() {
+        let picked = self.picked.contains(&(layer_index, column));
+        if let Some(dropped) = response.dnd_release_payload::<DraggedCells>() {
+            actions.push(Action::MoveCells(dropped.0.clone(), layer_index, column));
+        }
+        let carrying = response.dnd_hover_payload::<Dragged>().is_some()
+            || response.dnd_hover_payload::<DraggedCells>().is_some()
+            || response.dnd_hover_payload::<DraggedEffect>().is_some();
+        let stroke = if carrying {
             (2.0, egui::Color32::from_rgb(240, 200, 60))
         } else if cell.is_some() && layer.active == Some(column) {
             (3.0, GREEN)
@@ -2426,19 +2517,41 @@ impl App {
             (1.0, egui::Color32::from_gray(if response.hovered() { 110 } else { 60 }))
         };
         painter.rect_stroke(rect, 3.0, stroke, egui::StrokeKind::Inside);
+        if picked {
+            painter.rect_stroke(rect.shrink(3.0), 2.0, (2.0, egui::Color32::from_rgb(70, 140, 255)), egui::StrokeKind::Inside);
+        }
         if let Some(dropped) = response.dnd_release_payload::<Dragged>() {
             actions.push(Action::Place(layer_index, column, dropped.0.clone()));
         } else if self.learn {
             spot(actions, true, &response, Control::Cell(layer_index, column));
             return;
         } else if response.clicked() && cell.is_some() {
-            actions.push(Action::Launch(layer_index, column));
+            // Ctrl adds to or takes from the selection, Shift selects a run; a plain
+            // click launches.
+            let modifiers = ui.input(|input| input.modifiers);
+            if modifiers.command || modifiers.shift {
+                actions.push(Action::PickCell(layer_index, column, modifiers.shift));
+            } else {
+                actions.push(Action::Launch(layer_index, column));
+            }
+        }
+        if response.dragged() && cell.is_some() {
+            // Dragging one of the selected cells carries them all.
+            let carried = if picked { self.picked.iter().copied().collect() } else { vec![(layer_index, column)] };
+            response.dnd_set_drag_payload(DraggedCells(carried));
         }
         if let Some(error) = cell.and_then(|cell| cell.error.as_ref()) {
             response.clone().on_hover_text(error);
         }
         if let Some(cell) = cell {
             response.context_menu(|ui| {
+                if picked && self.picked.len() > 1 {
+                    if ui.button(format!("Clear the {} selected cells", self.picked.len())).clicked() {
+                        actions.push(Action::ClearCells(self.picked.iter().copied().collect()));
+                        ui.close_menu();
+                    }
+                    ui.separator();
+                }
                 let mut seconds = cell.seconds;
                 ui.horizontal(|ui| {
                     ui.label("Plays for");
@@ -2504,7 +2617,7 @@ impl App {
                     }
                 }
             }
-            ui.weak("Click a cell to launch it. The top layer is drawn last.");
+            ui.weak("Click launches. Ctrl- or Shift-click selects cells to drag or to clear (Delete).");
         });
         egui::ScrollArea::both().auto_shrink([false, false]).show(ui, |ui| {
             ui.spacing_mut().item_spacing = egui::vec2(4.0, 4.0);
@@ -2663,7 +2776,7 @@ impl App {
                 .flat_map(|layer| layer.error.iter().chain(layer.cells.iter().flatten().filter_map(|cell| cell.error.as_ref())))
                 .collect();
             println!(
-                "frames={} seconds={:.1} fps={:.1} tempo={:.1} sure={:.2} | audio {:?} rate {:?} error {:?} peak {:.4} | cells {} folders {} | library changes {} drawn {} | layers live {:?} drawn {:?} errors {:?} | output {:?} | midi {:?} out {:?} sent {} bound {} opacity {:.2} presets {} checked {} | groups {} pictures failed {} run {:?} preview {}",
+                "frames={} seconds={:.1} fps={:.1} tempo={:.1} sure={:.2} | audio {:?} rate {:?} error {:?} peak {:.4} | cells {} folders {} | library changes {} drawn {} | layers live {:?} drawn {:?} errors {:?} | output {:?} | midi {:?} out {:?} sent {} bound {} opacity {:.2} presets {} checked {} | groups {} pictures failed {} run {:?} preview {} | filled {:?} picked {:?}",
                 self.frames,
                 self.start.elapsed().as_secs_f32(),
                 self.frames as f32 / self.start.elapsed().as_secs_f32(),
@@ -2691,7 +2804,9 @@ impl App {
                 self.groups.len(),
                 self.thumb_failed.len(),
                 self.thumb_run,
-                self.pre.drawn
+                self.pre.drawn,
+                self.layers.iter().map(|layer| (0..self.columns).filter(|at| layer.cells[*at].is_some()).collect::<Vec<_>>()).collect::<Vec<_>>(),
+                self.picked
             );
             self.options.exit_after = None;
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
@@ -2737,6 +2852,10 @@ impl eframe::App for App {
         // In MIDI learn every bindable control gets a frame: yellow for the one waiting
         // for its knob or pad, blue for one that is bound, grey for one that is free.
         let frames = ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground, egui::Id::new("midi-learn")));
+        // Delete clears the selected cells, unless something is being typed.
+        if !self.picked.is_empty() && !ctx.wants_keyboard_input() && ctx.input(|input| input.key_pressed(egui::Key::Delete)) {
+            actions.push(Action::ClearCells(self.picked.iter().copied().collect()));
+        }
         for action in actions {
             let Action::Spot(rect, control, picked, forget) = action else {
                 self.apply(action);
