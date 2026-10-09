@@ -188,6 +188,8 @@ struct Options {
     undo_test: bool,
     /// Show the Assets tab as thumbnails, with its first folder opened.
     tiles: bool,
+    /// Start with the grid scrolled this far sideways.
+    scroll: f32,
     /// Open the editor for the first cell of the second layer.
     edit_test: bool,
     /// Put an effect on the first cell of the second layer.
@@ -233,6 +235,7 @@ impl Options {
                 "--midi-test" => options.midi_test = true,
                 "--open" => options.open = Some(value().into()),
                 "--edit-test" => options.edit_test = true,
+                "--scroll" => options.scroll = value().parse().unwrap_or(0.0),
                 "--cell-fx" => options.cell_fx = true,
                 "--drag-test" => options.drag_test = true,
                 "--tiles" => options.tiles = true,
@@ -332,6 +335,8 @@ struct Look {
     contrast: f32,
     gamma: f32,
     invert: bool,
+    /// Its own react mode, which then wins over the cell's, the layer's and the autoplay's.
+    react_mode: Option<u8>,
     params: Vec<(String, f32)>,
 }
 impl Default for Look {
@@ -348,6 +353,7 @@ impl Default for Look {
             contrast: 1.0,
             gamma: 1.0,
             invert: false,
+            react_mode: None,
             params: Vec::new(),
         }
     }
@@ -366,7 +372,7 @@ impl Look {
         serde_json::json!({
             "zoom": self.zoom, "rotate": self.rotate, "pan": self.pan, "speed": self.speed, "react": self.react,
             "hue": self.hue, "saturation": self.saturation, "brightness": self.brightness, "contrast": self.contrast,
-            "gamma": self.gamma, "invert": self.invert, "params": self.params,
+            "gamma": self.gamma, "invert": self.invert, "react_mode": self.react_mode, "params": self.params,
         })
     }
     fn from(saved: &serde_json::Value) -> Self {
@@ -384,6 +390,7 @@ impl Look {
             contrast: number("contrast", 1.0),
             gamma: number("gamma", 1.0),
             invert: saved["invert"].as_bool().unwrap_or(false),
+            react_mode: saved["react_mode"].as_u64().map(|mode| (mode as u8).min(REACT_MODES.len() as u8 - 1)),
             params: saved["params"].as_array().into_iter().flatten().filter_map(pair).collect(),
         }
     }
@@ -887,6 +894,8 @@ struct App {
     seen_row: std::cell::Cell<Option<egui::Rect>>,
     seen_cell: std::cell::Cell<Option<egui::Rect>>,
     drag_notes: std::cell::RefCell<Vec<String>>,
+    /// How far the grid's cells are scrolled sideways.
+    grid_x: f32,
     /// Where the editor is folded away; whether an effect goes to the layer (it was
     /// highlighted last) or to the highlighted cells; a target for transitions.
     editor_open: bool,
@@ -1087,6 +1096,7 @@ impl App {
             seen_row: std::cell::Cell::new(None),
             seen_cell: std::cell::Cell::new(None),
             drag_notes: std::cell::RefCell::new(Vec::new()),
+            grid_x: 0.0,
             editor_open: true,
             editing: None,
             focus_layer: true,
@@ -1239,6 +1249,7 @@ impl App {
         }
         app.tab = app.options.tab.min(2);
         app.assets_tiles = app.options.tiles;
+        app.grid_x = app.options.scroll;
         if let Some(wanted) = app.options.download.clone() {
             app.download_text = wanted;
             app.start_download();
@@ -2218,6 +2229,16 @@ impl App {
             if double_clicked(ui, &moved) {
                 look.react = 1.0;
             }
+            ui.horizontal(|ui| {
+                let chosen = look.react_mode.map_or("as the layer", |mode| REACT_MODES[usize::from(mode)]);
+                egui::ComboBox::from_id_salt("look-react").width(110.0).selected_text(chosen).show_ui(ui, |ui| {
+                    ui.selectable_value(&mut look.react_mode, None, "as the layer");
+                    for (mode, name) in REACT_MODES.iter().enumerate() {
+                        ui.selectable_value(&mut look.react_mode, Some(mode as u8), *name);
+                    }
+                });
+                ui.label("react mode").on_hover_text("Set here, it wins over the cell's, the layer's and the library autoplay's");
+            });
         });
         egui::CollapsingHeader::new("Colour").default_open(true).show(ui, |ui| {
             let moved = ui.add(egui::Slider::new(&mut look.hue, 0.0..=1.0).text("hue"));
@@ -2772,8 +2793,9 @@ impl App {
             let Some(cell) = layer.active.and_then(|column| layer.cells[column].as_ref()) else { continue };
             match (&cell.source, &cell.program) {
                 (Source::Shader(entry), Some(program)) => {
-                    let react = cell.react.unwrap_or(layer.react);
                     let look = self.looks.get(entry);
+                    // The shader's own mode first, then the cell's, then the layer's.
+                    let react = look.and_then(|look| look.react_mode).or(cell.react).unwrap_or(layer.react);
                     let audio = scaled(&layer.reactor.apply(react, dt, &moving), look.map_or(1.0, |look| look.react));
                     layer.flash = layer.reactor.flash(react);
                     layer.time += dt * look.map_or(1.0, |look| look.speed);
@@ -4089,19 +4111,49 @@ impl App {
             }
             ui.weak("Click launches. Ctrl- or Shift-click selects cells to drag or to clear (Delete).");
         });
-        egui::ScrollArea::both().auto_shrink([false, false]).show(ui, |ui| {
+        egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
             ui.spacing_mut().item_spacing = egui::vec2(4.0, 4.0);
+            // Each row's cells scroll sideways in a strip of their own, and every strip is
+            // held at the same place, so the layer controls on the left never move.
+            let held = self.grid_x;
+            let mut moved = held;
+            let mut strip = |ui: &mut egui::Ui, salt: usize, bar: bool, add: &mut dyn FnMut(&mut egui::Ui)| {
+                let shown = if bar { egui::scroll_area::ScrollBarVisibility::AlwaysVisible } else { egui::scroll_area::ScrollBarVisibility::AlwaysHidden };
+                let out = egui::ScrollArea::horizontal()
+                    .id_salt(("cells", salt))
+                    .auto_shrink([false, true])
+                    .scroll_bar_visibility(shown)
+                    .scroll_offset(egui::vec2(held, 0.0))
+                    .show(ui, |ui| add(ui));
+                // The strip that was scrolled this frame leads the others.
+                if (out.state.offset.x - held).abs() > 0.5 {
+                    moved = out.state.offset.x;
+                }
+            };
             for index in (0..self.layers.len()).rev() {
-                ui.horizontal(|ui| {
+                ui.horizontal_top(|ui| {
                     self.layer_header(ui, index, actions);
-                    for column in 0..self.columns {
-                        self.cell(ui, index, column, actions);
-                    }
+                    strip(ui, index, false, &mut |ui| {
+                        ui.horizontal(|ui| {
+                            for column in 0..self.columns {
+                                self.cell(ui, index, column, actions);
+                            }
+                        });
+                    });
                 });
                 if let Some(error) = &self.layers[index].error {
                     ui.colored_label(RED, format!("{}: {error}", self.layers[index].name));
                 }
             }
+            // One scroll bar for all of them, under the cells.
+            ui.horizontal(|ui| {
+                ui.add_space(HEADER_WIDTH + 4.0);
+                let width = self.columns as f32 * (CELL.x + 4.0);
+                strip(ui, usize::MAX, true, &mut |ui| {
+                    ui.allocate_space(egui::vec2(width, 1.0));
+                });
+            });
+            self.grid_x = moved;
         });
     }
     /// The picture the preview shows: a library shader being tried out, else the output.
