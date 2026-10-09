@@ -1,7 +1,8 @@
 # RPi-VJ Desktop
 
 A Windows VJ app that shares the Pi engine's audio analysis, beat prediction, react
-modes and shader format. Phase 1 of five: one shader layer over one video layer.
+modes and shader format. Phase 2 of five: a composition of layers filled from a
+shader library and video clips.
 
 ## Run
 
@@ -10,38 +11,55 @@ cargo run --release -p rpi-vj-desktop
 ```
 
 Run it from anywhere inside the repository. It reads the shader library from
-`target/shader-bank/catalog.json` (set `RPI_VJ_ROOT` to point at another checkout).
+`target/shader-bank/catalog.json` and the shaders' input textures from
+`target/shader-bank/assets/` (set `RPI_VJ_ROOT` to point at another checkout).
 
 Video clips need the mpv player library, `libmpv-2.dll`, which is not in the
 repository. Put it in `target/desktop/mpv/`, beside the program, or in a folder named
 by `RPI_VJ_MPV`. It comes from the `mpv-dev-x86_64` archive at
-<https://github.com/shinchiro/mpv-winbuild-cmake/releases>. Without it the app runs
-and says that video is off.
+<https://github.com/shinchiro/mpv-winbuild-cmake/releases>. Without it a layer that is
+asked to play a clip says that the library is missing.
+
+The composition, folders and settings are kept in `%APPDATA%\RPi-VJ\desktop.json`,
+written every 20 seconds and on exit.
 
 ## What is there
 
-- **Shader library:** every shader in the catalog, searchable by name, author or id.
-  A click puts one live. Multipass shaders are listed greyed out; the engine is
-  single-pass. Shaders that read input textures run, but see black where the texture
-  would be.
-- **Audio in:** any capture device, or an output device heard through loopback ("what
-  is playing"). FFT gain, a level meter with clip warning, the tempo the tracker finds
-  and how sure it is.
-- **Beat prediction:** the Pi's predictor, with its lead as a slider in milliseconds.
-- **React modes:** PUMP, STROBE, STEP, RIDE, TWIST and AUTO, as on the Pi.
-- **Video layer:** one looping clip under the shader layer, with opacity and blend
-  mode for the shader on top.
-- **Preview and projection:** a preview in the window, and the same picture borderless
-  on any monitor.
+- **Library (left):** every shader in the catalog, searchable by name, author or id.
+  "On the Pi" lists the shaders of the Pi show. Folders of your own: type a name and
+  press "Add folder", then drag shaders onto it or use a shader's right-click menu.
+  Click selects, Ctrl-click adds, Shift-click takes a range. Multipass shaders appear
+  greyed out when "multipass" is ticked; the engine is single-pass.
+- **Composition (middle):** layers as rows, cells as columns. Drag one or many shaders
+  onto a cell and they fill the row from there, adding columns as needed.
+  Double-clicking a library shader puts it on the selected layer and launches it.
+  "Add clips to selected layer…" or dropping video files on the window adds clips.
+  Click a cell to launch it; the live cell has a green frame. Right-click a cell to
+  clear it, a layer's controls to clear or remove the layer.
+- **Per layer:** opacity, blend mode (Add, Screen, Mix, Multiply, Lighten, Difference),
+  react mode (PUMP, STROBE, STEP, RIDE, TWIST, AUTO), one effect with an amount
+  (Mirror, Pixelate, RGB split, Invert, Mono, Hue, Kaleido), Bypass and Eject. The top
+  row is drawn last, over the rows below it.
+- **Audio in (top):** any capture device, or an output device heard through loopback
+  ("what is playing"). FFT gain, a level meter with clip warning, the tempo the tracker
+  finds and how sure it is, and the beat predictor's lead in milliseconds.
+- **Output (right, top bar):** a small preview, and the same picture borderless on any
+  monitor.
 
 ## Test options
+
+Any of these except `--state`, `--gain` and `--output` keeps the saved composition out
+of the way.
 
 | Option | Effect |
 |---|---|
 | `--compile-all` | Compile every runnable shader, write `target/desktop/compile-report.json`, exit |
-| `--live <id>` | Start with this shader live |
-| `--clip <file>` | Start with this clip playing |
+| `--live <id>` | Put this shader on the second layer and launch it |
+| `--fill <n>` | Put the first n shaders of the Pi show on the second layer |
+| `--fx <n>` | Give the second layer effect number n |
+| `--clip <file>` | Put this clip on the first layer and launch it |
 | `--gain <x>` | Start with this FFT gain |
 | `--output <n>` | Start projecting on monitor n |
+| `--state <file>` | Keep the composition in this file instead |
 | `--snapshot <png>` / `--ui-snapshot <png>` | Save the output picture or the window after `--frames <n>` frames, exit |
-| `--exit-after <s>` | Exit after s seconds, printing frame rate, tempo and device state |
+| `--exit-after <s>` | Exit after s seconds, printing frame rate, tempo and layer state |

@@ -54,17 +54,29 @@ type RenderCreate = unsafe extern "C" fn(*mut Handle, Handle, *mut Param) -> c_i
 type Render = unsafe extern "C" fn(Handle, *mut Param) -> c_int;
 type Update = unsafe extern "C" fn(Handle) -> u64;
 
-/// The window system's symbol lookup, as the UI framework hands it over at start.
-type Resolver<'a> = &'a dyn Fn(&CStr) -> *const c_void;
-
-unsafe extern "C" fn resolve(context: *mut c_void, name: *const c_char) -> *mut c_void {
-    // SAFETY: `context` is the `Resolver` that `Player::new` keeps alive for the whole
-    // of render-context creation, the only time libmpv looks symbols up; libmpv passes
-    // a terminated name.
+/// Looks a GL function up for the player: first among the driver's functions, then
+/// among the few old ones that `opengl32.dll` itself exports.
+#[cfg(windows)]
+unsafe extern "C" fn resolve(_: *mut c_void, name: *const c_char) -> *mut c_void {
+    type Lookup = unsafe extern "system" fn(*const c_char) -> *mut c_void;
+    static OPENGL: std::sync::OnceLock<Option<Library>> = std::sync::OnceLock::new();
+    // SAFETY: the library stays loaded for the life of the program; libmpv passes a
+    // terminated name, and the GL context is current whenever it asks.
     unsafe {
-        let resolver = &*context.cast::<Resolver>();
-        resolver(CStr::from_ptr(name)).cast_mut()
+        let Some(library) = OPENGL.get_or_init(|| Library::new("opengl32.dll").ok()) else { return ptr::null_mut() };
+        if let Ok(lookup) = library.get::<Lookup>(b"wglGetProcAddress\0") {
+            let found = lookup(name);
+            // The driver answers small numbers or -1 for names it does not have.
+            if (found as usize) > 3 && (found as isize) != -1 {
+                return found;
+            }
+        }
+        library.get::<*mut c_void>(CStr::from_ptr(name).to_bytes_with_nul()).map_or(ptr::null_mut(), |symbol| *symbol)
     }
+}
+#[cfg(not(windows))]
+unsafe extern "C" fn resolve(_: *mut c_void, _: *const c_char) -> *mut c_void {
+    ptr::null_mut()
 }
 fn check(code: c_int) -> Result<()> {
     ensure!(code >= 0, "libmpv API error {code}");
@@ -103,7 +115,7 @@ pub struct Player {
 }
 impl Player {
     /// Call with the app's GL context current; it must stay current until the drop.
-    pub fn new(resolver: Resolver) -> Result<Self> {
+    pub fn new() -> Result<Self> {
         // SAFETY: the library outlives every symbol taken from it; ABI structs and
         // strings live through the calls they are passed to.
         unsafe {
@@ -148,7 +160,7 @@ impl Player {
                     .with_context(|| format!("mpv option {key}"))?;
             }
             check(initialize(this.handle))?;
-            let mut init = GlInit { get_proc_address: resolve, context: (&resolver as *const Resolver).cast_mut().cast() };
+            let mut init = GlInit { get_proc_address: resolve, context: ptr::null_mut() };
             let mut params = [
                 Param { kind: 1, data: c"opengl".as_ptr() as *mut c_void },
                 Param { kind: 2, data: (&mut init as *mut GlInit).cast() },

@@ -6,7 +6,7 @@ license = "MIT"
 description = "Desktop VJ app sharing the Pi engine's audio analysis, react modes and shader format"
 
 [dependencies]
-rpi-vj-native = { path = "../engine" }
+rpi-vj-native = { path = "../engine", features = ["controller"] }
 anyhow = "1"
 serde_json = "1"
 eframe = { version = "0.31", default-features = false, features = ["glow", "default_fonts"] }

@@ -1,44 +1,93 @@
-//! The GL side: shader programs, render targets, the shader pass and the layer mix.
-//! The shader pass feeds the same uniforms as the Pi renderer's `shader_pass`.
-use anyhow::{ensure, Result};
+//! The GL side: shader programs with their input textures, render targets, the shader
+//! pass and the layer mix. The shader pass feeds the same uniforms as the Pi renderer's
+//! `shader_pass`.
+use anyhow::{ensure, Context, Result};
 use glow::HasContext;
-use rpi_vj_native::audio::{AudioFrame, Tempo};
-use std::{collections::HashMap, sync::Arc};
+use rpi_vj_native::{
+    audio::{AudioFrame, Tempo},
+    texture::{self, Channel, Kind},
+};
+use std::{cell::RefCell, collections::HashMap, rc::Rc, sync::Arc};
 
 const VERTEX: &str = include_str!("../../engine/shaders/fullscreen.vert");
 const MIX: &str = "#version 300 es
 precision highp float;
-uniform sampler2D u_video;
-uniform sampler2D u_shader;
-uniform float u_video_on;
-uniform float u_shader_on;
+uniform sampler2D u_base;
+uniform sampler2D u_top;
+uniform float u_base_on;
+uniform float u_top_on;
 uniform float u_opacity;
 uniform int u_mode;
+uniform int u_fx;
+uniform float u_fx_amount;
 uniform float u_flash;
 uniform mat3 u_flash_turn;
 uniform vec3 u_flash_tint;
 in vec2 uv;
 out vec4 color;
+const float TAU = 6.2831853;
+const float ASPECT = 16.0 / 9.0;
 void main() {
-    vec3 base = texture(u_video, uv).rgb * u_video_on;
-    vec3 top = texture(u_shader, uv).rgb * u_shader_on;
+    vec3 base = texture(u_base, uv).rgb * u_base_on;
+    vec2 p = uv;
+    if (u_fx == 1) {
+        // Mirror: left onto right, then top onto bottom as well.
+        p.x = 0.5 - abs(p.x - 0.5);
+        if (u_fx_amount > 0.5) p.y = 0.5 - abs(p.y - 0.5);
+    }
+    if (u_fx == 2) {
+        vec2 cells = vec2(ASPECT, 1.0) * mix(240.0, 10.0, u_fx_amount);
+        p = (floor(p * cells) + 0.5) / cells;
+    }
+    if (u_fx == 7) {
+        vec2 q = (p - 0.5) * vec2(ASPECT, 1.0);
+        float slice = TAU / floor(mix(3.0, 12.0, u_fx_amount));
+        float angle = abs(mod(atan(q.y, q.x), slice) - slice * 0.5);
+        p = vec2(cos(angle), sin(angle)) * length(q) / vec2(ASPECT, 1.0) + 0.5;
+    }
+    vec3 top = texture(u_top, p).rgb;
+    if (u_fx == 3) {
+        vec2 shift = vec2(0.03 * u_fx_amount, 0.0);
+        top = vec3(texture(u_top, p + shift).r, top.g, texture(u_top, p - shift).b);
+    }
+    float luma = dot(top, vec3(0.2126, 0.7152, 0.0722));
+    if (u_fx == 4) top = mix(top, 1.0 - top, u_fx_amount);
+    if (u_fx == 5) top = mix(top, vec3(luma), u_fx_amount);
+    if (u_fx == 6) {
+        // Turn the colours about the grey axis.
+        float angle = u_fx_amount * TAU;
+        vec3 axis = vec3(0.57735);
+        top = top * cos(angle) + cross(axis, top) * sin(angle) + axis * dot(axis, top) * (1.0 - cos(angle));
+    }
+    top *= u_top_on;
     if (u_flash > 0.5) {
-        float luma = dot(top, vec3(0.2126, 0.7152, 0.0722));
         top = clamp(u_flash_turn * top + u_flash_tint * (0.3 + 0.7 * luma), 0.0, 1.0);
     }
     vec3 mixed = base + top * u_opacity;
     if (u_mode == 1) mixed = 1.0 - (1.0 - base) * (1.0 - top * u_opacity);
     if (u_mode == 2) mixed = mix(base, top, u_opacity);
     if (u_mode == 3) mixed = base * mix(vec3(1.0), top, u_opacity);
-    color = vec4(mixed, 1.0);
+    if (u_mode == 4) mixed = mix(base, max(base, top), u_opacity);
+    if (u_mode == 5) mixed = mix(base, abs(base - top), u_opacity);
+    color = vec4(clamp(mixed, 0.0, 1.0), 1.0);
 }
 ";
-/// How the shader layer is laid over the video layer, in the order of `u_mode`.
-pub const BLENDS: [&str; 4] = ["Add", "Screen", "Mix", "Multiply"];
+/// How a layer is laid over the layers below it, in the order of `u_mode`.
+pub const BLENDS: [&str; 6] = ["Add", "Screen", "Mix", "Multiply", "Lighten", "Difference"];
+/// What a layer does to its own picture before it is mixed, in the order of `u_fx`.
+pub const EFFECTS: [&str; 8] = ["None", "Mirror", "Pixelate", "RGB split", "Invert", "Mono", "Hue", "Kaleido"];
 
+/// An input texture of a shader: one upload shared by every shader that binds the same
+/// file with the same sampling.
+pub struct Texture {
+    id: glow::Texture,
+    target: u32,
+    size: [f32; 3],
+}
 pub struct Program {
     id: glow::Program,
     uniforms: HashMap<String, glow::UniformLocation>,
+    channels: [Option<Rc<Texture>>; 4],
 }
 pub struct Target {
     pub fbo: glow::Framebuffer,
@@ -56,13 +105,22 @@ pub struct Frame<'a> {
     pub flow: &'a [f32; 4],
     pub spec_flow: &'a [f32; 32],
 }
+/// One step of the layer stack: `top` over `base`.
 pub struct Mix {
-    pub video: Option<glow::Texture>,
-    pub shader: Option<glow::Texture>,
+    pub base: Option<glow::Texture>,
+    pub top: Option<glow::Texture>,
     pub opacity: f32,
     pub mode: i32,
+    pub fx: i32,
+    pub fx_amount: f32,
     /// From `Reactor::flash`: brightness, colour wash, hue turn, and 1 while STROBE is on.
     pub flash: [f32; 4],
+}
+impl Mix {
+    /// `base` passed on as it is.
+    pub fn copy(base: glow::Texture) -> Self {
+        Self { base: Some(base), top: None, opacity: 0.0, mode: 0, fx: 0, fx_amount: 0.0, flash: [1.0, 0.0, 0.0, 0.0] }
+    }
 }
 pub struct Gfx {
     pub gl: Arc<glow::Context>,
@@ -71,9 +129,17 @@ pub struct Gfx {
     /// handed over as desktop GLSL 3.30, which reads the same for what the bank uses.
     es: bool,
     mix: Program,
+    textures: RefCell<HashMap<String, Rc<Texture>>>,
 }
 pub fn spectrum_bands(audio: &AudioFrame) -> [f32; 32] {
     std::array::from_fn(|i| audio.spectrum[i * 4..i * 4 + 4].iter().copied().fold(0.0, f32::max))
+}
+fn gl_target(kind: Kind) -> u32 {
+    match kind {
+        Kind::Flat => glow::TEXTURE_2D,
+        Kind::Cube => glow::TEXTURE_CUBE_MAP,
+        Kind::Volume => glow::TEXTURE_3D,
+    }
 }
 impl Gfx {
     pub fn new(gl: Arc<glow::Context>) -> Result<Self> {
@@ -83,19 +149,113 @@ impl Gfx {
             let probe = "#version 300 es\nprecision highp float;\nout vec4 c;\nvoid main(){c=vec4(1.0);}\n";
             let es = compile(&gl, VERTEX, probe).map(|id| gl.delete_program(id)).is_ok();
             let mix = build(&gl, es, MIX, &[])?;
-            Ok(Self { gl, vao, es, mix })
+            Ok(Self { gl, vao, es, mix, textures: RefCell::default() })
         }
     }
     pub fn dialect(&self) -> &'static str {
         if self.es { "GLSL ES 3.00" } else { "GLSL 3.30" }
     }
-    /// Compile a prepared fragment shader. `defaults` are its ISF float inputs.
-    pub fn program(&self, fragment: &str, defaults: &[(String, f32)]) -> Result<Program> {
-        build(&self.gl, self.es, fragment, defaults)
+    /// Compile a prepared fragment shader. `defaults` are its ISF float inputs and
+    /// `channels` the input textures its `iChannelN` samplers read.
+    pub fn program(&self, fragment: &str, defaults: &[(String, f32)], channels: &[Channel]) -> Result<Program> {
+        let mut program = build(&self.gl, self.es, fragment, defaults)?;
+        let mut resolution = [0.0f32; 12];
+        for channel in channels {
+            let index = usize::from(channel.channel).min(3);
+            match self.texture(channel) {
+                Ok(texture) => {
+                    resolution[index * 3..index * 3 + 3].copy_from_slice(&texture.size);
+                    program.channels[index] = Some(texture);
+                }
+                Err(error) => {
+                    self.delete(program);
+                    return Err(error);
+                }
+            }
+        }
+        // SAFETY: as in `new`; the location belongs to this program.
+        unsafe {
+            self.gl.use_program(Some(program.id));
+            self.gl.uniform_3_f32_slice(program.uniforms.get("iChannelResolution"), &resolution);
+            self.gl.use_program(None);
+        }
+        Ok(program)
     }
     pub fn delete(&self, program: Program) {
         // SAFETY: the program came from `program` on this context.
         unsafe { self.gl.delete_program(program.id) }
+    }
+    pub fn discard(&self, target: Target) {
+        // SAFETY: both objects came from `target` on this context.
+        unsafe {
+            self.gl.delete_framebuffer(target.fbo);
+            self.gl.delete_texture(target.texture);
+        }
+    }
+    /// The upload of one input texture, made on first use.
+    fn texture(&self, channel: &Channel) -> Result<Rc<Texture>> {
+        let key = format!("{}|{:?}|{:?}|{:?}|{}", channel.path.display(), channel.kind, channel.filter, channel.wrap, channel.vflip);
+        if let Some(found) = self.textures.borrow().get(&key) {
+            return Ok(Rc::clone(found));
+        }
+        let layers = texture::load(&channel.key())?;
+        let first = layers.first().context("texture has no data")?;
+        let (gl, target) = (&self.gl, gl_target(channel.kind));
+        let format = |channels: u8| if channels == 1 { (glow::R8, glow::RED) } else { (glow::RGBA8, glow::RGBA) };
+        // SAFETY: as in `new`; every buffer holds exactly the texels its size declares.
+        let id = unsafe {
+            let id = gl.create_texture().map_err(anyhow::Error::msg)?;
+            gl.bind_texture(target, Some(id));
+            gl.pixel_store_i32(glow::UNPACK_ALIGNMENT, 1);
+            for (index, layer) in layers.iter().enumerate() {
+                let (internal, external) = format(layer.channels);
+                let data = glow::PixelUnpackData::Slice(Some(&layer.data));
+                let (width, height, depth) = (layer.width as i32, layer.height as i32, layer.depth as i32);
+                match channel.kind {
+                    Kind::Flat => {
+                        gl.tex_image_2d(target, 0, internal as i32, width, height, 0, external, glow::UNSIGNED_BYTE, data)
+                    }
+                    Kind::Cube => gl.tex_image_2d(
+                        glow::TEXTURE_CUBE_MAP_POSITIVE_X + index as u32,
+                        0,
+                        internal as i32,
+                        width,
+                        height,
+                        0,
+                        external,
+                        glow::UNSIGNED_BYTE,
+                        data,
+                    ),
+                    Kind::Volume => gl.tex_image_3d(
+                        target,
+                        0,
+                        internal as i32,
+                        width,
+                        height,
+                        depth,
+                        0,
+                        external,
+                        glow::UNSIGNED_BYTE,
+                        data,
+                    ),
+                }
+            }
+            gl.pixel_store_i32(glow::UNPACK_ALIGNMENT, 4);
+            let (min, mag) = channel.filter.gl();
+            gl.tex_parameter_i32(target, glow::TEXTURE_MIN_FILTER, min as i32);
+            gl.tex_parameter_i32(target, glow::TEXTURE_MAG_FILTER, mag as i32);
+            for axis in [glow::TEXTURE_WRAP_S, glow::TEXTURE_WRAP_T, glow::TEXTURE_WRAP_R] {
+                gl.tex_parameter_i32(target, axis, channel.wrap.gl() as i32);
+            }
+            if channel.filter.mipmaps() {
+                gl.generate_mipmap(target);
+            }
+            gl.bind_texture(target, None);
+            id
+        };
+        let made = Rc::new(Texture { id, target, size: [first.width as f32, first.height as f32, first.depth as f32] });
+        self.textures.borrow_mut().insert(key, Rc::clone(&made));
+        Ok(made)
     }
     pub fn target(&self, size: (u32, u32)) -> Result<Target> {
         let gl = &self.gl;
@@ -132,6 +292,17 @@ impl Gfx {
             gl.bind_texture(glow::TEXTURE_2D, None);
             ensure!(complete, "render target {}x{} is incomplete", size.0, size.1);
             Ok(Target { fbo, texture, size })
+        }
+    }
+    pub fn clear(&self, target: &Target) {
+        // SAFETY: as in `new`.
+        unsafe {
+            self.gl.bind_framebuffer(glow::FRAMEBUFFER, Some(target.fbo));
+            self.gl.disable(glow::SCISSOR_TEST);
+            self.gl.color_mask(true, true, true, true);
+            self.gl.clear_color(0.0, 0.0, 0.0, 1.0);
+            self.gl.clear(glow::COLOR_BUFFER_BIT);
+            self.gl.bind_framebuffer(glow::FRAMEBUFFER, None);
         }
     }
     unsafe fn begin(&self, target: &Target, program: &Program) {
@@ -218,17 +389,26 @@ impl Gfx {
             gl.uniform_1_f32_slice(p.uniforms.get("iChannelTime"), &[time; 4]);
             gl.uniform_1_f32_slice(p.uniforms.get("u_spectrum"), &spectrum_bands(audio));
             gl.uniform_1_f32_slice(p.uniforms.get("u_spec_flow"), f.spec_flow);
-            // No input textures yet: a channel a shader reads samples black, not
-            // whatever the UI left on the unit.
-            for unit in 0..4 {
-                gl.active_texture(glow::TEXTURE0 + unit);
+            // Each unit gets its input texture, or nothing: a channel without one
+            // samples black, not whatever the UI left on the unit.
+            for (unit, channel) in p.channels.iter().enumerate() {
+                gl.active_texture(glow::TEXTURE0 + unit as u32);
                 gl.bind_texture(glow::TEXTURE_2D, None);
+                if let Some(texture) = channel {
+                    gl.bind_texture(texture.target, Some(texture.id));
+                }
             }
             gl.draw_arrays(glow::TRIANGLES, 0, 3);
+            for (unit, channel) in p.channels.iter().enumerate() {
+                if let Some(texture) = channel {
+                    gl.active_texture(glow::TEXTURE0 + unit as u32);
+                    gl.bind_texture(texture.target, None);
+                }
+            }
             self.end();
         }
     }
-    /// Lay the shader layer over the video layer into `target`.
+    /// One step of the layer stack into `target`.
     pub fn mix(&self, target: &Target, m: &Mix) {
         let (gl, p) = (&self.gl, &self.mix);
         // The hue turn about the grey axis, worked out here so the shader only multiplies.
@@ -242,15 +422,17 @@ impl Gfx {
         // SAFETY: as in `new`; locations belong to the mix program.
         unsafe {
             self.begin(target, p);
-            for (unit, name, texture) in [(0, "u_video", m.video), (1, "u_shader", m.shader)] {
+            for (unit, name, texture) in [(0, "u_base", m.base), (1, "u_top", m.top)] {
                 gl.active_texture(glow::TEXTURE0 + unit);
                 gl.bind_texture(glow::TEXTURE_2D, texture);
                 gl.uniform_1_i32(p.uniforms.get(name), unit as i32);
             }
-            gl.uniform_1_f32(p.uniforms.get("u_video_on"), f32::from(u8::from(m.video.is_some())));
-            gl.uniform_1_f32(p.uniforms.get("u_shader_on"), f32::from(u8::from(m.shader.is_some())));
+            gl.uniform_1_f32(p.uniforms.get("u_base_on"), f32::from(u8::from(m.base.is_some())));
+            gl.uniform_1_f32(p.uniforms.get("u_top_on"), f32::from(u8::from(m.top.is_some())));
             gl.uniform_1_f32(p.uniforms.get("u_opacity"), m.opacity);
             gl.uniform_1_i32(p.uniforms.get("u_mode"), m.mode);
+            gl.uniform_1_i32(p.uniforms.get("u_fx"), m.fx);
+            gl.uniform_1_f32(p.uniforms.get("u_fx_amount"), m.fx_amount);
             gl.uniform_1_f32(p.uniforms.get("u_flash"), m.flash[3]);
             gl.uniform_matrix_3_f32_slice(p.uniforms.get("u_flash_turn"), false, &turn);
             gl.uniform_3_f32(p.uniforms.get("u_flash_tint"), tint[0], tint[1], tint[2]);
@@ -287,6 +469,34 @@ impl Gfx {
         rgb
     }
 }
+fn build(gl: &glow::Context, es: bool, fragment: &str, defaults: &[(String, f32)]) -> Result<Program> {
+    let adapt = |source: &str| {
+        if es { source.to_owned() } else { source.replacen("#version 300 es", "#version 330 core", 1) }
+    };
+    // SAFETY: the context is current; every object made here belongs to it.
+    unsafe {
+        let id = compile(gl, &adapt(VERTEX), &adapt(fragment))?;
+        let mut uniforms = HashMap::new();
+        for index in 0..gl.get_active_uniforms(id) {
+            if let Some(uniform) = gl.get_active_uniform(id, index) {
+                let name = uniform.name.trim_end_matches("[0]");
+                if let Some(location) = gl.get_uniform_location(id, name) {
+                    uniforms.insert(name.to_owned(), location);
+                }
+            }
+        }
+        gl.use_program(Some(id));
+        // Every sampler gets its own unit; left alone they would all read unit 0.
+        for channel in 0..4 {
+            gl.uniform_1_i32(uniforms.get(&format!("iChannel{channel}")), channel);
+        }
+        for (name, value) in defaults {
+            gl.uniform_1_f32(uniforms.get(name), *value);
+        }
+        gl.use_program(None);
+        Ok(Program { id, uniforms, channels: [None, None, None, None] })
+    }
+}
 unsafe fn compile(gl: &glow::Context, vertex: &str, fragment: &str) -> Result<glow::Program> {
     let id = gl.create_program().map_err(anyhow::Error::msg)?;
     let result = (|| {
@@ -311,31 +521,3 @@ unsafe fn compile(gl: &glow::Context, vertex: &str, fragment: &str) -> Result<gl
     }
     result
 }
-fn build(gl: &glow::Context, es: bool, fragment: &str, defaults: &[(String, f32)]) -> Result<Program> {
-    let adapt = |source: &str| {
-        if es { source.to_owned() } else { source.replacen("#version 300 es", "#version 330 core", 1) }
-    };
-    // SAFETY: the context is current; every object made here belongs to it.
-    unsafe {
-        let id = compile(gl, &adapt(VERTEX), &adapt(fragment))?;
-            let mut uniforms = HashMap::new();
-            for index in 0..gl.get_active_uniforms(id) {
-                if let Some(uniform) = gl.get_active_uniform(id, index) {
-                    let name = uniform.name.trim_end_matches("[0]");
-                    if let Some(location) = gl.get_uniform_location(id, name) {
-                        uniforms.insert(name.to_owned(), location);
-                    }
-                }
-            }
-            gl.use_program(Some(id));
-            // Every sampler gets its own unit; left alone they would all read unit 0.
-            for channel in 0..4 {
-                gl.uniform_1_i32(uniforms.get(&format!("iChannel{channel}")), channel);
-            }
-            for (name, value) in defaults {
-                gl.uniform_1_f32(uniforms.get(name), *value);
-            }
-            gl.use_program(None);
-            Ok(Program { id, uniforms })
-        }
-    }
