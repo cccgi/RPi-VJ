@@ -90,6 +90,7 @@ pub fn run(
     let (mut level, mut held, mut held_at) = (0.0f32, 0.0f32, Instant::now());
     let (mut clipped_at, mut input_touched) = (None::<Instant>, None::<Instant>);
     let mut input_seen = None;
+    let mut raw_level = 0.0f32;
     // Frame length and share of late frames lately, and the shaders found too heavy for STROBE.
     let (mut frame_length, mut lag, mut lag_shader) = (1.0f32 / 60.0, 0.0f32, None);
     let mut no_strobe = std::collections::HashSet::new();
@@ -236,6 +237,7 @@ pub fn run(
         let timed = predictor.apply(idle_dt, lead, &heard);
         let (raw, peak) = capture::take_peaks();
         level = peak.max(level * (-idle_dt / 0.3).exp());
+        raw_level = raw.max(raw_level * (-idle_dt / 1.5).exp());
         if peak >= held || held_at.elapsed() > Duration::from_millis(1500) {
             (held, held_at) = (level, Instant::now());
         }
@@ -443,13 +445,14 @@ pub fn run(
                 .map_or(0, |(_, _, n)| n.load(Ordering::Relaxed));
             let tempo = if heard.beat_period > 0.0 { 60.0 / heard.beat_period } else { 0.0 };
             eprintln!(
-                "renderer frames={frames} late={late_frames} audio_dropped={dropped} warmed={warmed:?} bands={:.2?} macros={:.2?} gain={:.2} sections={section_count} tempo={tempo:.1} sure={:.2} jitter_ms={:.1} in={:.0}dB lead_ms={:.0}",
+                "renderer frames={frames} late={late_frames} audio_dropped={dropped} warmed={warmed:?} bands={:.2?} macros={:.2?} gain={:.2} sections={section_count} tempo={tempo:.1} sure={:.2} jitter_ms={:.1} in={:.1}dB raw={:.1}dB lead_ms={:.0}",
                 [heard.bass, heard.low_mid, heard.mid, heard.treble, heard.onset],
                 state.macros,
                 state.input_gain,
                 heard.beat_sure,
                 predictor.jitter * 1000.0,
                 renderer.meter[1] * 48.0 - 48.0,
+                20.0 * raw_level.max(1e-6).log10(),
                 lead * 1000.0
             );
             health_time = Instant::now();
