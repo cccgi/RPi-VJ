@@ -253,6 +253,36 @@ impl Control {
 }
 /// A MIDI message as a binding knows it: kind (0x90 note, 0xB0 controller), channel, number.
 type MidiKey = (u8, u8, u8);
+/// The Akai APC Key 25 as it comes: an 8 by 5 pad grid (notes 0..40 from the bottom left),
+/// the arrow keys, "stop all clips", the scene buttons beside the rows, and eight knobs.
+mod apc {
+    pub const NAME: &str = "APC Key 25";
+    pub const COLUMNS: usize = 8;
+    pub const ROWS: usize = 5;
+    pub const UP: u8 = 64;
+    pub const DOWN: u8 = 65;
+    pub const LEFT: u8 = 66;
+    pub const RIGHT: u8 = 67;
+    pub const STOP_ALL: u8 = 81;
+    /// Scene buttons, top row first.
+    pub const SCENE: u8 = 82;
+    pub const KNOB: u8 = 48;
+}
+/// Pad velocities for a cell that is empty, filled and playing, and for a button that
+/// is on and off. Each controller has its own colour numbers.
+fn led_defaults(midi: &midi::Midi) -> [u8; 5] {
+    if midi.has(apc::NAME) {
+        // Off, yellow, green.
+        [0, 5, 1, 1, 0]
+    } else if midi.has("Launchpad") {
+        // Off, dim amber, green on the first Launchpads.
+        [12, 29, 60, 60, 12]
+    } else if midi.has("X-TOUCH") {
+        [0, 0, 1, 1, 0]
+    } else {
+        [0, 1, 127, 127, 0]
+    }
+}
 /// What the library plays by itself, kept under a name.
 struct Preset {
     name: String,
@@ -339,6 +369,13 @@ struct App {
     learn: bool,
     learn_target: Option<Control>,
     midi_last: Option<String>,
+    /// What each light was last told, by (status, number); a light is sent only on change.
+    lights: HashMap<(u8, u8), u8>,
+    /// Velocities for empty, filled, playing, on, off.
+    led: [u8; 5],
+    /// The APC Key 25 layout is in use, and where its pad grid sits: first column, first layer.
+    apc: bool,
+    pads: (usize, usize),
     // Composition.
     layers: Vec<Layer>,
     columns: usize,
@@ -447,6 +484,10 @@ impl App {
             auto_changes: 0,
             presets: Vec::new(),
             preset_name: String::new(),
+            lights: HashMap::new(),
+            led: [0, 1, 127, 127, 0],
+            apc: false,
+            pads: (0, 0),
             midi: midi::open(),
             bindings: Vec::new(),
             learn: false,
@@ -503,6 +544,8 @@ impl App {
             compile: None,
             options,
         };
+        app.led = led_defaults(&app.midi);
+        app.apc = app.midi.has(apc::NAME);
         let mut wanted_source = None;
         if !app.load_state(&mut wanted_source) {
             for name in ["Layer 1", "Layer 2", "Layer 3"] {
@@ -620,12 +663,117 @@ impl App {
                 if let Some(target) = self.learn_target.take() {
                     self.bindings.retain(|(bound, control)| *bound != key && *control != target);
                     self.bindings.push((key, target));
+                    self.lights.clear();
                 }
+                continue;
+            }
+            if self.apc && self.apc_in(kind, number, value) {
                 continue;
             }
             let bound: Vec<Control> = self.bindings.iter().filter(|(k, _)| *k == key).map(|(_, control)| *control).collect();
             for control in bound {
                 self.control(control, f32::from(value) / 127.0, note_on || value >= 64);
+            }
+        }
+    }
+    /// The APC Key 25 layout: pads launch the cells under them, the arrows move the pad
+    /// grid over the composition, a scene button ejects its layer, "stop all clips"
+    /// ejects every layer, and the knobs are five layer opacities, the autoplay
+    /// opacity, the beat lead and the FFT gain. True when the message was one of these.
+    fn apc_in(&mut self, kind: u8, number: u8, value: u8) -> bool {
+        let (columns, rows) = (apc::COLUMNS, apc::ROWS);
+        if kind == 0xB0 {
+            let Some(knob) = number.checked_sub(apc::KNOB).map(usize::from).filter(|knob| *knob < 8) else { return false };
+            let control = match knob {
+                5 => Control::AutoOpacity,
+                6 => Control::Lead,
+                7 => Control::Gain,
+                row => Control::Opacity(row + self.pads.1),
+            };
+            self.control(control, f32::from(value) / 127.0, false);
+            return true;
+        }
+        match number {
+            pad if usize::from(pad) < columns * rows => {
+                let (layer, column) = (usize::from(pad) / columns + self.pads.1, usize::from(pad) % columns + self.pads.0);
+                if self.layers.get(layer).is_some_and(|layer| layer.cells.get(column).is_some_and(Option::is_some)) {
+                    self.launch(layer, column);
+                }
+            }
+            apc::LEFT => self.pads.0 = self.pads.0.saturating_sub(columns),
+            apc::RIGHT if self.pads.0 + columns < self.columns => self.pads.0 += columns,
+            apc::DOWN => self.pads.1 = self.pads.1.saturating_sub(1),
+            apc::UP if self.pads.1 + rows < self.layers.len() => self.pads.1 += 1,
+            apc::STOP_ALL => (0..self.layers.len()).for_each(|layer| self.eject(layer)),
+            scene if (apc::SCENE..apc::SCENE + rows as u8).contains(&scene) => {
+                let layer = rows - 1 - usize::from(scene - apc::SCENE) + self.pads.1;
+                if layer < self.layers.len() {
+                    self.eject(layer);
+                }
+            }
+            apc::RIGHT | apc::UP => {}
+            _ => return false,
+        }
+        true
+    }
+    /// Where a knob-bound control stands, 0..=1; `None` for the ones pads press.
+    fn control_value(&self, control: Control) -> Option<f32> {
+        Some(match control {
+            Control::Gain => (self.gain / 0.05).ln() / (16.0f32 / 0.05).ln(),
+            Control::Lead => self.lead_ms / 250.0,
+            Control::Opacity(layer) => self.layers.get(layer)?.opacity,
+            Control::FxAmount(layer) => self.layers.get(layer)?.fx_amount,
+            Control::AutoOpacity => self.auto.opacity,
+            _ => return None,
+        })
+    }
+    /// The light for a cell: empty, filled or playing.
+    fn cell_light(&self, layer: usize, column: usize) -> u8 {
+        match self.layers.get(layer) {
+            Some(row) if row.cells.get(column).is_some_and(Option::is_some) => {
+                if row.active == Some(column) { self.led[2] } else { self.led[1] }
+            }
+            _ => self.led[0],
+        }
+    }
+    /// Tell the controllers what to light: every bound pad shows the state of what it
+    /// is bound to, every bound knob gets its value back (for ringed encoders), and the
+    /// APC layout shows the cells under its pads. Only what changed is sent.
+    fn light(&mut self) {
+        let on = |lit: bool| if lit { self.led[3] } else { self.led[4] };
+        let mut wanted: Vec<((u8, u8), u8)> = Vec::new();
+        for ((kind, channel, number), control) in &self.bindings {
+            let value = match (*control, self.control_value(*control)) {
+                (_, Some(value)) => (value.clamp(0.0, 1.0) * 127.0).round() as u8,
+                (Control::Cell(layer, column), _) => self.cell_light(layer, column),
+                (Control::Eject(layer), _) => on(self.layers.get(layer).is_some_and(|layer| layer.active.is_some())),
+                (Control::AutoToggle | Control::AutoNext, _) => on(self.autoplay.is_some()),
+                _ => self.led[4],
+            };
+            wanted.push(((kind | channel, *number), value));
+        }
+        if self.apc {
+            let (columns, rows) = (apc::COLUMNS, apc::ROWS);
+            for pad in 0..columns * rows {
+                wanted.push(((0x90, pad as u8), self.cell_light(pad / columns + self.pads.1, pad % columns + self.pads.0)));
+            }
+            for row in 0..rows {
+                let live = self.layers.get(row + self.pads.1).is_some_and(|layer| layer.active.is_some());
+                wanted.push(((0x90, apc::SCENE + (rows - 1 - row) as u8), u8::from(live)));
+            }
+            // An arrow is lit while there is more of the composition that way.
+            for (arrow, more) in [
+                (apc::LEFT, self.pads.0 > 0),
+                (apc::RIGHT, self.pads.0 + columns < self.columns),
+                (apc::DOWN, self.pads.1 > 0),
+                (apc::UP, self.pads.1 + rows < self.layers.len()),
+            ] {
+                wanted.push(((0x90, arrow), u8::from(more)));
+            }
+        }
+        for ((status, number), value) in wanted {
+            if self.lights.insert((status, number), value) != Some(value) {
+                self.midi.send([status, number, value]);
             }
         }
     }
@@ -1227,6 +1375,8 @@ impl App {
                 "opacity": preset.opacity,
                 "blend": preset.blend,
             })).collect::<Vec<_>>(),
+            "led": self.led,
+            "apc": self.apc,
             "midi": self.bindings.iter().map(|((kind, channel, number), control)| serde_json::json!({
                 "kind": kind,
                 "channel": channel,
@@ -1326,6 +1476,10 @@ impl App {
                 blend: (whole(&preset["blend"]) as usize).min(gfx::BLENDS.len() - 1),
             });
         }
+        if let Some(led) = state["led"].as_array().filter(|led| led.len() == 5) {
+            self.led = std::array::from_fn(|index| (whole(&led[index]) as u8).min(127));
+        }
+        self.apc = state["apc"].as_bool().unwrap_or(self.apc) && self.midi.has(apc::NAME);
         for binding in state["midi"].as_array().into_iter().flatten() {
             if let Some(control) = binding["control"].as_str().and_then(Control::parse) {
                 let key = (whole(&binding["kind"]) as u8, whole(&binding["channel"]) as u8, whole(&binding["number"]) as u8);
@@ -1423,6 +1577,54 @@ impl App {
             if ui.toggle_value(&mut self.learn, "MIDI learn").changed() {
                 self.learn_target = None;
             }
+            ui.menu_button("MIDI", |ui| {
+                ui.strong("In");
+                for name in &self.midi.names {
+                    ui.label(name);
+                }
+                ui.strong("Out (lights)");
+                for name in &self.midi.output_names {
+                    ui.label(name);
+                }
+                if self.midi.names.is_empty() && self.midi.output_names.is_empty() {
+                    ui.weak("no device; connect one and restart");
+                }
+                ui.separator();
+                ui.strong("Light values");
+                for (index, label) in ["empty cell", "filled cell", "playing cell", "button on", "button off"].into_iter().enumerate() {
+                    ui.horizontal(|ui| {
+                        if ui.add(egui::DragValue::new(&mut self.led[index]).range(0..=127)).changed() {
+                            self.lights.clear();
+                        }
+                        ui.label(label);
+                    });
+                }
+                if ui.button("Reset to this controller's colours").clicked() {
+                    self.led = led_defaults(&self.midi);
+                    self.lights.clear();
+                }
+                ui.separator();
+                if ui.add_enabled(self.midi.has(apc::NAME), egui::Checkbox::new(&mut self.apc, "APC Key 25 layout")).changed() {
+                    self.lights.clear();
+                }
+                if self.apc {
+                    ui.weak(format!(
+                        "pads show columns {}-{}, layers {}-{}; arrows move them",
+                        self.pads.0 + 1,
+                        self.pads.0 + apc::COLUMNS,
+                        self.pads.1 + 1,
+                        self.pads.1 + apc::ROWS
+                    ));
+                }
+                ui.separator();
+                if ui.button("Send all lights again").clicked() {
+                    self.lights.clear();
+                }
+                if ui.button(format!("Forget all {} bindings", self.bindings.len())).clicked() {
+                    self.bindings.clear();
+                    self.lights.clear();
+                }
+            });
             let devices = match self.midi.names.len() {
                 0 => "no MIDI device".to_owned(),
                 1 => self.midi.names[0].clone(),
@@ -2001,7 +2203,7 @@ impl App {
                 .flat_map(|layer| layer.error.iter().chain(layer.cells.iter().flatten().filter_map(|cell| cell.error.as_ref())))
                 .collect();
             println!(
-                "frames={} seconds={:.1} fps={:.1} tempo={:.1} sure={:.2} | audio {:?} rate {:?} error {:?} peak {:.4} | cells {} folders {} | library changes {} drawn {} | layers live {:?} drawn {:?} errors {:?} | output {:?} | midi {:?} bound {} opacity {:.2} presets {} checked {}",
+                "frames={} seconds={:.1} fps={:.1} tempo={:.1} sure={:.2} | audio {:?} rate {:?} error {:?} peak {:.4} | cells {} folders {} | library changes {} drawn {} | layers live {:?} drawn {:?} errors {:?} | output {:?} | midi {:?} out {:?} sent {} bound {} opacity {:.2} presets {} checked {}",
                 self.frames,
                 self.start.elapsed().as_secs_f32(),
                 self.frames as f32 / self.start.elapsed().as_secs_f32(),
@@ -2020,6 +2222,8 @@ impl App {
                 errors,
                 self.output_rect.get(),
                 self.midi.names,
+                self.midi.output_names,
+                self.midi.sent,
                 self.bindings.len(),
                 self.layers.get(1).map_or(0.0, |layer| layer.opacity),
                 self.presets.len(),
@@ -2053,6 +2257,7 @@ impl eframe::App for App {
         }
         self.take_dropped_files(ctx);
         self.handle_midi();
+        self.light();
         let mut actions = Vec::new();
         egui::TopBottomPanel::top("top").show(ctx, |ui| self.top_bar(ui, &mut actions));
         egui::SidePanel::left("library").default_width(330.0).show(ctx, |ui| self.library_panel(ui, &mut actions));
@@ -2093,6 +2298,12 @@ impl eframe::App for App {
         ctx.request_repaint();
     }
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        // Leave the controllers dark, not showing a composition that is gone.
+        for (status, number) in std::mem::take(&mut self.lights).into_keys() {
+            if status & 0xF0 == 0x90 {
+                self.midi.send([status, number, 0]);
+            }
+        }
         self.save_state();
     }
 }
