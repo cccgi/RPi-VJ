@@ -14,7 +14,7 @@ pub fn set_gain(gain: f32) {
 }
 
 /// Sound card capture gain for the two kinds of source, in its 0.5 dB steps.
-const MIC_CAPTURE: u8 = 48;
+const MIC_CAPTURE: u8 = 60;
 const LINE_CAPTURE: u8 = 12;
 /// Set the sound card's own input gain for a microphone or a line-level source. It acts
 /// ahead of the converter, where a line signal at microphone gain would clip. Runs in
