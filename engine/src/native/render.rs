@@ -204,6 +204,10 @@ pub struct Renderer {
     /// Tempo found in the music, which the beat clock and `u_bpm` then follow in place of
     /// the tempo set by hand; 0 while none is trusted.
     pub heard_bpm: f32,
+    /// Input level meter, bottom right: level and held peak (0..1 over -48..0 dB),
+    /// 1 while clipping, and how sure the beat tracker is.
+    pub meter: [f32; 4],
+    pub meter_on: bool,
 }
 /// Diagnostic override: when either variable is set, every shader renders at this size
 /// regardless of its manifest `render_height`.
@@ -507,6 +511,8 @@ impl Renderer {
                 geo_idle: 0.0,
                 flash: [1.0, 0.0, 0.0, 0.0],
                 heard_bpm: 0.0,
+                meter: [0.0; 4],
+                meter_on: false,
             })
         }
     }
@@ -715,12 +721,13 @@ impl Renderer {
             if state.hud && time - self.hud_stamp >= 0.25 {
                 self.hud_pixels.fill(0);
                 let text = format!(
-                    "BPM {:.0} | SPEED {:.2} | VIDEO FX {} | SHADER FX {} | FRAME {:.1}ms",
+                    "BPM {:.0} | SPEED {:.2} | VIDEO FX {} | SHADER FX {} | FRAME {:.1}ms | IN {:.0}dB",
                     bpm,
                     state.speed,
                     state.video_effect,
                     state.shader_effect,
-                    dt * 1000.0
+                    dt * 1000.0,
+                    self.meter[1] * 48.0 - 48.0
                 );
                 for (index, c) in text.chars().take(95).enumerate() {
                     if let Some(glyph) = font8x8::BASIC_FONTS.get(c) {
@@ -789,6 +796,9 @@ impl Renderer {
             gl.bind_texture(glow::TEXTURE_2D, Some(self.hud_texture));
             p.int(gl, "u_hud_tex", 2);
             p.int(gl, "u_hud", i32::from(state.hud));
+            p.int(gl, "u_meter_on", i32::from(self.meter_on));
+            let m = self.meter;
+            gl.uniform_4_f32(gl.get_uniform_location(p.id, "u_meter").as_ref(), m[0], m[1], m[2], m[3]);
             p.int(gl, "u_deck_tex", 0);
             p.int(gl, "u_shader_tex", 1);
             p.size(gl, "u_resolution", size.0 as f32, size.1 as f32);

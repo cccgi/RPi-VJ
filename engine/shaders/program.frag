@@ -30,6 +30,8 @@ uniform mat3 u_flash_turn;  // hue turn, scaled by the flash brightness
 uniform vec3 u_flash_tint;  // colour wash, scaled by its strength
 #endif
 uniform int u_hud;
+uniform int u_meter_on;
+uniform vec4 u_meter;
 
 float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 float fxhash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
@@ -234,6 +236,25 @@ void main() {
   if(u_hud==1 && all(greaterThanEqual(hudPixel,vec2(0.0))) && all(lessThan(hudPixel,vec2(768.0,16.0)))) {
     float text=texture(u_hud_tex,hudPixel/vec2(768.0,16.0)).r;
     fragColor=vec4(mix(blended*0.15,vec3(1.0),text),1.0);
+  }
+  // Input level meter, bottom right. Lower bar: level over -48..0 dB, blue while too
+  // low (under -18), green where it should peak (-18..-6), yellow, then red from -2;
+  // the white tick is the held peak and a red frame means clipping. Upper bar: how sure
+  // the beat tracker is, with a tick where beat prediction takes over.
+  vec2 meter=(gl_FragCoord.xy-vec2(u_resolution.x-420.0,20.0))/vec2(400.0,36.0);
+  if(u_meter_on==1 && all(greaterThanEqual(meter,vec2(0.0))) && all(lessThan(meter,vec2(1.0)))) {
+    vec3 c=blended*0.15;
+    if(meter.y<0.6) {
+      vec3 zone=meter.x<0.625 ? vec3(0.25,0.45,0.95) : meter.x<0.875 ? vec3(0.2,0.85,0.3)
+              : meter.x<0.958 ? vec3(0.95,0.8,0.2) : vec3(1.0,0.2,0.15);
+      c=meter.x<u_meter.x ? zone : zone*0.18;
+      if(abs(meter.x-u_meter.y)<0.006) c=vec3(1.0);
+    } else if(meter.y>0.72) {
+      c=meter.x<u_meter.w ? vec3(0.85,0.5,1.0) : vec3(0.12);
+      if(abs(meter.x-0.45)<0.004) c=vec3(1.0);
+    }
+    if(u_meter.z>0.5 && (min(meter.x,1.0-meter.x)<0.008 || min(meter.y,1.0-meter.y)<0.08)) c=vec3(1.0,0.0,0.0);
+    fragColor=vec4(c,1.0);
   }
 }
 

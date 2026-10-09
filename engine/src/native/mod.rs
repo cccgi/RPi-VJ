@@ -86,6 +86,13 @@ pub fn run(
     let (mut sections, mut section_count) = (crate::audio::SectionDetector::default(), 0u32);
     let (mut reactor, mut line_applied) = (crate::audio::Reactor::default(), None);
     let mut predictor = crate::audio::BeatPredictor::default();
+    // Level meter: level, held peak and when it was set, last clip, last touch of the input.
+    let (mut level, mut held, mut held_at) = (0.0f32, 0.0f32, Instant::now());
+    let (mut clipped_at, mut input_touched) = (None::<Instant>, None::<Instant>);
+    let mut input_seen = None;
+    // Frame length and share of late frames lately, and the shaders found too heavy for STROBE.
+    let (mut frame_length, mut lag, mut lag_shader) = (1.0f32 / 60.0, 0.0f32, None);
+    let mut no_strobe = std::collections::HashSet::new();
     let mut events = sdl.event_pump().map_err(anyhow::Error::msg)?;
     let mut state = State::from_show(&show);
     if !link.external() {
@@ -223,7 +230,32 @@ pub fn run(
             reactor.new_section();
         }
         // Beats the tempo tracker can foresee are drawn early enough to land with the sound.
-        let timed = predictor.apply(idle_dt, crate::audio::BEAT_LEAD, &heard);
+        // A frame that takes longer reaches the screen later, so it is drawn for later.
+        frame_length += (idle_dt - frame_length) * (1.0 - (-idle_dt).exp());
+        let lead = crate::audio::BEAT_LEAD + (frame_length - 1.0 / 60.0).clamp(0.0, 0.05);
+        let timed = predictor.apply(idle_dt, lead, &heard);
+        let (raw, peak) = capture::take_peaks();
+        level = peak.max(level * (-idle_dt / 0.3).exp());
+        if peak >= held || held_at.elapsed() > Duration::from_millis(1500) {
+            (held, held_at) = (level, Instant::now());
+        }
+        if raw > 0.98 || peak > 1.0 {
+            clipped_at = Some(Instant::now());
+        }
+        // The meter shows with the HUD, and for half a minute after the input level or
+        // gain is touched.
+        let input = (state.line_input, state.input_gain);
+        if input_seen.replace(input).is_some_and(|seen| seen != input) && start.elapsed() > Duration::from_secs(3) {
+            input_touched = Some(Instant::now());
+        }
+        let place = |sample: f32| ((20.0 * sample.max(1e-4).log10() + 48.0) / 48.0).clamp(0.0, 1.0);
+        let recent = |when: Option<Instant>, seconds| when.is_some_and(|at| at.elapsed() < Duration::from_secs(seconds));
+        renderer.meter = [place(level), place(held), f32::from(u8::from(recent(clipped_at, 2))), heard.beat_sure];
+        renderer.meter_on = state.hud || recent(input_touched, 30);
+        if lag_shader != state.selected_shader {
+            (lag, lag_shader) = (0.0, state.selected_shader);
+        }
+        reactor.no_strobe = state.selected_shader.is_some_and(|shader| no_strobe.contains(&shader));
         renderer.heard_bpm = predictor.bpm();
         let moving = crate::audio::idle_audio(&timed, idle_clock.elapsed().as_secs_f32(), idle);
         let moving = reactor.apply(state.react, idle_dt, &moving);
@@ -392,8 +424,17 @@ pub fn run(
             });
             report_time = Instant::now();
         }
-        if frame_start.elapsed() > Duration::from_millis(20) {
-            late_frames += 1;
+        let late = frame_start.elapsed() > Duration::from_millis(20);
+        late_frames += u64::from(late);
+        // A shader that runs late while AUTO has STROBE on cannot afford it: STROBE needs
+        // the heavier compositor. AUTO keeps it off that shader for the rest of the run.
+        lag += (f32::from(u8::from(late)) - lag) * 0.01;
+        if lag > 0.04 && renderer.flash[3] > 0.0 && state.react == crate::audio::REACT_AUTO {
+            if let Some(shader) = state.selected_shader {
+                if no_strobe.insert(shader) {
+                    eprintln!("shader {shader} runs late with STROBE; AUTO leaves STROBE out on it");
+                }
+            }
         }
         if health_time.elapsed() > Duration::from_secs(1) {
             notify::send("WATCHDOG=1");
@@ -402,12 +443,14 @@ pub fn run(
                 .map_or(0, |(_, _, n)| n.load(Ordering::Relaxed));
             let tempo = if heard.beat_period > 0.0 { 60.0 / heard.beat_period } else { 0.0 };
             eprintln!(
-                "renderer frames={frames} late={late_frames} audio_dropped={dropped} warmed={warmed:?} bands={:.2?} macros={:.2?} gain={:.2} sections={section_count} tempo={tempo:.1} sure={:.2} jitter_ms={:.1}",
+                "renderer frames={frames} late={late_frames} audio_dropped={dropped} warmed={warmed:?} bands={:.2?} macros={:.2?} gain={:.2} sections={section_count} tempo={tempo:.1} sure={:.2} jitter_ms={:.1} in={:.0}dB lead_ms={:.0}",
                 [heard.bass, heard.low_mid, heard.mid, heard.treble, heard.onset],
                 state.macros,
                 state.input_gain,
                 heard.beat_sure,
-                predictor.jitter * 1000.0
+                predictor.jitter * 1000.0,
+                renderer.meter[1] * 48.0 - 48.0,
+                lead * 1000.0
             );
             health_time = Instant::now();
         }

@@ -9,6 +9,15 @@ use std::sync::{
 
 /// Input gain as `f32` bits; written by the render loop from the control state.
 static GAIN: AtomicU32 = AtomicU32::new(0x3f80_0000);
+/// Highest sample since the meter last asked, as `f32` bits: at the converter, and after
+/// the input gain. Bits of non-negative floats order the way the floats do.
+static PEAK_RAW: AtomicU32 = AtomicU32::new(0);
+static PEAK: AtomicU32 = AtomicU32::new(0);
+/// For the level meter: the highest sample at the converter and after the input gain
+/// since the last call.
+pub fn take_peaks() -> (f32, f32) {
+    (f32::from_bits(PEAK_RAW.swap(0, Ordering::Relaxed)), f32::from_bits(PEAK.swap(0, Ordering::Relaxed)))
+}
 pub fn set_gain(gain: f32) {
     GAIN.store(gain.to_bits(), Ordering::Relaxed);
 }
@@ -49,6 +58,11 @@ impl AudioCallback for Capture {
     type Channel = f32;
     fn callback(&mut self, samples: &mut [f32]) {
         let gain = f32::from_bits(GAIN.load(Ordering::Relaxed));
+        let raw = samples.iter().fold(0.0f32, |top, sample| top.max(sample.abs()));
+        if raw.is_finite() && gain.is_finite() {
+            PEAK_RAW.fetch_max(raw.to_bits(), Ordering::Relaxed);
+            PEAK.fetch_max((raw * gain.abs()).to_bits(), Ordering::Relaxed);
+        }
         for pair in samples.as_chunks::<2>().0 {
             self.samples[self.used] = pair[0] * gain;
             self.samples[self.used + 1] = pair[1] * gain;

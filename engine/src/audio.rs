@@ -105,7 +105,7 @@ pub fn idle_audio(frame: &AudioFrame, time: f32, amount: f32) -> AudioFrame {
 /// The ways shaders can follow the music, in the order the key steps through them.
 pub const REACT_MODES: [&str; 6] = ["PUMP", "STROBE", "STEP", "RIDE", "TWIST", "AUTO"];
 /// AUTO is not a way of its own: it moves through the others.
-const REACT_AUTO: u8 = 5;
+pub const REACT_AUTO: u8 = 5;
 /// AUTO moves on after this many beats, or after this many seconds when beats are scarce.
 const AUTO_BEATS: u32 = 32;
 const AUTO_SECONDS: f32 = 30.0;
@@ -151,14 +151,23 @@ pub struct Reactor {
     low: f32,
     low_top: f32,
     strong: bool,
+    /// Set while the shader on screen cannot afford STROBE: AUTO then leaves it out.
+    pub no_strobe: bool,
 }
 impl Reactor {
     fn resolve(&self, mode: u8) -> u8 {
         if mode == REACT_AUTO { self.auto } else { mode }
     }
     /// AUTO: move to another way, picked unevenly so the order does not read as a loop.
+    fn pool(&self) -> &'static [u8] {
+        match (self.strong, self.no_strobe) {
+            (true, false) => &AUTO_STRONG,
+            (true, true) => &[0, 4],
+            (false, _) => &AUTO_SOFT,
+        }
+    }
     fn advance(&mut self) {
-        let pool: &[u8] = if self.strong { &AUTO_STRONG } else { &AUTO_SOFT };
+        let pool = self.pool();
         let skip = ((self.steps as u32).wrapping_mul(2_654_435_761) >> 16) as usize;
         let others = pool.iter().filter(|mode| **mode != self.auto);
         self.auto = others.clone().nth(skip % others.count()).copied().unwrap_or(pool[0]);
@@ -221,8 +230,7 @@ impl Reactor {
         if mode == REACT_AUTO {
             self.auto_time += dt;
             self.auto_beats += u32::from(beat);
-            let pool: &[u8] = if self.strong { &AUTO_STRONG } else { &AUTO_SOFT };
-            if !pool.contains(&self.auto) || (beat && self.auto_beats >= AUTO_BEATS) || self.auto_time > AUTO_SECONDS {
+            if !self.pool().contains(&self.auto) || (beat && self.auto_beats >= AUTO_BEATS) || self.auto_time > AUTO_SECONDS {
                 self.advance();
             }
         }
@@ -1116,6 +1124,18 @@ mod tests {
             assert!(pool.iter().all(|mode| used.contains(mode)) && used.len() > 3, "part {part}: {used:?}");
             assert!(longest < AUTO_SECONDS + 9.0, "part {part}: {longest}");
         }
+        // On a shader that cannot afford STROBE, driving music gets the other two.
+        reactor.no_strobe = true;
+        let mut used = Vec::new();
+        for frame in 0..(120.0 / dt) as usize {
+            let onset = if (frame as f32 * dt / beat).fract() < dt / beat { 1.0 } else { 0.0 };
+            reactor.apply(REACT_AUTO, dt, &AudioFrame { volume: 0.5, bass: 0.5, onset, ..AudioFrame::default() });
+            if frame > 480 && !used.contains(&reactor.auto) {
+                used.push(reactor.auto);
+            }
+        }
+        used.sort_unstable();
+        assert_eq!(used, [0, 4]);
         // A new section moves it on at once, but not twice in a breath.
         let before = reactor.auto;
         reactor.new_section();
