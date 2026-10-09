@@ -29,8 +29,31 @@ use std::{
 
 const RENDER_SIZES: [(u32, u32); 3] = [(1280, 720), (1920, 1080), (2560, 1440)];
 const THUMB: (u32, u32) = (192, 108);
-const CELL: egui::Vec2 = egui::vec2(128.0, 96.0);
-const CELL_PICTURE: f32 = 78.0;
+const CELL: egui::Vec2 = egui::vec2(160.0, 112.0);
+const CELL_PICTURE: f32 = 90.0;
+const IMAGE_TYPES: [&str; 6] = ["png", "jpg", "jpeg", "gif", "webp", "bmp"];
+/// A file a layer can show: a video clip or a picture.
+fn is_media(path: &std::path::Path) -> bool {
+    let kind = path.extension().and_then(|kind| kind.to_str()).unwrap_or("").to_lowercase();
+    CLIP_TYPES.contains(&kind.as_str()) || IMAGE_TYPES.contains(&kind.as_str())
+}
+/// Whether a slider was double-clicked. A slider itself only notices drags, so this
+/// lays a click over it; drags still reach the slider.
+fn double_clicked(ui: &egui::Ui, slider: &egui::Response) -> bool {
+    ui.interact(slider.rect, slider.id.with("reset"), egui::Sense::click()).double_clicked()
+}
+/// Where an effect chain sits.
+#[derive(Clone, Copy, PartialEq)]
+enum ChainAt {
+    Cell(usize, usize),
+    Layer(usize),
+    Composition,
+}
+/// Assets gathered from anywhere on the computer under one name.
+struct Collection {
+    name: String,
+    items: Vec<PathBuf>,
+}
 /// How a layer moves on by itself, in the order of `Layer::auto`.
 const AUTO_MODES: [&str; 3] = ["Manual", "Sequence", "Shuffle"];
 /// A change of song section moves on only after this long on one cell, seconds.
@@ -66,6 +89,8 @@ struct Options {
     preview: Option<String>,
     detach: bool,
     thumbs: bool,
+    /// Put an effect on the first cell of the second layer.
+    cell_fx: bool,
     /// Move two of the filled cells to the top layer.
     move_test: bool,
     /// Download these Shadertoy ids or links, print the log and leave.
@@ -106,6 +131,7 @@ impl Options {
                 "--autoplay" => options.autoplay = value().parse().unwrap_or(0),
                 "--midi-test" => options.midi_test = true,
                 "--open" => options.open = Some(value().into()),
+                "--cell-fx" => options.cell_fx = true,
                 "--move-test" => options.move_test = true,
                 "--download" => options.download = Some(value()),
                 "--look-test" => options.look_test = true,
@@ -428,17 +454,31 @@ fn run_effects(
     scratch: &[gfx::Target; 2],
     source: glow::Texture,
     effects: &[Effect],
+    first: usize,
     time: f32,
     beat: f32,
     bass: f32,
-) -> glow::Texture {
-    let (mut picture, mut next) = (source, 0);
+) -> (glow::Texture, usize) {
+    // `first` is the scratch target to write first: the one `source` is not in.
+    let (mut picture, mut next) = (source, first);
     for effect in effects.iter().filter(|effect| !effect.bypass && effect.kind > 0) {
         gfx.effect(&scratch[next], picture, effect.kind as i32, effect.amount, time, beat, bass);
         picture = scratch[next].texture;
         next ^= 1;
     }
-    picture
+    (picture, next)
+}
+/// Keep what a layer shows now, for its transition to what it shows next.
+fn begin_transition(gfx: &gfx::Gfx, layer: &mut Layer) {
+    if layer.transition == 0 {
+        return;
+    }
+    if layer.drawn {
+        gfx.mix(&layer.from, &gfx::Mix::copy(layer.target.texture));
+    } else {
+        gfx.clear(&layer.from);
+    }
+    layer.switched = Instant::now();
 }
 fn effects_json(effects: &[Effect]) -> serde_json::Value {
     effects
@@ -468,10 +508,12 @@ struct Cell {
     seconds: f32,
     /// Its own react mode; `None` takes the layer's.
     react: Option<u8>,
+    /// Effects on this cell alone, worked through before the layer's.
+    effects: Vec<Effect>,
 }
 impl Cell {
     fn new(source: Source) -> Self {
-        Self { source, program: None, thumb: None, prepared: false, error: None, seconds: 20.0, react: None }
+        Self { source, program: None, thumb: None, prepared: false, error: None, seconds: 20.0, react: None, effects: Vec::new() }
     }
 }
 struct Layer {
@@ -492,6 +534,12 @@ struct Layer {
     played: Vec<usize>,
     /// The shader clock: it runs at the pace the shader's look sets.
     time: f32,
+    /// The change from one cell to the next: which kind (`gfx::TRANSITIONS`), how
+    /// long, when the last one began, and the picture the layer showed before it.
+    transition: usize,
+    transition_seconds: f32,
+    switched: Instant,
+    from: gfx::Target,
     reactor: Reactor,
     clock: BeatClock,
     flow: [f32; 4],
@@ -632,9 +680,17 @@ enum Action {
     MoveCells(Vec<(usize, usize)>, usize, usize),
     ClearCells(Vec<(usize, usize)>),
     /// Effect chains: of a layer, or of the whole composition for `None`.
-    AddEffect(Option<usize>, usize),
-    RemoveEffect(Option<usize>, usize),
-    MoveEffect(Option<usize>, usize, bool),
+    AddEffect(ChainAt, usize),
+    RemoveEffect(ChainAt, usize),
+    MoveEffect(ChainAt, usize, bool),
+    /// An effect double-clicked in the Effects tab: onto the highlighted cells, or onto
+    /// the layer when the layer was highlighted last.
+    AddEffectToFocus(usize),
+    /// Assets: put a file on the selected layer and launch it; fill and empty collections.
+    SendClip(PathBuf),
+    AddToCollection(usize, Vec<PathBuf>),
+    RemoveFromCollection(usize, Vec<PathBuf>),
+    DeleteCollection(usize),
     /// Library: run one in the preview, mark favourites, remove from or restore to the library.
     Preview(usize),
     Favorite(Vec<usize>, bool),
@@ -717,6 +773,21 @@ struct App {
     declared: Option<(usize, Vec<(String, f32, bool)>)>,
     code: Option<(usize, String, Option<String>)>,
     rebuild_at: Option<Instant>,
+    /// Where the editor is folded away; whether an effect goes to the layer (it was
+    /// highlighted last) or to the highlighted cells; a target for transitions.
+    editor_open: bool,
+    focus_layer: bool,
+    crossing: gfx::Target,
+    /// Assets: the folder being looked at and what is in it (path, is a folder), the
+    /// files picked there, and the collections.
+    assets_dir: PathBuf,
+    assets_list: Vec<(PathBuf, bool)>,
+    assets_stale: bool,
+    assets_picked: BTreeSet<PathBuf>,
+    assets_anchor: Option<usize>,
+    collections: Vec<Collection>,
+    collection_view: Option<usize>,
+    new_collection: String,
     /// Downloading from Shadertoy, and the shaders that came in and are not reviewed yet.
     download: Option<Download>,
     download_text: String,
@@ -794,6 +865,10 @@ fn new_layer(gfx: &gfx::Gfx, name: String, columns: usize, size: usize) -> Resul
         launched: Instant::now(),
         played: Vec::new(),
         time: 0.0,
+        transition: 1,
+        transition_seconds: 0.5,
+        switched: Instant::now(),
+        from: gfx.target(RENDER_SIZES[size])?,
         reactor: Reactor::default(),
         clock: BeatClock::default(),
         flow: [0.0; 4],
@@ -863,6 +938,17 @@ impl App {
             master: Vec::new(),
             scratch: [gfx.target(RENDER_SIZES[size])?, gfx.target(RENDER_SIZES[size])?],
             looks: HashMap::new(),
+            editor_open: true,
+            focus_layer: true,
+            crossing: gfx.target(RENDER_SIZES[size])?,
+            assets_dir: std::env::var_os("USERPROFILE").map(PathBuf::from).map(|home| if home.join("Videos").is_dir() { home.join("Videos") } else { home }).unwrap_or_else(|| PathBuf::from("/")),
+            assets_list: Vec::new(),
+            assets_stale: true,
+            assets_picked: BTreeSet::new(),
+            assets_anchor: None,
+            collections: Vec::new(),
+            collection_view: None,
+            new_collection: String::new(),
             graded: gfx.target(RENDER_SIZES[size])?,
             pre_out: gfx.target(RENDER_SIZES[size])?,
             declared: None,
@@ -990,7 +1076,7 @@ impl App {
                 app.apply(Action::OpenComposition(saved));
             }
         }
-        app.tab = app.options.tab.min(1);
+        app.tab = app.options.tab.min(2);
         if let Some(wanted) = app.options.download.clone() {
             app.download_text = wanted;
             app.start_download();
@@ -1015,6 +1101,11 @@ impl App {
             }
             app.apply(Action::Preview(entry));
             app.favorites.insert(entry);
+        }
+        if app.options.cell_fx {
+            // Click a cell, then double-click an effect: it lands on that cell, not the layer.
+            app.apply(Action::Launch(1, 0));
+            app.apply(Action::AddEffectToFocus(7));
         }
         if app.options.move_test {
             // Pick the first and third cells of the second layer and move them to the top layer.
@@ -1233,10 +1324,214 @@ impl App {
         }
     }
     /// The effect chain of a layer, or of the composition for `None`.
-    fn chain(&mut self, target: Option<usize>) -> Option<&mut Vec<Effect>> {
+    fn chain(&mut self, target: ChainAt) -> Option<&mut Vec<Effect>> {
         match target {
-            Some(layer) => self.layers.get_mut(layer).map(|layer| &mut layer.effects),
-            None => Some(&mut self.master),
+            ChainAt::Cell(layer, column) => self.layers.get_mut(layer)?.cells.get_mut(column)?.as_mut().map(|cell| &mut cell.effects),
+            ChainAt::Layer(layer) => self.layers.get_mut(layer).map(|layer| &mut layer.effects),
+            ChainAt::Composition => Some(&mut self.master),
+        }
+    }
+    /// The cells an effect goes to when it is double-clicked: the picked ones, else the
+    /// one clicked last; none when the layer was highlighted last.
+    fn focus_cells(&self) -> Vec<(usize, usize)> {
+        let filled = |(layer, column): &(usize, usize)| {
+            self.layers.get(*layer).is_some_and(|row| row.cells.get(*column).is_some_and(Option::is_some))
+        };
+        if self.focus_layer {
+            Vec::new()
+        } else if !self.picked.is_empty() {
+            self.picked.iter().copied().filter(filled).collect()
+        } else {
+            self.pick_anchor.into_iter().filter(filled).collect()
+        }
+    }
+    /// Read the folder the Assets tab is looking at: folders first, then media files.
+    fn list_assets(&mut self) {
+        self.assets_stale = false;
+        let mut found: Vec<(PathBuf, bool)> = std::fs::read_dir(&self.assets_dir)
+            .into_iter()
+            .flatten()
+            .flatten()
+            .filter_map(|entry| {
+                let path = entry.path();
+                let name = path.file_name()?.to_string_lossy().into_owned();
+                let folder = path.is_dir();
+                let hidden = name.starts_with('.') || name.starts_with('$');
+                (!hidden && (folder || is_media(&path))).then_some((path, folder))
+            })
+            .collect();
+        found.sort_by_key(|(path, folder)| (!*folder, path.file_name().map(|name| name.to_string_lossy().to_lowercase())));
+        self.assets_list = found;
+        self.assets_picked.clear();
+        self.assets_anchor = None;
+    }
+    /// The Assets tab: collections on top, then either a collection's files or the
+    /// folder being browsed. Files are picked like shaders and dragged to the grid.
+    fn assets_panel(&mut self, ui: &mut egui::Ui, actions: &mut Vec<Action>) {
+        if self.assets_stale {
+            self.list_assets();
+        }
+        let name_of = |path: &PathBuf| path.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_else(|| path.display().to_string());
+        // Collections: click to open, drag onto the grid to place everything in one, drop files on one to add them.
+        ui.strong("Collections");
+        for (index, collection) in self.collections.iter().enumerate() {
+            let label = format!("{} ({})", collection.name, collection.items.len());
+            let response = ui.selectable_label(self.collection_view == Some(index), label).interact(egui::Sense::click_and_drag());
+            if response.clicked() {
+                self.collection_view = if self.collection_view == Some(index) { None } else { Some(index) };
+                self.assets_picked.clear();
+            }
+            if response.dragged() {
+                response.dnd_set_drag_payload(Dragged(collection.items.iter().cloned().map(Source::Clip).collect()));
+            }
+            if let Some(dropped) = response.dnd_release_payload::<Dragged>() {
+                let files = dropped.0.iter().filter_map(|source| match source {
+                    Source::Clip(path) => Some(path.clone()),
+                    Source::Shader(_) => None,
+                });
+                actions.push(Action::AddToCollection(index, files.collect()));
+            }
+            if response.dnd_hover_payload::<Dragged>().is_some() {
+                ui.painter().rect_stroke(response.rect, 3.0, (2.0, GREEN), egui::StrokeKind::Inside);
+            }
+            response.context_menu(|ui| {
+                if ui.button("Delete collection").clicked() {
+                    actions.push(Action::DeleteCollection(index));
+                    ui.close_menu();
+                }
+            });
+        }
+        ui.horizontal(|ui| {
+            ui.add(egui::TextEdit::singleline(&mut self.new_collection).hint_text("new collection name").desired_width(170.0));
+            if ui.button("Add collection").clicked() && !self.new_collection.trim().is_empty() {
+                self.collections.push(Collection { name: self.new_collection.trim().to_owned(), items: Vec::new() });
+                self.new_collection.clear();
+            }
+        });
+        ui.separator();
+        // What the list below shows: a collection's files, or the folder.
+        let viewing = self.collection_view.filter(|index| *index < self.collections.len());
+        let rows: Vec<(PathBuf, bool)> = match viewing {
+            Some(index) => self.collections[index].items.iter().map(|path| (path.clone(), false)).collect(),
+            None => self.assets_list.clone(),
+        };
+        match viewing {
+            Some(index) => {
+                ui.horizontal(|ui| {
+                    ui.strong(&self.collections[index].name);
+                    if ui.button("Back to folders").clicked() {
+                        self.collection_view = None;
+                    }
+                });
+            }
+            None => {
+                ui.horizontal(|ui| {
+                    if ui.button("Up").clicked() {
+                        if let Some(parent) = self.assets_dir.parent() {
+                            self.assets_dir = parent.to_owned();
+                            self.assets_stale = true;
+                        }
+                    }
+                    if ui.button("Refresh").clicked() {
+                        self.assets_stale = true;
+                    }
+                    ui.menu_button("Drive", |ui| {
+                        for letter in b'A'..=b'Z' {
+                            let drive = PathBuf::from(format!("{}:/", letter as char));
+                            if drive.is_dir() && ui.button(format!("{}:", letter as char)).clicked() {
+                                self.assets_dir = drive;
+                                self.assets_stale = true;
+                                ui.close_menu();
+                            }
+                        }
+                    });
+                    if ui.button("Choose…").clicked() {
+                        if let Some(folder) = rfd::FileDialog::new().set_directory(&self.assets_dir).pick_folder() {
+                            self.assets_dir = folder;
+                            self.assets_stale = true;
+                        }
+                    }
+                });
+                ui.add(egui::Label::new(egui::RichText::new(self.assets_dir.display().to_string()).weak()).truncate());
+            }
+        }
+        ui.weak(format!("{} picked. Drag to a cell or a collection; double-click a file to launch it.", self.assets_picked.len()));
+        let modifiers = ui.input(|input| input.modifiers);
+        let picked = self.assets_picked.clone();
+        let (mut asked, mut enter) = (None, None);
+        let row = ui.spacing().interact_size.y.max(ui.text_style_height(&egui::TextStyle::Body) + 4.0);
+        egui::ScrollArea::vertical().auto_shrink([false, false]).show_rows(ui, row, rows.len(), |ui, shown| {
+            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Truncate);
+            for place in shown {
+                let (path, folder) = &rows[place];
+                let selected = picked.contains(path);
+                let text = if *folder { format!("▶ {}", name_of(path)) } else { name_of(path) };
+                let response = ui.selectable_label(selected, text).interact(egui::Sense::click_and_drag()).on_hover_text(path.display().to_string());
+                if *folder {
+                    if response.double_clicked() {
+                        enter = Some(path.clone());
+                    }
+                    continue;
+                }
+                if response.double_clicked() {
+                    actions.push(Action::SendClip(path.clone()));
+                } else if response.clicked() {
+                    asked = Some((place, true));
+                } else if response.drag_started() && !selected {
+                    asked = Some((place, false));
+                }
+                if response.dragged() {
+                    let carried: Vec<Source> = if selected {
+                        rows.iter().filter(|(path, _)| picked.contains(path)).map(|(path, _)| Source::Clip(path.clone())).collect()
+                    } else {
+                        vec![Source::Clip(path.clone())]
+                    };
+                    response.dnd_set_drag_payload(Dragged(carried));
+                }
+                response.context_menu(|ui| {
+                    let files: Vec<PathBuf> = if selected { picked.iter().cloned().collect() } else { vec![path.clone()] };
+                    ui.menu_button("Add to collection", |ui| {
+                        for (index, collection) in self.collections.iter().enumerate() {
+                            if ui.button(&collection.name).clicked() {
+                                actions.push(Action::AddToCollection(index, files.clone()));
+                                ui.close_menu();
+                            }
+                        }
+                        if self.collections.is_empty() {
+                            ui.weak("no collections yet");
+                        }
+                    });
+                    if let Some(index) = viewing {
+                        if ui.button("Remove from this collection").clicked() {
+                            actions.push(Action::RemoveFromCollection(index, files.clone()));
+                            ui.close_menu();
+                        }
+                    }
+                });
+            }
+        });
+        if let Some(folder) = enter {
+            self.assets_dir = folder;
+            self.assets_stale = true;
+        }
+        if let Some((place, clicked)) = asked {
+            let path = rows[place].0.clone();
+            match (clicked, modifiers.shift, modifiers.command, self.assets_anchor.filter(|anchor| *anchor < rows.len())) {
+                (true, true, _, Some(anchor)) => {
+                    let run = rows[anchor.min(place)..=anchor.max(place)].iter().filter(|(_, folder)| !folder);
+                    self.assets_picked.extend(run.map(|(path, _)| path.clone()));
+                }
+                (true, _, true, _) => {
+                    if !self.assets_picked.remove(&path) {
+                        self.assets_picked.insert(path);
+                    }
+                    self.assets_anchor = Some(place);
+                }
+                _ => {
+                    self.assets_picked = BTreeSet::from([path]);
+                    self.assets_anchor = Some(place);
+                }
+            }
         }
     }
     fn close_preview(&mut self) {
@@ -1323,6 +1618,7 @@ impl App {
                 self.release(cell);
             }
             self.gfx.discard(layer.target);
+            self.gfx.discard(layer.from);
         }
     }
     fn random(&mut self) -> usize {
@@ -1382,6 +1678,7 @@ impl App {
                 Ok(program) => {
                     let mut cell = Cell::new(Source::Shader(entry));
                     (cell.program, cell.prepared) = (Some(program), true);
+                    begin_transition(&self.gfx, &mut self.auto);
                     if let Some(old) = self.auto.cells[0].replace(cell) {
                         self.release(old);
                     }
@@ -1596,31 +1893,71 @@ impl App {
         let edited = self.edited_path(entry).is_file();
         ui.separator();
         ui.horizontal(|ui| {
+            if ui.small_button(if self.editor_open { "▼" } else { "▶" }).on_hover_text("Fold the editor away").clicked() {
+                self.editor_open = !self.editor_open;
+            }
             ui.strong("Shader editor");
-            if ui.small_button("Reset").on_hover_text("Back to the shader as it came").clicked() {
+            if self.editor_open && ui.small_button("Reset").on_hover_text("Back to the shader as it came").clicked() {
                 look = Look::default();
             }
             if edited {
                 ui.weak("edited code in use");
             }
         });
+        if !self.editor_open {
+            return;
+        }
+        ui.weak("Double-click a slider to put it back.");
         ui.spacing_mut().slider_width = 130.0;
         egui::CollapsingHeader::new("Transform").default_open(true).show(ui, |ui| {
-            ui.add(egui::Slider::new(&mut look.zoom, 0.2..=5.0).logarithmic(true).text("zoom"));
-            ui.add(egui::Slider::new(&mut look.rotate, -180.0..=180.0).suffix("°").text("turn"));
-            ui.add(egui::Slider::new(&mut look.pan[0], -1.0..=1.0).text("across"));
-            ui.add(egui::Slider::new(&mut look.pan[1], -1.0..=1.0).text("up"));
+            let moved = ui.add(egui::Slider::new(&mut look.zoom, 0.2..=5.0).logarithmic(true).text("zoom"));
+            if double_clicked(ui, &moved) {
+                look.zoom = 1.0;
+            }
+            let moved = ui.add(egui::Slider::new(&mut look.rotate, -180.0..=180.0).suffix("°").text("turn"));
+            if double_clicked(ui, &moved) {
+                look.rotate = 0.0;
+            }
+            let moved = ui.add(egui::Slider::new(&mut look.pan[0], -1.0..=1.0).text("across"));
+            if double_clicked(ui, &moved) {
+                look.pan[0] = 0.0;
+            }
+            let moved = ui.add(egui::Slider::new(&mut look.pan[1], -1.0..=1.0).text("up"));
+            if double_clicked(ui, &moved) {
+                look.pan[1] = 0.0;
+            }
         });
         egui::CollapsingHeader::new("Motion").default_open(true).show(ui, |ui| {
-            ui.add(egui::Slider::new(&mut look.speed, -2.0..=4.0).text("speed"));
-            ui.add(egui::Slider::new(&mut look.react, 0.0..=2.0).text("follows the music"));
+            let moved = ui.add(egui::Slider::new(&mut look.speed, -2.0..=4.0).text("speed"));
+            if double_clicked(ui, &moved) {
+                look.speed = 1.0;
+            }
+            let moved = ui.add(egui::Slider::new(&mut look.react, 0.0..=2.0).text("follows the music"));
+            if double_clicked(ui, &moved) {
+                look.react = 1.0;
+            }
         });
         egui::CollapsingHeader::new("Colour").default_open(true).show(ui, |ui| {
-            ui.add(egui::Slider::new(&mut look.hue, 0.0..=1.0).text("hue"));
-            ui.add(egui::Slider::new(&mut look.saturation, 0.0..=2.0).text("saturation"));
-            ui.add(egui::Slider::new(&mut look.brightness, 0.0..=2.0).text("brightness"));
-            ui.add(egui::Slider::new(&mut look.contrast, 0.0..=2.0).text("contrast"));
-            ui.add(egui::Slider::new(&mut look.gamma, 0.3..=3.0).logarithmic(true).text("gamma"));
+            let moved = ui.add(egui::Slider::new(&mut look.hue, 0.0..=1.0).text("hue"));
+            if double_clicked(ui, &moved) {
+                look.hue = 0.0;
+            }
+            let moved = ui.add(egui::Slider::new(&mut look.saturation, 0.0..=2.0).text("saturation"));
+            if double_clicked(ui, &moved) {
+                look.saturation = 1.0;
+            }
+            let moved = ui.add(egui::Slider::new(&mut look.brightness, 0.0..=2.0).text("brightness"));
+            if double_clicked(ui, &moved) {
+                look.brightness = 1.0;
+            }
+            let moved = ui.add(egui::Slider::new(&mut look.contrast, 0.0..=2.0).text("contrast"));
+            if double_clicked(ui, &moved) {
+                look.contrast = 1.0;
+            }
+            let moved = ui.add(egui::Slider::new(&mut look.gamma, 0.3..=3.0).logarithmic(true).text("gamma"));
+            if double_clicked(ui, &moved) {
+                look.gamma = 1.0;
+            }
             ui.checkbox(&mut look.invert, "invert");
         });
         egui::CollapsingHeader::new("The shader's own numbers").default_open(true).show(ui, |ui| {
@@ -1636,7 +1973,10 @@ impl App {
                 if *whole {
                     slider = slider.step_by(1.0);
                 }
-                if ui.add(slider).changed() {
+                let moved = ui.add(slider);
+                if double_clicked(ui, &moved) {
+                    look.params.retain(|(known, _)| known != name);
+                } else if moved.changed() {
                     look.params.retain(|(known, _)| known != name);
                     if value != *original {
                         look.params.push((name.clone(), value));
@@ -1832,6 +2172,7 @@ impl App {
         let Some(source) = self.layers[layer].cells[column].as_ref().map(|cell| cell.source.clone()) else { return };
         let layer = &mut self.layers[layer];
         layer.error = None;
+        begin_transition(&self.gfx, layer);
         match source {
             Source::Shader(_) => {
                 if let Some(player) = &mut layer.player {
@@ -1869,11 +2210,12 @@ impl App {
             gfx.discard(std::mem::replace(old, made));
             Ok(())
         };
-        for target in self.stack.iter_mut().chain(&mut self.scratch).chain([&mut self.out_target, &mut self.graded, &mut self.pre_out]) {
+        for target in self.stack.iter_mut().chain(&mut self.scratch).chain([&mut self.out_target, &mut self.graded, &mut self.pre_out, &mut self.crossing]) {
             fresh(target, &self.gfx)?;
         }
         for layer in self.layers.iter_mut().chain([&mut self.auto, &mut self.pre]) {
             fresh(&mut layer.target, &self.gfx)?;
+            fresh(&mut layer.from, &self.gfx)?;
         }
         self.out_texture = None;
         self.pre_texture = None;
@@ -1885,10 +2227,12 @@ impl App {
             Action::Launch(layer, column) => {
                 self.picked.clear();
                 self.pick_anchor = Some((layer, column));
+                self.focus_layer = false;
                 self.launch(layer, column);
             }
             Action::PickCell(layer, column, run) => {
                 self.selected_layer = layer;
+                self.focus_layer = false;
                 match self.pick_anchor.filter(|anchor| run && anchor.0 == layer) {
                     Some((_, from)) => {
                         let filled = (from.min(column)..=from.max(column)).filter(|at| self.layers[layer].cells[*at].is_some());
@@ -1926,6 +2270,7 @@ impl App {
                     self.picked.clear();
                     let removed = self.layers.remove(layer);
                     self.gfx.discard(removed.target);
+                    self.gfx.discard(removed.from);
                     self.selected_layer = self.selected_layer.min(self.layers.len() - 1);
                 }
             }
@@ -1967,6 +2312,46 @@ impl App {
                         self.favorites.remove(&entry);
                     }
                 }
+            }
+            Action::AddEffectToFocus(kind) => {
+                let cells = self.focus_cells();
+                let targets: Vec<ChainAt> = if cells.is_empty() {
+                    vec![ChainAt::Layer(self.selected_layer)]
+                } else {
+                    cells.into_iter().map(|(layer, column)| ChainAt::Cell(layer, column)).collect()
+                };
+                for target in targets {
+                    if let Some(chain) = self.chain(target) {
+                        chain.push(Effect { kind, amount: 0.5, bypass: false });
+                    }
+                }
+            }
+            Action::SendClip(clip) => {
+                let layer = self.selected_layer.min(self.layers.len().saturating_sub(1));
+                let column = self.layers[layer].cells.iter().position(Option::is_none).unwrap_or(self.columns);
+                self.place(layer, column, vec![Source::Clip(clip)]);
+                self.launch(layer, column);
+            }
+            Action::AddToCollection(index, files) => {
+                if let Some(collection) = self.collections.get_mut(index) {
+                    for file in files {
+                        if !collection.items.contains(&file) {
+                            collection.items.push(file);
+                        }
+                    }
+                }
+            }
+            Action::RemoveFromCollection(index, files) => {
+                if let Some(collection) = self.collections.get_mut(index) {
+                    collection.items.retain(|item| !files.contains(item));
+                }
+                self.assets_picked.clear();
+            }
+            Action::DeleteCollection(index) => {
+                if index < self.collections.len() {
+                    self.collections.remove(index);
+                }
+                self.collection_view = None;
             }
             Action::Reviewed(entries) => {
                 for entry in entries {
@@ -2140,12 +2525,21 @@ impl App {
         // The stack, bottom layer first, each laid over what is below it.
         let (mut below, mut next) = (None, 0);
         for layer in self.layers.iter().chain([&self.auto]).filter(|layer| layer.drawn && !layer.bypass) {
+            // Colours, the cell's own effects, the change from the cell before, the layer's effects.
             let picture = graded(&self.gfx, &self.looks, layer, &self.graded);
+            let own = layer.active.and_then(|column| layer.cells[column].as_ref()).map(|cell| cell.effects.as_slice()).unwrap_or(&[]);
+            let (mut picture, first) = run_effects(&self.gfx, &self.scratch, picture, own, 0, time, moving.onset, moving.bass);
+            let since = layer.switched.elapsed().as_secs_f32();
+            if layer.transition > 0 && since < layer.transition_seconds {
+                self.gfx.transition(&self.crossing, layer.from.texture, picture, layer.transition as i32, since / layer.transition_seconds);
+                picture = self.crossing.texture;
+            }
+            let (picture, _) = run_effects(&self.gfx, &self.scratch, picture, &layer.effects, first, time, moving.onset, moving.bass);
             self.gfx.mix(
                 &self.stack[next],
                 &gfx::Mix {
                     base: below,
-                    top: Some(run_effects(&self.gfx, &self.scratch, picture, &layer.effects, time, moving.onset, moving.bass)),
+                    top: Some(picture),
                     opacity: layer.opacity,
                     mode: layer.blend as i32,
                     fx: 0,
@@ -2158,7 +2552,7 @@ impl App {
         }
         match below {
             Some(picture) => {
-                let picture = run_effects(&self.gfx, &self.scratch, picture, &self.master, time, moving.onset, moving.bass);
+                let (picture, _) = run_effects(&self.gfx, &self.scratch, picture, &self.master, 0, time, moving.onset, moving.bass);
                 self.gfx.mix(&self.out_target, &gfx::Mix::copy(picture));
             }
             None => self.gfx.clear(&self.out_target),
@@ -2240,6 +2634,7 @@ impl App {
             if let (Some(kept), Some(map)) = (saved, value.as_object_mut()) {
                 map.insert("seconds".into(), kept.seconds.into());
                 map.insert("react".into(), kept.react.into());
+                map.insert("effects".into(), effects_json(&kept.effects));
             }
             value
         };
@@ -2255,6 +2650,8 @@ impl App {
                     "react": layer.react,
                     "auto": layer.auto,
                     "on_sections": layer.on_sections,
+                    "transition": gfx::TRANSITIONS[layer.transition],
+                    "transition_seconds": layer.transition_seconds,
                     "cells": layer.cells.iter().map(cell).collect::<Vec<_>>(),
                 })
             })
@@ -2280,6 +2677,8 @@ impl App {
             "removed": self.removed.iter().map(|entry| self.library[*entry].id.as_str()).collect::<Vec<_>>(),
             "master": effects_json(&self.master),
             "looks": self.looks.iter().map(|(entry, look)| (self.library[*entry].id.clone(), look.json())).collect::<serde_json::Map<_, _>>(),
+            "collections": self.collections.iter().map(|collection| serde_json::json!({ "name": collection.name, "items": collection.items })).collect::<Vec<_>>(),
+            "assets_dir": self.assets_dir,
             "review": self.review.iter().map(|entry| self.library[*entry].id.as_str()).collect::<Vec<_>>(),
             "detached": self.detached,
             "led": self.led,
@@ -2340,6 +2739,10 @@ impl App {
             layer.react = react(&saved["react"]).unwrap_or(0);
             layer.auto = (saved["auto"].as_u64().unwrap_or(0) as usize).min(AUTO_MODES.len() - 1);
             layer.on_sections = saved["on_sections"].as_bool().unwrap_or(false);
+            if let Some(kind) = gfx::TRANSITIONS.iter().position(|name| Some(*name) == saved["transition"].as_str()) {
+                layer.transition = kind;
+            }
+            layer.transition_seconds = number(&saved["transition_seconds"], 0.5).clamp(0.05, 30.0);
             for (column, cell) in saved["cells"].as_array().into_iter().flatten().enumerate() {
                 let source = match (cell["shader"].as_str(), cell["clip"].as_str()) {
                     (Some(id), _) => self.index_of.get(id).map(|entry| Source::Shader(*entry)),
@@ -2350,6 +2753,7 @@ impl App {
                     let mut kept = Cell::new(source);
                     kept.seconds = number(&cell["seconds"], 20.0).clamp(1.0, 36000.0);
                     kept.react = react(&cell["react"]);
+                    kept.effects = effects_from(&cell["effects"]);
                     kept
                 });
             }
@@ -2392,6 +2796,15 @@ impl App {
         (self.favorites, self.removed) = (entries(&state["favorites"]), entries(&state["removed"]));
         self.master = effects_from(&state["master"]);
         self.review = entries(&state["review"]);
+        for saved in state["collections"].as_array().into_iter().flatten() {
+            self.collections.push(Collection {
+                name: saved["name"].as_str().unwrap_or("Collection").to_owned(),
+                items: saved["items"].as_array().into_iter().flatten().filter_map(|item| item.as_str().map(PathBuf::from)).collect(),
+            });
+        }
+        if let Some(folder) = state["assets_dir"].as_str().map(PathBuf::from).filter(|folder| folder.is_dir()) {
+            self.assets_dir = folder;
+        }
         for (id, saved) in state["looks"].as_object().into_iter().flatten() {
             if let Some(entry) = self.index_of.get(id) {
                 self.looks.insert(*entry, Look::from(saved));
@@ -2591,10 +3004,15 @@ impl App {
         ui.horizontal(|ui| {
             ui.selectable_value(&mut self.tab, 0, egui::RichText::new("Shaders").heading());
             ui.selectable_value(&mut self.tab, 1, egui::RichText::new("Effects").heading());
+            ui.selectable_value(&mut self.tab, 2, egui::RichText::new("Assets").heading());
             ui.toggle_value(&mut self.download_open, "Download…").on_hover_text("Get shaders from Shadertoy by link or id");
         });
         if self.tab == 1 {
             self.effects_panel(ui, actions);
+            return;
+        }
+        if self.tab == 2 {
+            self.assets_panel(ui, actions);
             return;
         }
         // Folders: pick one to look into, or drop shaders on one to add them.
@@ -2804,8 +3222,11 @@ impl App {
                     asked = Some((place, index, false));
                 }
                 if response.dragged() {
-                    let carried: Vec<Source> = if selected {
+                    // A selected row carries the selection; a ticked row, everything ticked.
+                    let carried: Vec<Source> = if selected && selection.len() > 1 {
                         shown.iter().filter(|entry| selection.contains(entry)).map(|entry| Source::Shader(*entry)).collect()
+                    } else if self.checked.contains(&index) {
+                        shown.iter().filter(|entry| self.checked.contains(entry)).map(|entry| Source::Shader(*entry)).collect()
                     } else {
                         vec![Source::Shader(index)]
                     };
@@ -2889,7 +3310,12 @@ impl App {
     /// or double-click to put it on the selected layer.
     fn effects_panel(&mut self, ui: &mut egui::Ui, actions: &mut Vec<Action>) {
         ui.add(egui::TextEdit::singleline(&mut self.fx_filter).hint_text("search effects").desired_width(200.0));
-        ui.weak("Drag onto a layer, or onto the composition box on the right. Double-click adds to the selected layer.");
+        let aim = match self.focus_cells().len() {
+            0 => format!("the layer {}", self.layers[self.selected_layer.min(self.layers.len() - 1)].name),
+            1 => "the highlighted cell".to_owned(),
+            count => format!("the {count} highlighted cells"),
+        };
+        ui.weak(format!("Double-click adds to {aim}. Click a layer's name to aim at the layer, a cell to aim at cells. Or drag onto a cell, a layer's controls, or the composition box on the right."));
         let needle = self.fx_filter.to_lowercase();
         egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
             for heading in ["Colour", "Distort", "Stylize", "Audio"] {
@@ -2904,7 +3330,7 @@ impl App {
                 for kind in listed {
                     let response = ui.selectable_label(false, gfx::EFFECTS[kind].0).interact(egui::Sense::click_and_drag());
                     if response.double_clicked() {
-                        actions.push(Action::AddEffect(Some(self.selected_layer), kind));
+                        actions.push(Action::AddEffectToFocus(kind));
                     }
                     if response.dragged() {
                         response.dnd_set_drag_payload(DraggedEffect(kind));
@@ -2914,7 +3340,7 @@ impl App {
         });
     }
     /// One effect chain's rows: on or off, name, amount, order, remove; and a box to drop on.
-    fn chain_rows(&mut self, ui: &mut egui::Ui, target: Option<usize>, title: String, actions: &mut Vec<Action>) {
+    fn chain_rows(&mut self, ui: &mut egui::Ui, target: ChainAt, title: String, actions: &mut Vec<Action>) {
         ui.separator();
         let zone = ui
             .group(|ui| {
@@ -3017,11 +3443,20 @@ impl App {
                     }
                 }
             });
+            ui.horizontal(|ui| {
+                egui::ComboBox::from_id_salt(("transition", index)).width(104.0).selected_text(gfx::TRANSITIONS[layer.transition]).show_ui(ui, |ui| {
+                    for (kind, name) in gfx::TRANSITIONS.iter().enumerate() {
+                        ui.selectable_value(&mut layer.transition, kind, *name);
+                    }
+                });
+                ui.add_enabled(layer.transition > 0, egui::DragValue::new(&mut layer.transition_seconds).range(0.05..=30.0).speed(0.05).suffix(" s"))
+                    .on_hover_text("How long the change from one cell to the next takes");
+            });
         })
         .response
         .interact(egui::Sense::click());
         if let Some(dropped) = header.dnd_release_payload::<DraggedEffect>() {
-            actions.push(Action::AddEffect(Some(index), dropped.0));
+            actions.push(Action::AddEffect(ChainAt::Layer(index), dropped.0));
         }
         if header.dnd_hover_payload::<DraggedEffect>().is_some() {
             ui.painter().rect_stroke(header.rect, 3.0, (2.0, GREEN), egui::StrokeKind::Inside);
@@ -3038,6 +3473,8 @@ impl App {
         });
         if select {
             self.selected_layer = index;
+            self.focus_layer = true;
+            self.picked.clear();
         }
     }
     fn cell(&self, ui: &mut egui::Ui, layer_index: usize, column: usize, actions: &mut Vec<Action>) {
@@ -3073,6 +3510,9 @@ impl App {
                 painter.text(at, align, text, egui::FontId::proportional(10.0), egui::Color32::WHITE);
             };
             tag(rect.right_top() + egui::vec2(-5.0, 4.0), egui::Align2::RIGHT_TOP, format!("{:.0} s", cell.seconds));
+            if !cell.effects.is_empty() {
+                tag(rect.left_top() + egui::vec2(5.0, 20.0), egui::Align2::LEFT_TOP, format!("FX {}", cell.effects.len()));
+            }
             if let Some(react) = cell.react {
                 tag(rect.left_top() + egui::vec2(5.0, 4.0), egui::Align2::LEFT_TOP, REACT_MODES[usize::from(react)].to_owned());
             }
@@ -3084,7 +3524,7 @@ impl App {
             }
         }
         if let Some(dropped) = response.dnd_release_payload::<DraggedEffect>() {
-            actions.push(Action::AddEffect(Some(layer_index), dropped.0));
+            actions.push(Action::AddEffect(ChainAt::Cell(layer_index, column), dropped.0));
         }
         let picked = self.picked.contains(&(layer_index, column));
         if let Some(dropped) = response.dnd_release_payload::<DraggedCells>() {
@@ -3287,8 +3727,12 @@ impl App {
             self.editor(ui, actions);
             let layer = self.selected_layer.min(self.layers.len().saturating_sub(1));
             let title = format!("{} effects", self.layers[layer].name);
-            self.chain_rows(ui, Some(layer), title, actions);
-            self.chain_rows(ui, None, "Composition effects".into(), actions);
+            for (at, column) in self.focus_cells().into_iter().take(1) {
+                let name = self.layers[at].cells[column].as_ref().map(|cell| self.source_name(&cell.source)).unwrap_or_default();
+                self.chain_rows(ui, ChainAt::Cell(at, column), format!("Cell effects: {name}"), actions);
+            }
+            self.chain_rows(ui, ChainAt::Layer(layer), title, actions);
+            self.chain_rows(ui, ChainAt::Composition, "Composition effects".into(), actions);
         });
     }
     fn project(&self, ctx: &egui::Context) {
@@ -3318,7 +3762,7 @@ impl App {
         let dropped: Vec<PathBuf> = ctx.input(|input| input.raw.dropped_files.iter().filter_map(|file| file.path.clone()).collect());
         let clips: Vec<Source> = dropped
             .into_iter()
-            .filter(|path| path.extension().and_then(|e| e.to_str()).is_some_and(|e| CLIP_TYPES.contains(&e.to_lowercase().as_str())))
+            .filter(|path| is_media(path))
             .map(Source::Clip)
             .collect();
         if !clips.is_empty() {
@@ -3370,7 +3814,7 @@ impl App {
                 .flat_map(|layer| layer.error.iter().chain(layer.cells.iter().flatten().filter_map(|cell| cell.error.as_ref())))
                 .collect();
             println!(
-                "frames={} seconds={:.1} fps={:.1} tempo={:.1} sure={:.2} | audio {:?} rate {:?} error {:?} peak {:.4} | cells {} folders {} | library changes {} drawn {} | layers live {:?} drawn {:?} errors {:?} | output {:?} | midi {:?} out {:?} sent {} bound {} opacity {:.2} presets {} checked {} | groups {} pictures failed {} run {:?} preview {} | filled {:?} picked {:?}",
+                "frames={} seconds={:.1} fps={:.1} tempo={:.1} sure={:.2} | audio {:?} rate {:?} error {:?} peak {:.4} | cells {} folders {} | library changes {} drawn {} | layers live {:?} drawn {:?} errors {:?} | output {:?} | midi {:?} out {:?} sent {} bound {} opacity {:.2} presets {} checked {} | groups {} pictures failed {} run {:?} preview {} | filled {:?} picked {:?} | cell fx {} layer fx {}",
                 self.frames,
                 self.start.elapsed().as_secs_f32(),
                 self.frames as f32 / self.start.elapsed().as_secs_f32(),
@@ -3400,7 +3844,9 @@ impl App {
                 self.thumb_run,
                 self.pre.drawn,
                 self.layers.iter().map(|layer| (0..self.columns).filter(|at| layer.cells[*at].is_some()).collect::<Vec<_>>()).collect::<Vec<_>>(),
-                self.picked
+                self.picked,
+                self.layers.iter().flat_map(|layer| layer.cells.iter().flatten()).map(|cell| cell.effects.len()).sum::<usize>(),
+                self.layers.iter().map(|layer| layer.effects.len()).sum::<usize>()
             );
             self.options.exit_after = None;
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);

@@ -149,6 +149,8 @@ impl Player {
                 ("terminal", "no"),
                 ("idle", "yes"),
                 ("loop-file", "inf"),
+                // A still picture stays up like a clip that never ends.
+                ("image-display-duration", "inf"),
                 // Decode on the graphics card where that is safe, and hand frames over
                 // as ordinary memory: no dependence on how the window was made.
                 ("hwdec", "auto-copy-safe"),

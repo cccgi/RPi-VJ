@@ -103,6 +103,39 @@ pub const EFFECTS: [(&str, &str); 26] = [
     ("Colorize", "Colour"),
     ("Flip", "Distort"),
 ];
+/// How a layer changes from one cell to the next, in the order of `u_kind`.
+pub const TRANSITIONS: [&str; 10] =
+    ["Cut", "Fade", "Wipe", "Wipe down", "Iris", "Zoom", "Dissolve", "Push", "Dip to black", "Flash"];
+const TRANSITION: &str = "#version 300 es
+precision highp float;
+uniform sampler2D u_from;
+uniform sampler2D u_to;
+uniform int u_kind;
+uniform float u_t;
+in vec2 uv;
+out vec4 color;
+void main() {
+    float t = smoothstep(0.0, 1.0, u_t);
+    vec3 a = texture(u_from, uv).rgb;
+    vec3 b = texture(u_to, uv).rgb;
+    vec3 c = mix(a, b, t);
+    if (u_kind == 2) c = mix(a, b, smoothstep(-0.04, 0.04, t * 1.08 - 0.04 - uv.x));
+    if (u_kind == 3) c = mix(a, b, smoothstep(-0.04, 0.04, t * 1.08 - 0.04 - (1.0 - uv.y)));
+    if (u_kind == 4) {
+        float reach = length((uv - 0.5) * vec2(16.0 / 9.0, 1.0));
+        c = mix(a, b, smoothstep(-0.03, 0.03, t * 1.1 - reach));
+    }
+    if (u_kind == 5) c = mix(texture(u_from, (uv - 0.5) / (1.0 + t * 2.0) + 0.5).rgb, b, t);
+    if (u_kind == 6) {
+        float grain = fract(sin(dot(floor(uv * vec2(160.0, 90.0)), vec2(12.9898, 78.233))) * 43758.5453);
+        c = grain < t ? b : a;
+    }
+    if (u_kind == 7) c = uv.x < 1.0 - t ? texture(u_from, vec2(uv.x + t, uv.y)).rgb : texture(u_to, vec2(uv.x - (1.0 - t), uv.y)).rgb;
+    if (u_kind == 8) c = t < 0.5 ? a * (1.0 - 2.0 * t) : b * (2.0 * t - 1.0);
+    if (u_kind == 9) c = mix(a, b, t) + vec3(1.0 - abs(2.0 * t - 1.0));
+    color = vec4(clamp(c, 0.0, 1.0), 1.0);
+}
+";
 const GRADE: &str = "#version 300 es
 precision highp float;
 uniform sampler2D u_src;
@@ -278,6 +311,7 @@ pub struct Gfx {
     mix: Program,
     fx: Program,
     grade: Program,
+    cross: Program,
     textures: RefCell<HashMap<String, Rc<Texture>>>,
 }
 pub fn spectrum_bands(audio: &AudioFrame) -> [f32; 32] {
@@ -300,7 +334,8 @@ impl Gfx {
             let mix = build(&gl, es, MIX, &[])?;
             let fx = build(&gl, es, FX, &[])?;
             let grade = build(&gl, es, GRADE, &[])?;
-            Ok(Self { gl, vao, es, mix, fx, grade, textures: RefCell::default() })
+            let cross = build(&gl, es, TRANSITION, &[])?;
+            Ok(Self { gl, vao, es, mix, fx, grade, cross, textures: RefCell::default() })
         }
     }
     pub fn dialect(&self) -> &'static str {
@@ -588,6 +623,25 @@ impl Gfx {
             gl.uniform_1_f32(p.uniforms.get("u_flash"), m.flash[3]);
             gl.uniform_matrix_3_f32_slice(p.uniforms.get("u_flash_turn"), false, &turn);
             gl.uniform_3_f32(p.uniforms.get("u_flash_tint"), tint[0], tint[1], tint[2]);
+            gl.draw_arrays(glow::TRIANGLES, 0, 3);
+            gl.active_texture(glow::TEXTURE1);
+            gl.bind_texture(glow::TEXTURE_2D, None);
+            self.end();
+        }
+    }
+    /// One step of a transition: `from` giving way to `to`, `t` from 0 to 1.
+    pub fn transition(&self, target: &Target, from: glow::Texture, to: glow::Texture, kind: i32, t: f32) {
+        let (gl, p) = (&self.gl, &self.cross);
+        // SAFETY: as in `new`; locations belong to the transition program.
+        unsafe {
+            self.begin(target, p);
+            for (unit, name, texture) in [(0, "u_from", from), (1, "u_to", to)] {
+                gl.active_texture(glow::TEXTURE0 + unit);
+                gl.bind_texture(glow::TEXTURE_2D, Some(texture));
+                gl.uniform_1_i32(p.uniforms.get(name), unit as i32);
+            }
+            gl.uniform_1_i32(p.uniforms.get("u_kind"), kind);
+            gl.uniform_1_f32(p.uniforms.get("u_t"), t.clamp(0.0, 1.0));
             gl.draw_arrays(glow::TRIANGLES, 0, 3);
             gl.active_texture(glow::TEXTURE1);
             gl.bind_texture(glow::TEXTURE_2D, None);

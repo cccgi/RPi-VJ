@@ -68,6 +68,24 @@ written every 20 seconds and on exit.
   with `python`, which needs Playwright and opens a browser window while it works.
   New shaders are checked for compiling and collected in the group "New, to review";
   right-click one and choose "Mark as reviewed" to take it out.
+- **Assets tab:** browse the computer for video clips and pictures (Up, Drive,
+  Choose…; double-click a folder to enter it). Files are picked like shaders (click,
+  Ctrl-click, Shift-click) and dragged onto a cell, or double-clicked to launch on
+  the selected layer. Pictures show as stills.
+- **Collections:** in the Assets tab. Name one and press "Add collection", then drag
+  files onto it or use a file's right-click menu; a collection can hold files from
+  anywhere. Click a collection to see its files; drag the collection itself onto a
+  cell to place everything in it from there on.
+- **Transitions:** each layer has a transition and a time (the last line of its
+  controls): Cut, Fade, Wipe, Wipe down, Iris, Zoom, Dissolve, Push, Dip to black,
+  Flash. It plays whenever the layer goes from one cell to the next, by hand, in
+  sequence, shuffled or from the library's autoplay. The outgoing picture is held
+  still while it gives way.
+- **Effects on cells:** an effect double-clicked in the Effects tab goes to the
+  highlighted cells (the picked ones, else the one clicked last), or to the layer
+  when the layer's name was clicked last. Dropping an effect on a cell puts it on
+  that cell; on a layer's controls, on the layer. A cell's effects run before its
+  layer's, and a cell with effects shows "FX" and their number.
 - **Effects tab:** beside "Shaders" at the top of the left panel. Drag an effect onto
   a layer (its controls or any of its cells) or onto the "Composition effects" box on
   the right; double-click adds it to the selected layer. Each layer and the
