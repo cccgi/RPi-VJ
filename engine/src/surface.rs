@@ -214,6 +214,29 @@ pub fn page(show: &Show, state: &State) -> Vec<KeyDescriptor> {
         keys[28] = key(label, Some(Command::CycleReact), [110, 40, 95]);
         keys[28].caption = "REACT".into();
     }
+    // DELETE marks the shader on screen as unfit; on a marked shader it takes the mark off.
+    let marked = |shader: usize| state.deleted_shaders.get(shader).copied().unwrap_or(false);
+    if keys[29].kind == KeyKind::Empty {
+        let live = state.selected_shader.filter(|_| state.shader);
+        let count = state.deleted_shaders.iter().filter(|mark| **mark).count();
+        keys[29] = if live.is_some_and(marked) {
+            let mut k = key("UNMARK", Some(Command::DeleteShader), [220, 20, 20]);
+            k.state = KeyState::Active;
+            k
+        } else {
+            key("DELETE", live.map(|_| Command::DeleteShader), [90, 20, 20])
+        };
+        keys[29].caption = format!("{count} MARKED");
+    }
+    // A marked shader stays playable, so the choice can be looked at again.
+    for k in keys.iter_mut() {
+        if let Some(Command::TriggerShader { shader }) = k.command {
+            if marked(shader) {
+                k.color = [90, 20, 20];
+                k.caption = "MARKED".into();
+            }
+        }
+    }
     keys
 }
 #[cfg(test)]
@@ -281,6 +304,35 @@ mod tests {
         assert_eq!((state.react, state.line_input), (0, true));
         state.page = 1;
         assert_eq!(page(&show, &state)[26].command, Some(Command::ToggleHud));
+    }
+    #[test]
+    fn the_delete_key_marks_the_live_shader_and_takes_the_mark_off_again() {
+        let show: Show = serde_json::from_str(
+            r#"{"version":2,"audio_device":null,
+                "shaders":[{"label":"A","path":"Cargo.toml"},{"label":"B","path":"Cargo.toml"}],
+                "pages":[{"name":"A","bindings":[
+                    {"key":0,"label":"A","command":{"type":"TriggerShader","shader":0}},
+                    {"key":1,"label":"B","command":{"type":"TriggerShader","shader":1}}]}]}"#,
+        )
+        .unwrap();
+        let mut state = State::from_show(&show);
+        // With no shader on screen there is nothing to mark.
+        let keys = page(&show, &state);
+        assert_eq!((keys[29].label.as_str(), keys[29].command, keys[29].caption.as_str()), ("DELETE", None, "0 MARKED"));
+        state.apply(Command::TriggerShader { shader: 1 }).unwrap();
+        state.apply(page(&show, &state)[29].command.unwrap()).unwrap();
+        let keys = page(&show, &state);
+        assert_eq!((keys[29].label.as_str(), keys[29].caption.as_str()), ("UNMARK", "1 MARKED"));
+        assert_eq!(state.deleted_shaders, [false, true]);
+        // Another shader's key shows the mark; a reset keeps it; a second press removes it.
+        state.apply(Command::TriggerShader { shader: 0 }).unwrap();
+        let keys = page(&show, &state);
+        assert_eq!((keys[1].caption.as_str(), keys[29].label.as_str()), ("MARKED", "DELETE"));
+        state.apply(Command::Reset).unwrap();
+        assert_eq!(state.deleted_shaders, [false, true]);
+        state.apply(Command::TriggerShader { shader: 1 }).unwrap();
+        state.apply(page(&show, &state)[29].command.unwrap()).unwrap();
+        assert_eq!(state.deleted_shaders, [false, false]);
     }
     #[test]
     fn navigation_keys_name_the_page_they_lead_to() {

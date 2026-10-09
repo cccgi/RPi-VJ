@@ -51,6 +51,8 @@ pub enum Command {
     /// One of the eight performance macros (X-Touch layer B knobs), 0..=1.
     SetMacro { index: u8, value: f32 },
     CrateShader { crate_id: u8 },
+    /// Mark the selected shader as unfit, or take the mark off. Nothing is removed here:
+    /// the marks are kept in the state for the show to be cleaned up from later.
     DeleteShader,
 }
 /// Authoritative control state is independent of the render process and HID feedback.
@@ -365,7 +367,8 @@ impl State {
             }
             Command::DeleteShader => {
                 if let Some(shader) = self.selected_shader {
-                    if let Some(slot) = self.deleted_shaders.get_mut(shader) { *slot = true; }
+                    // A second press takes the mark off again.
+                    if let Some(slot) = self.deleted_shaders.get_mut(shader) { *slot = !*slot; }
                 }
             }
             Command::ClearClips => {

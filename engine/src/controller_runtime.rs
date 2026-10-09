@@ -121,6 +121,7 @@ pub fn run(show: Show, path: &Path) -> Result<()> {
     let deck = Deck::start(Arc::clone(&show))?;
     let mut bag = crate::control::ShuffleBag::new(session);
     let (mut sections_seen, mut shuffling) = (None, state.auto_shuffle);
+    let mut marks_seen = None;
     let midi = crate::midi::start();
     let mut midi_channel = crate::xtouch::CHANNEL;
     let mut midi_epoch = 0;
@@ -285,7 +286,10 @@ pub fn run(show: Show, path: &Path) -> Result<()> {
         // off stays off.
         let switched_on = state.auto_shuffle && !shuffling;
         shuffling = state.auto_shuffle;
-        if state.auto_shuffle && !state.blackout && (if state.shader { new_section } else { switched_on }) {
+        // A shader just marked as unfit is left at once rather than at the next section.
+        let marks = state.deleted_shaders.iter().filter(|mark| **mark).count();
+        let marked = marks > marks_seen.replace(marks).unwrap_or(marks);
+        if state.auto_shuffle && !state.blackout && (if state.shader { new_section || marked } else { switched_on }) {
             if let Some(shader) = bag.next(&state) {
                 if state.apply(Command::TriggerShader { shader }).is_ok() {
                     dirty = true;
