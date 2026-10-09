@@ -201,6 +201,9 @@ pub struct Renderer {
     pub geo_idle: f32,
     /// Beat flash on the shader layer: brightness, colour wash, hue turn, 1 when in use.
     pub flash: [f32; 4],
+    /// Tempo found in the music, which the beat clock and `u_bpm` then follow in place of
+    /// the tempo set by hand; 0 while none is trusted.
+    pub heard_bpm: f32,
 }
 /// Diagnostic override: when either variable is set, every shader renders at this size
 /// regardless of its manifest `render_height`.
@@ -503,6 +506,7 @@ impl Renderer {
                 geo_level: [0.0; 5],
                 geo_idle: 0.0,
                 flash: [1.0, 0.0, 0.0, 0.0],
+                heard_bpm: 0.0,
             })
         }
     }
@@ -565,7 +569,8 @@ impl Renderer {
         for (clock, energy) in self.spec_flow.iter_mut().zip(spectrum_bands(audio)) {
             *clock += dt * (SPEC_FLOW_RATE.0 + energy * SPEC_FLOW_RATE.1);
         }
-        let tempo = self.clock.tick(dt, state.bpm, audio);
+        let bpm = if self.heard_bpm > 0.0 { self.heard_bpm } else { state.bpm };
+        let tempo = self.clock.tick(dt, bpm, audio);
         // Layer B macros: knobs 1-4 each let one band drive one transform of the shader layer
         // (bass bulge, low-mid twist, mid wave, treble ripple); 5-8 move, spin and mirror it.
         let m = state.macros;
@@ -711,7 +716,7 @@ impl Renderer {
                 self.hud_pixels.fill(0);
                 let text = format!(
                     "BPM {:.0} | SPEED {:.2} | VIDEO FX {} | SHADER FX {} | FRAME {:.1}ms",
-                    state.bpm,
+                    bpm,
                     state.speed,
                     state.video_effect,
                     state.shader_effect,
@@ -754,7 +759,7 @@ impl Renderer {
                         time,
                         dt,
                         frame: self.frame,
-                        bpm: state.bpm,
+                        bpm,
                         tempo,
                         canvas,
                         audio,

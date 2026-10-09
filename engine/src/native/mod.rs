@@ -224,6 +224,7 @@ pub fn run(
         }
         // Beats the tempo tracker can foresee are drawn early enough to land with the sound.
         let timed = predictor.apply(idle_dt, crate::audio::BEAT_LEAD, &heard);
+        renderer.heard_bpm = predictor.bpm();
         let moving = crate::audio::idle_audio(&timed, idle_clock.elapsed().as_secs_f32(), idle);
         let moving = reactor.apply(state.react, idle_dt, &moving);
         renderer.flash = reactor.flash(state.react);
