@@ -2654,6 +2654,7 @@ dependencies = [
  "rfd",
  "rpi-vj-native",
  "serde_json",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

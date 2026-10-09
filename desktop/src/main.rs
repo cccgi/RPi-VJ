@@ -37,6 +37,54 @@ fn is_media(path: &std::path::Path) -> bool {
     let kind = path.extension().and_then(|kind| kind.to_str()).unwrap_or("").to_lowercase();
     CLIP_TYPES.contains(&kind.as_str()) || IMAGE_TYPES.contains(&kind.as_str())
 }
+/// Put the window with this title exactly over a rectangle of the desktop, in screen
+/// pixels, and say where it was found. Positions given through the UI library are in
+/// points of one screen's scaling, which lands a window in the wrong place on a screen
+/// scaled differently; the system call takes pixels and has the last word.
+#[cfg(windows)]
+fn place_window(title: &str, position: (i32, i32), size: (u32, u32)) -> Option<[i32; 4]> {
+    use windows_sys::Win32::{
+        Foundation::{HWND, RECT},
+        UI::WindowsAndMessaging::{FindWindowW, GetWindowRect, SetWindowPos, SWP_NOACTIVATE, SWP_NOZORDER},
+    };
+    let wide: Vec<u16> = title.encode_utf16().chain([0]).collect();
+    // SAFETY: plain calls with a terminated string and a rectangle that outlives them.
+    unsafe {
+        let window = FindWindowW(std::ptr::null(), wide.as_ptr());
+        if window as usize == 0 {
+            return None;
+        }
+        let mut rect = RECT { left: 0, top: 0, right: 0, bottom: 0 };
+        GetWindowRect(window, &mut rect);
+        let found = [rect.left, rect.top, rect.right, rect.bottom];
+        let wanted = [position.0, position.1, position.0 + size.0 as i32, position.1 + size.1 as i32];
+        if found != wanted {
+            let none: HWND = std::mem::zeroed();
+            SetWindowPos(window, none, position.0, position.1, size.0 as i32, size.1 as i32, SWP_NOACTIVATE | SWP_NOZORDER);
+        }
+        Some(found)
+    }
+}
+#[cfg(not(windows))]
+fn place_window(_: &str, _: (i32, i32), _: (u32, u32)) -> Option<[i32; 4]> {
+    None
+}
+/// What undo compares and brings back: the saved state without the settings of this
+/// computer and its devices, and without which cells happen to be playing.
+fn undo_view(full: &serde_json::Value) -> serde_json::Value {
+    let mut view = full.clone();
+    if let Some(map) = view.as_object_mut() {
+        for key in ["gain", "lead_ms", "size", "output_display", "audio", "detached", "led", "apc", "midi", "assets_dir"] {
+            map.remove(key);
+        }
+    }
+    for layer in view["layers"].as_array_mut().into_iter().flatten() {
+        if let Some(layer) = layer.as_object_mut() {
+            layer.remove("active");
+        }
+    }
+    view
+}
 /// What was dropped on a widget, if it is of this kind. Asking egui for a payload of
 /// one kind throws away a payload of another, so the kind is looked at first.
 fn dropped<T: std::any::Any + Send + Sync>(response: &egui::Response) -> Option<Arc<T>> {
@@ -136,6 +184,8 @@ struct Options {
     /// Drag the first row of the left panel's list onto the first cell of the second
     /// layer with a scripted pointer.
     drag_test: bool,
+    /// Clear two cells, undo, redo, undo.
+    undo_test: bool,
     /// Show the Assets tab as thumbnails, with its first folder opened.
     tiles: bool,
     /// Put an effect on the first cell of the second layer.
@@ -183,6 +233,7 @@ impl Options {
                 "--cell-fx" => options.cell_fx = true,
                 "--drag-test" => options.drag_test = true,
                 "--tiles" => options.tiles = true,
+                "--undo-test" => options.undo_test = true,
                 "--move-test" => options.move_test = true,
                 "--download" => options.download = Some(value()),
                 "--look-test" => options.look_test = true,
@@ -739,6 +790,8 @@ enum Action {
     AddEffectToFocus(usize),
     /// Assets: put a file on the selected layer and launch it; fill and empty collections.
     SendClip(PathBuf),
+    Undo,
+    Redo,
     AddToCollection(usize, Vec<PathBuf>),
     RemoveFromCollection(usize, Vec<PathBuf>),
     DeleteCollection(usize),
@@ -904,6 +957,16 @@ struct App {
     output_display: usize,
     /// Where the projection window ended up, in points; for the test printout.
     output_rect: std::cell::Cell<Option<egui::Rect>>,
+    /// Where the system says the projection window is, in screen pixels.
+    output_px: std::cell::Cell<Option<[i32; 4]>>,
+    /// Undo: states to go back to, states to go forward to, the state as last looked
+    /// at, and when that was.
+    undo: Vec<serde_json::Value>,
+    redo: Vec<serde_json::Value>,
+    undo_base: serde_json::Value,
+    undo_looked: Instant,
+    /// Clips on layers whose thumbnail has not been asked for yet.
+    clip_thumbs_wanted: std::cell::RefCell<Vec<PathBuf>>,
     // Housekeeping.
     message: Option<String>,
     state_path: Option<PathBuf>,
@@ -1093,6 +1156,12 @@ impl App {
             output_on: false,
             output_display: displays.len().saturating_sub(1),
             output_rect: std::cell::Cell::new(None),
+            output_px: std::cell::Cell::new(None),
+            undo: Vec::new(),
+            redo: Vec::new(),
+            undo_base: serde_json::Value::Null,
+            undo_looked: now,
+            clip_thumbs_wanted: std::cell::RefCell::new(Vec::new()),
             displays,
             message: None,
             state_path,
@@ -1219,6 +1288,7 @@ impl App {
         if app.options.compile_all {
             app.compile = Some(CompileRun { next: 0, passed: 0, failures: Vec::new(), started: now });
         }
+        app.undo_base = app.state();
         Ok(app)
     }
     fn make_layer(&self, name: String) -> Result<Layer> {
@@ -2518,6 +2588,8 @@ impl App {
                     }
                 }
             }
+            Action::Undo => self.step_history(true),
+            Action::Redo => self.step_history(false),
             Action::SendClip(clip) => {
                 let layer = self.selected_layer.min(self.layers.len().saturating_sub(1));
                 let column = self.layers[layer].cells.iter().position(Option::is_none).unwrap_or(self.columns);
@@ -2836,6 +2908,7 @@ impl App {
             .map(|layer| {
                 serde_json::json!({
                     "name": layer.name,
+                    "active": layer.active,
                     "opacity": layer.opacity,
                     "blend": layer.blend,
                     "effects": effects_json(&layer.effects),
@@ -2953,13 +3026,84 @@ impl App {
         }
         true
     }
+    /// Notice changes for undo: a couple of times a second, and not while a button is
+    /// held, so a slider being dragged is one step, not hundreds.
+    fn track_undo(&mut self, ctx: &egui::Context) {
+        if self.undo_looked.elapsed() < Duration::from_millis(400) || ctx.input(|input| input.pointer.any_down()) {
+            return;
+        }
+        self.undo_looked = Instant::now();
+        let now = self.state();
+        if undo_view(&now) == undo_view(&self.undo_base) {
+            self.undo_base = now;
+            return;
+        }
+        self.undo.push(std::mem::replace(&mut self.undo_base, now));
+        self.redo.clear();
+        if self.undo.len() > 100 {
+            self.undo.remove(0);
+        }
+    }
+    /// One step back, or forward again.
+    fn step_history(&mut self, back: bool) {
+        // A change not noticed yet is a step of its own.
+        let now = self.state();
+        if undo_view(&now) != undo_view(&self.undo_base) {
+            self.undo.push(std::mem::replace(&mut self.undo_base, now.clone()));
+            self.redo.clear();
+        }
+        let Some(target) = (if back { self.undo.pop() } else { self.redo.pop() }) else { return };
+        if back {
+            self.redo.push(now);
+        } else {
+            self.undo.push(now);
+        }
+        self.restore(&target);
+        self.undo_base = self.state();
+        self.undo_looked = Instant::now();
+    }
+    /// Put the composition, effects, looks, folders, collections and presets back to a
+    /// saved state. This computer's own settings stay as they are, and the cells that
+    /// were playing in that state play again.
+    fn restore(&mut self, saved: &serde_json::Value) {
+        let kept = (self.gain, self.lead_ms, self.output_display, self.detached, self.led, self.apc, std::mem::take(&mut self.bindings), self.assets_dir.clone());
+        self.clear_composition();
+        self.picked.clear();
+        self.folders.clear();
+        self.presets.clear();
+        self.collections.clear();
+        self.looks.clear();
+        let mut audio = None;
+        if !self.apply_state(saved, &mut audio) && self.layers.is_empty() {
+            if let Ok(layer) = self.make_layer("Layer 1".into()) {
+                self.layers.push(layer);
+            }
+        }
+        (self.gain, self.lead_ms, self.output_display, self.detached, self.led, self.apc, self.bindings, self.assets_dir) = kept;
+        self.selected_layer = self.selected_layer.min(self.layers.len().saturating_sub(1));
+        if matches!(self.view, View::Folder(folder) if folder >= self.folders.len()) {
+            self.view = View::All;
+        }
+        self.collection_view = self.collection_view.filter(|index| *index < self.collections.len());
+        for (index, layer) in saved["layers"].as_array().into_iter().flatten().enumerate() {
+            let live = layer["active"].as_u64().map(|column| column as usize);
+            if let Some(column) = live.filter(|column| self.layers.get(index).is_some_and(|row| row.cells.get(*column).is_some_and(Option::is_some))) {
+                self.launch(index, column);
+            }
+        }
+        self.lights.clear();
+    }
     /// Bring back what `save_state` wrote; false when there is nothing usable.
     fn load_state(&mut self, audio: &mut Option<String>) -> bool {
         let Some(text) = self.state_path.as_ref().and_then(|path| std::fs::read_to_string(path).ok()) else {
             return false;
         };
         let Ok(state) = serde_json::from_str::<serde_json::Value>(&text) else { return false };
-        if !self.load_layers(&state) {
+        self.apply_state(&state, audio)
+    }
+    /// Take everything a saved state holds; false when it holds no composition.
+    fn apply_state(&mut self, state: &serde_json::Value, audio: &mut Option<String>) -> bool {
+        if !self.load_layers(state) {
             return false;
         }
         let number = |value: &serde_json::Value, otherwise: f32| value.as_f64().map_or(otherwise, |v| v as f32);
@@ -3729,7 +3873,21 @@ impl App {
                     painter.image(*texture, picture, FLIPPED, egui::Color32::WHITE);
                 }
                 (_, _, Some(_)) => note("ERROR", egui::Color32::from_rgb(90, 25, 25)),
-                (Source::Clip(_), _, _) => note("CLIP", egui::Color32::from_rgb(35, 55, 90)),
+                (Source::Clip(path), _, _) => match self.asset_thumbs.get(path) {
+                    Some(Some(texture)) => {
+                        // The clip's own picture, fitted into the cell whatever its shape.
+                        painter.rect_filled(picture, 3.0, egui::Color32::BLACK);
+                        let size = texture.size_vec2();
+                        let fit = (picture.width() / size.x).min(picture.height() / size.y);
+                        let shown = egui::Rect::from_center_size(picture.center(), size * fit);
+                        painter.image(texture.id(), shown, egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)), egui::Color32::WHITE);
+                    }
+                    Some(None) => note("CLIP", egui::Color32::from_rgb(35, 55, 90)),
+                    None => {
+                        self.clip_thumbs_wanted.borrow_mut().push(path.clone());
+                        note("CLIP", egui::Color32::from_rgb(35, 55, 90));
+                    }
+                },
                 _ => note("…", egui::Color32::from_gray(30)),
             }
             painter.text(
@@ -3888,6 +4046,12 @@ impl App {
                     }
                 }
             }
+            if ui.add_enabled(!self.undo.is_empty(), egui::Button::new("Undo")).on_hover_text("Ctrl+Z").clicked() {
+                actions.push(Action::Undo);
+            }
+            if ui.add_enabled(!self.redo.is_empty(), egui::Button::new("Redo")).on_hover_text("Ctrl+Y").clicked() {
+                actions.push(Action::Redo);
+            }
             ui.weak("Click launches. Ctrl- or Shift-click selects cells to drag or to clear (Delete).");
         });
         egui::ScrollArea::both().auto_shrink([false, false]).show(ui, |ui| {
@@ -4003,6 +4167,7 @@ impl App {
                 ui.painter().image(texture, rect, FLIPPED, egui::Color32::WHITE);
             });
         });
+        self.output_px.set(place_window("RPi-VJ output", display.position, display.size));
     }
     /// Clips dragged in from the file manager go to the selected layer's free cells.
     fn take_dropped_files(&mut self, ctx: &egui::Context) {
@@ -4054,6 +4219,18 @@ impl App {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
         }
+        if self.options.undo_test {
+            match self.frames {
+                60 => self.apply(Action::ClearCells(vec![(1, 0), (1, 1)])),
+                120 | 240 => self.step_history(true),
+                180 => self.step_history(false),
+                _ => {}
+            }
+            if [61, 121, 181, 241].contains(&self.frames) {
+                let filled: Vec<usize> = (0..self.columns).filter(|at| self.layers[1].cells[*at].is_some()).collect();
+                println!("frame {}: layer 2 holds {:?}, live {:?}, undo {} redo {}", self.frames, filled, self.layers[1].active, self.undo.len(), self.redo.len());
+            }
+        }
         if self.options.exit_after.is_some_and(|seconds| self.start.elapsed().as_secs_f32() >= seconds) {
             let errors: Vec<&String> = self
                 .layers
@@ -4078,7 +4255,7 @@ impl App {
                 self.layers.iter().map(|layer| layer.active).collect::<Vec<_>>(),
                 self.layers.iter().map(|layer| layer.drawn).collect::<Vec<_>>(),
                 errors,
-                self.output_rect.get(),
+                (self.output_rect.get(), self.output_px.get(), self.displays.get(self.output_display).map(|display| (display.position, display.size))),
                 self.midi.names,
                 self.midi.output_names,
                 self.midi.sent,
@@ -4126,6 +4303,12 @@ impl eframe::App for App {
             self.pre_texture = Some(frame.register_native_glow_texture(self.pre_out.texture));
         }
         self.make_thumbs(ctx);
+        self.take_thumbs(ctx);
+        for path in std::mem::take(&mut *self.clip_thumbs_wanted.borrow_mut()) {
+            if !self.asset_thumbs.contains_key(&path) && self.thumb_ask.send(path.clone()).is_ok() {
+                self.asset_thumbs.insert(path, None);
+            }
+        }
         self.finish_download();
         // A changed number of the previewed shader: compile it again once the drag rests.
         if self.rebuild_at.is_some_and(|at| at.elapsed() > Duration::from_millis(150)) {
@@ -4150,6 +4333,15 @@ impl eframe::App for App {
         // In MIDI learn every bindable control gets a frame: yellow for the one waiting
         // for its knob or pad, blue for one that is bound, grey for one that is free.
         let frames = ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground, egui::Id::new("midi-learn")));
+        // Ctrl+Z and Ctrl+Y (or Ctrl+Shift+Z), unless something is being typed: text has its own.
+        if !ctx.wants_keyboard_input() {
+            let pressed = |modifiers, key| ctx.input_mut(|input| input.consume_key(modifiers, key));
+            if pressed(egui::Modifiers::COMMAND | egui::Modifiers::SHIFT, egui::Key::Z) || pressed(egui::Modifiers::COMMAND, egui::Key::Y) {
+                actions.push(Action::Redo);
+            } else if pressed(egui::Modifiers::COMMAND, egui::Key::Z) {
+                actions.push(Action::Undo);
+            }
+        }
         // Delete clears the selected cells, unless something is being typed.
         if !self.picked.is_empty() && !ctx.wants_keyboard_input() && ctx.input(|input| input.key_pressed(egui::Key::Delete)) {
             actions.push(Action::ClearCells(self.picked.iter().copied().collect()));
@@ -4179,6 +4371,7 @@ impl eframe::App for App {
         if self.output_on {
             self.project(ctx);
         }
+        self.track_undo(ctx);
         if self.saved_at.elapsed() > Duration::from_secs(20) {
             self.save_state();
         }

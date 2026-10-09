@@ -17,3 +17,6 @@ image = { version = "0.25", default-features = false, features = ["png", "jpeg",
 libloading = "0.8"
 midir = "0.10"
 rfd = "0.15"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
