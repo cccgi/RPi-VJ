@@ -42,6 +42,7 @@ const BLANK: Rgb = [13, 14, 17];
 const BLANK_PANEL: Rgb = [24, 26, 32];
 const CAPTION_BAND: Rgb = [16, 18, 22];
 const OFFLINE: Rgb = [160, 60, 0];
+const CROSS: Rgb = [235, 20, 20];
 
 /// The type scale. A label takes the largest step that fits its zone.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -380,6 +381,19 @@ impl Canvas {
         self.fill(SIZE - inset - thickness, inset, thickness, side, color);
     }
     /// `thumb` must be `THUMB_WIDTH` x `THUMB_HEIGHT` RGB.
+    /// A large red X over everything above the foot: this one is marked for removal.
+    fn cross(&mut self) {
+        let (width, height) = (SIZE as i32, (SIZE - FOOT) as i32);
+        for y in 4..height - 4 {
+            // Where each stroke crosses this row, and half its width along the row.
+            let along = (y - 4) * (width - 20) / (height - 9) + 10;
+            for x in 0..width {
+                if (x - along).abs() <= 6 || (x - (width - 1 - along)).abs() <= 6 {
+                    self.blend(x, y, CROSS, 235);
+                }
+            }
+        }
+    }
     fn picture(&mut self, thumb: &[u8], dim: bool) {
         let bytes = THUMB_WIDTH * THUMB_HEIGHT * 3;
         self.rgb[..bytes].copy_from_slice(thumb);
@@ -616,6 +630,9 @@ pub fn draw(
             }
         }
     }
+    if key.crossed {
+        canvas.cross();
+    }
     if attention {
         // A picture key has no body to colour, so its frame carries the state colour.
         let frame = if thumbnail.is_some() { key.color } else { WHITE };
@@ -669,6 +686,7 @@ mod tests {
             kind,
             state: KeyState::Idle,
             caption: String::new(),
+            crossed: false,
         }
     }
     /// Bounding box (left, top, right, bottom) of pixels that differ from `background`.

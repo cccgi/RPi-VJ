@@ -37,6 +37,8 @@ pub struct KeyDescriptor {
     pub state: KeyState,
     /// Status word or secondary line for the key's foot strip; may be empty.
     pub caption: String,
+    /// Draw a large red X over the key: a shader marked for removal.
+    pub crossed: bool,
 }
 fn key(label: impl Into<String>, command: Option<Command>, color: [u8; 3]) -> KeyDescriptor {
     let label = label.into();
@@ -57,6 +59,7 @@ fn key(label: impl Into<String>, command: Option<Command>, color: [u8; 3]) -> Ke
         kind,
         state: KeyState::Idle,
         caption: String::new(),
+        crossed: false,
     }
 }
 /// "SHADERS 01 / 04" on page 1 of 4 becomes "SHADERS": the keys already show the position.
@@ -100,6 +103,8 @@ pub fn page(show: &Show, state: &State) -> Vec<KeyDescriptor> {
             }
             Some(Command::TriggerShader { shader }) => {
                 let entry = show.shaders.get(shader);
+                // Set here, before a live shader's key turns into its off switch.
+                k.crossed = state.deleted_shaders.get(shader).copied().unwrap_or(false);
                 k.thumbnail = entry
                     .and_then(|s| s.thumbnail.as_ref())
                     .filter(|p| p.is_file())
@@ -328,6 +333,7 @@ mod tests {
         state.apply(Command::TriggerShader { shader: 0 }).unwrap();
         let keys = page(&show, &state);
         assert_eq!((keys[1].caption.as_str(), keys[29].label.as_str()), ("MARKED", "DELETE"));
+        assert!(keys[1].crossed && !keys[0].crossed);
         state.apply(Command::Reset).unwrap();
         assert_eq!(state.deleted_shaders, [false, true]);
         state.apply(Command::TriggerShader { shader: 1 }).unwrap();
