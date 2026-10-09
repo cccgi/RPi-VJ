@@ -415,9 +415,9 @@ impl Look {
     /// The look as it stands this frame: every slider at its setting, moved by the
     /// music where its boxes are ticked. `signals` are pump (the bass), strobe (the
     /// beat's flash), twist (the mids) and auto (one of those, changing with the music).
-    fn live(&self, signals: [f32; 4], time: f32) -> Live {
+    fn live(&self, signals: [f32; 6], time: f32) -> Live {
         let follow = |slider: usize| -> f32 {
-            (0..4).filter(|bit| self.mods[slider] & (1 << bit) != 0).map(|bit| signals[bit]).sum::<f32>().min(1.5)
+            (0..6).filter(|bit| self.mods[slider] & (1 << bit) != 0).map(|bit| signals[bit]).sum::<f32>().min(1.5)
         };
         let angle = (self.rotate + 45.0 * follow(1)).to_radians();
         let grade = [
@@ -474,7 +474,7 @@ impl Look {
             colorize_speed: number("colorize_speed", 0.1).clamp(0.0, 4.0),
             colorize_bands: number("colorize_bands", 1.0).clamp(0.1, 12.0),
             tint: std::array::from_fn(|channel| saved["tint"][channel].as_f64().map_or([1.0, 0.45, 0.1][channel], |value| value as f32)),
-            mods: std::array::from_fn(|slider| saved["mods"][slider].as_u64().unwrap_or(0) as u8 & 15),
+            mods: std::array::from_fn(|slider| saved["mods"][slider].as_u64().unwrap_or(0) as u8 & 63),
             react_mode: saved["react_mode"].as_u64().map(|mode| (mode as u8).min(REACT_MODES.len() as u8 - 1)),
             params: saved["params"].as_array().into_iter().flatten().filter_map(pair).collect(),
         }
@@ -500,16 +500,19 @@ const NEUTRAL: [f32; 6] = [0.0, 1.0, 1.0, 1.0, 1.0, 0.0];
 /// How a shader's picture fills the frame when it is zoomed out or moved.
 const TILINGS: [&str; 4] = ["Shader's own canvas", "Tile", "Mirror", "Seamless tile"];
 /// The four small boxes beside an editor slider: which kinds of music-following move it.
-fn follow_boxes(ui: &mut egui::Ui, bits: &mut u8) {
+fn follow_boxes(ui: &mut egui::Ui, bits: &mut u8, kinds: usize) {
     ui.spacing_mut().item_spacing.x = 1.0;
     ui.spacing_mut().button_padding = egui::vec2(3.0, 1.0);
     for (bit, (letter, meaning)) in [
         ("P", "Pump: this slider swells with the bass"),
         ("S", "Strobe: this slider jumps on every beat"),
         ("T", "Twist: this slider follows the mids"),
-        ("A", "Auto: one of the three, changing with the music"),
+        ("A", "Auto: one of the first three, changing with the music"),
+        ("St", "Step: on each beat this slider snaps to a new place and holds there"),
+        ("R", "Ride: this slider travels out and back steadily, faster and further with more energy"),
     ]
     .into_iter()
+    .take(kinds)
     .enumerate()
     {
         let mut on = *bits & (1 << bit) != 0;
@@ -579,7 +582,7 @@ fn playing(layer: &Layer) -> Option<usize> {
     }
 }
 /// A layer's picture with its shader's colour settings applied, if it has any.
-fn graded(gfx: &gfx::Gfx, looks: &HashMap<usize, Look>, signals: [f32; 4], time: f32, layer: &Layer, into: &gfx::Target) -> glow::Texture {
+fn graded(gfx: &gfx::Gfx, looks: &HashMap<usize, Look>, signals: [f32; 6], time: f32, layer: &Layer, into: &gfx::Target) -> glow::Texture {
     match playing(layer).and_then(|entry| looks.get(&entry)).map(|look| look.live(signals, time)) {
         Some(live) if live.grade.is_some() || live.tile.is_some() => {
             gfx.grade(into, layer.target.texture, live.grade.unwrap_or(NEUTRAL), live.tile.unwrap_or([0.0; 7]), live.colorize, live.rainbow);
@@ -999,6 +1002,13 @@ struct App {
     thumb_wanted: Option<usize>,
     thumb_run: Option<usize>,
     thumb_target: gfx::Target,
+    /// Targets a still is first drawn into, at the hover size and at the cell size; the
+    /// shaders whose hover picture is out of date; and a look change waiting to be
+    /// shown in the stills, once the slider is let go.
+    thumb_raw: gfx::Target,
+    cell_raw: gfx::Target,
+    thumb_dirty: BTreeSet<usize>,
+    look_dirty: Option<(usize, Instant)>,
     /// A library shader running in the preview only, not in the output.
     pre: Layer,
     pre_texture: Option<egui::TextureId>,
@@ -1025,7 +1035,14 @@ struct App {
     grid_x: f32,
     /// What a slider that follows the music follows this frame: pump, strobe, twist and
     /// auto; and which of the first three auto is on, and since when.
-    signals: [f32; 4],
+    signals: [f32; 6],
+    /// Step and ride: which pose step is on, where it is heading and where it stands,
+    /// whether a beat is under way, and how far ride has travelled.
+    step_pose: usize,
+    step_held: f32,
+    step_shown: f32,
+    step_beat: bool,
+    ride_phase: f32,
     signal_auto: usize,
     signal_since: Instant,
     /// Whether the editor lists all of a shader's own numbers, or only the first.
@@ -1225,6 +1242,10 @@ impl App {
             thumb_wanted: None,
             thumb_run: None,
             thumb_target: gfx.target(PREVIEW)?,
+            thumb_raw: gfx.target(PREVIEW)?,
+            cell_raw: gfx.target(THUMB)?,
+            thumb_dirty: BTreeSet::new(),
+            look_dirty: None,
             pre: new_layer(&gfx, "Preview".into(), 1, size)?,
             pre_texture: None,
             detached: false,
@@ -1235,7 +1256,12 @@ impl App {
             seen_cell: std::cell::Cell::new(None),
             drag_notes: std::cell::RefCell::new(Vec::new()),
             grid_x: 0.0,
-            signals: [0.0; 4],
+            signals: [0.0; 6],
+            step_pose: 0,
+            step_held: 0.0,
+            step_shown: 0.0,
+            step_beat: false,
+            ride_phase: 0.0,
             signal_auto: 0,
             signal_since: now,
             numbers_open: true,
@@ -1983,17 +2009,14 @@ impl App {
     fn thumb_path(&self, entry: usize) -> PathBuf {
         self.root.join("target/desktop/thumbs").join(format!("{}.jpg", self.library[entry].id))
     }
-    /// Draw a shader's still picture and keep it as a file, unless that is done already.
-    fn render_thumb(&mut self, entry: usize) -> Result<()> {
-        let path = self.thumb_path(entry);
-        if path.is_file() {
-            return Ok(());
-        }
-        let program = self.build(entry)?;
+    /// A shader's still picture with its look: drawn into `raw`, then with its colours
+    /// and tiling into `out`. Nothing follows the music in a still.
+    fn still(&self, program: &gfx::Program, entry: usize, raw: &gfx::Target, out: &gfx::Target) {
+        let live = self.looks.get(&entry).map(|look| look.live([0.0; 6], 6.0));
         let audio = still_audio();
         self.gfx.shader_pass(
-            &program,
-            &self.thumb_target,
+            program,
+            raw,
             &gfx::Frame {
                 time: 6.0,
                 dt: 1.0 / 60.0,
@@ -2003,10 +2026,41 @@ impl App {
                 audio: &audio,
                 flow: &[6.0; 4],
                 spec_flow: &[3.0; 32],
-                canvas: [1.0, 0.0, 0.0, 0.0],
-                zoom: 1.0,
+                canvas: live.as_ref().map_or([1.0, 0.0, 0.0, 0.0], |live| live.canvas),
+                zoom: live.as_ref().map_or(1.0, |live| live.zoom),
             },
         );
+        match live {
+            Some(live) if live.grade.is_some() || live.tile.is_some() => {
+                self.gfx.grade(out, raw.texture, live.grade.unwrap_or(NEUTRAL), live.tile.unwrap_or([0.0; 7]), live.colorize, live.rainbow);
+            }
+            _ => self.gfx.mix(out, &gfx::Mix::copy(raw.texture)),
+        }
+    }
+    /// A shader's look changed: its hover picture and the picture of every cell that
+    /// holds it are drawn again.
+    fn refresh_stills(&mut self, entry: usize) {
+        self.thumbs.remove(&entry);
+        self.thumb_failed.remove(&entry);
+        self.thumb_dirty.insert(entry);
+        self.thumb_wanted = Some(entry);
+        for layer in &self.layers {
+            for cell in layer.cells.iter().flatten().filter(|cell| cell.source == Source::Shader(entry)) {
+                if let (Some(program), Some((target, _))) = (&cell.program, &cell.thumb) {
+                    self.still(program, entry, &self.cell_raw, target);
+                }
+            }
+        }
+    }
+    /// Draw a shader's still picture and keep it as a file, unless that is done already.
+    fn render_thumb(&mut self, entry: usize) -> Result<()> {
+        let path = self.thumb_path(entry);
+        if path.is_file() && !self.thumb_dirty.contains(&entry) {
+            return Ok(());
+        }
+        let program = self.build(entry)?;
+        self.still(&program, entry, &self.thumb_raw, &self.thumb_target);
+        self.thumb_dirty.remove(&entry);
         self.gfx.delete(program);
         std::fs::create_dir_all(path.parent().unwrap_or(&self.root))?;
         image::save_buffer(&path, &self.gfx.read(&self.thumb_target), PREVIEW.0, PREVIEW.1, image::ColorType::Rgb8)?;
@@ -2363,11 +2417,11 @@ impl App {
         if self.editing == Some(entry) {
             ui.weak("Layers playing this shader stay on it while this editor is open.");
         }
-        ui.weak("Double-click a slider to put it back. P S T A make a slider follow the music: pump (bass), strobe (beats), twist (mids), auto.");
+        ui.weak("Double-click a slider to put it back. P S T A make a slider follow the music: pump (bass), strobe (beats), twist (mids), auto. Transform sliders also have St (step) and R (ride).");
         ui.spacing_mut().slider_width = 92.0;
         egui::CollapsingHeader::new("Transform").default_open(true).show(ui, |ui| {
             ui.horizontal(|ui| {
-                follow_boxes(ui, &mut look.mods[0]);
+                follow_boxes(ui, &mut look.mods[0], 6);
                 let moved = ui.add(egui::Slider::new(&mut look.zoom, 0.1..=10.0).logarithmic(true).text("zoom"));
                 if double_clicked(ui, &moved) {
                     look.zoom = 1.0;
@@ -2392,21 +2446,21 @@ impl App {
                 }
             }
             ui.horizontal(|ui| {
-                follow_boxes(ui, &mut look.mods[1]);
+                follow_boxes(ui, &mut look.mods[1], 6);
                 let moved = ui.add(egui::Slider::new(&mut look.rotate, -180.0..=180.0).suffix("°").text("turn"));
                 if double_clicked(ui, &moved) {
                     look.rotate = 0.0;
                 }
             });
             ui.horizontal(|ui| {
-                follow_boxes(ui, &mut look.mods[2]);
+                follow_boxes(ui, &mut look.mods[2], 6);
                 let moved = ui.add(egui::Slider::new(&mut look.pan[0], -1.0..=1.0).text("across"));
                 if double_clicked(ui, &moved) {
                     look.pan[0] = 0.0;
                 }
             });
             ui.horizontal(|ui| {
-                follow_boxes(ui, &mut look.mods[3]);
+                follow_boxes(ui, &mut look.mods[3], 6);
                 let moved = ui.add(egui::Slider::new(&mut look.pan[1], -1.0..=1.0).text("up"));
                 if double_clicked(ui, &moved) {
                     look.pan[1] = 0.0;
@@ -2415,7 +2469,7 @@ impl App {
         });
         egui::CollapsingHeader::new("Motion").default_open(true).show(ui, |ui| {
             ui.horizontal(|ui| {
-                follow_boxes(ui, &mut look.mods[4]);
+                follow_boxes(ui, &mut look.mods[4], 4);
                 let moved = ui.add(egui::Slider::new(&mut look.speed, -2.0..=4.0).text("speed"));
                 if double_clicked(ui, &moved) {
                     look.speed = 1.0;
@@ -2438,42 +2492,42 @@ impl App {
         });
         egui::CollapsingHeader::new("Colour").default_open(true).show(ui, |ui| {
             ui.horizontal(|ui| {
-                follow_boxes(ui, &mut look.mods[5]);
+                follow_boxes(ui, &mut look.mods[5], 4);
                 let moved = ui.add(egui::Slider::new(&mut look.hue, 0.0..=1.0).text("hue"));
                 if double_clicked(ui, &moved) {
                     look.hue = 0.0;
                 }
             });
             ui.horizontal(|ui| {
-                follow_boxes(ui, &mut look.mods[6]);
+                follow_boxes(ui, &mut look.mods[6], 4);
                 let moved = ui.add(egui::Slider::new(&mut look.saturation, 0.0..=2.0).text("saturation"));
                 if double_clicked(ui, &moved) {
                     look.saturation = 1.0;
                 }
             });
             ui.horizontal(|ui| {
-                follow_boxes(ui, &mut look.mods[7]);
+                follow_boxes(ui, &mut look.mods[7], 4);
                 let moved = ui.add(egui::Slider::new(&mut look.brightness, 0.0..=2.0).text("brightness"));
                 if double_clicked(ui, &moved) {
                     look.brightness = 1.0;
                 }
             });
             ui.horizontal(|ui| {
-                follow_boxes(ui, &mut look.mods[8]);
+                follow_boxes(ui, &mut look.mods[8], 4);
                 let moved = ui.add(egui::Slider::new(&mut look.contrast, 0.0..=2.0).text("contrast"));
                 if double_clicked(ui, &moved) {
                     look.contrast = 1.0;
                 }
             });
             ui.horizontal(|ui| {
-                follow_boxes(ui, &mut look.mods[9]);
+                follow_boxes(ui, &mut look.mods[9], 4);
                 let moved = ui.add(egui::Slider::new(&mut look.gamma, 0.1..=8.0).logarithmic(true).text("gamma"));
                 if double_clicked(ui, &moved) {
                     look.gamma = 1.0;
                 }
             });
             ui.horizontal(|ui| {
-                follow_boxes(ui, &mut look.mods[10]);
+                follow_boxes(ui, &mut look.mods[10], 4);
                 let moved = ui.add(egui::Slider::new(&mut look.colorize, 0.0..=1.0).text("colorize"));
                 if double_clicked(ui, &moved) {
                     look.colorize = 0.0;
@@ -2602,6 +2656,7 @@ impl App {
             } else {
                 self.looks.insert(entry, look);
             }
+            self.look_dirty = Some((entry, Instant::now()));
         }
     }
     fn source_name(&self, source: &Source) -> String {
@@ -2626,28 +2681,15 @@ impl App {
             }
             return;
         };
-        let built = self.build(entry).and_then(|program| Ok((program, self.gfx.target(THUMB)?)));
+        let built = self.build(entry).and_then(|program| {
+            let target = self.gfx.target(THUMB)?;
+            self.still(&program, entry, &self.cell_raw, &target);
+            Ok((program, target))
+        });
         let Some(cell) = &mut self.layers[layer].cells[column] else { return };
         cell.prepared = true;
         match built {
             Ok((program, target)) => {
-                let audio = still_audio();
-                self.gfx.shader_pass(
-                    &program,
-                    &target,
-                    &gfx::Frame {
-                        time: 6.0,
-                        dt: 1.0 / 60.0,
-                        frame: 360,
-                        bpm: 128.0,
-                        tempo: rpi_vj_native::audio::Tempo::free(6.0, 128.0, 0.0),
-                        audio: &audio,
-                        flow: &[6.0; 4],
-                        spec_flow: &[3.0; 32],
-                        canvas: [1.0, 0.0, 0.0, 0.0],
-                        zoom: 1.0,
-                    },
-                );
                 let texture = frame.register_native_glow_texture(target.texture);
                 cell.program = Some(program);
                 cell.thumb = Some((target, texture));
@@ -3044,7 +3086,19 @@ impl App {
             self.signal_since = now;
         }
         let three = [moving.bass, moving.onset, moving.mid].map(|level| level.clamp(0.0, 1.0));
-        self.signals = [three[0], three[1], three[2], three[self.signal_auto]];
+        // Step: each beat a new pose, held until the next. Ride: out and back, the pace
+        // and the reach growing with the energy.
+        let beat = moving.onset > 0.4;
+        if beat && !self.step_beat {
+            self.step_pose += 1;
+            self.step_held = [1.0, 0.3, 0.7, 0.1][self.step_pose % 4];
+        }
+        self.step_beat = beat;
+        self.step_shown += (self.step_held - self.step_shown) * (1.0 - (-dt / 0.05).exp());
+        let energy = moving.volume.max(moving.bass).clamp(0.0, 1.0);
+        self.ride_phase = (self.ride_phase + dt * (0.05 + 0.45 * energy)).rem_euclid(1000.0);
+        let ride = (0.5 - 0.5 * (self.ride_phase * std::f32::consts::TAU).cos()) * (energy * 10.0).min(1.0);
+        self.signals = [three[0], three[1], three[2], three[self.signal_auto], self.step_shown, ride];
         for layer in self.layers.iter_mut().chain([&mut self.auto, &mut self.pre]) {
             layer.drawn = false;
             if new_section {
@@ -4666,6 +4720,13 @@ impl eframe::App for App {
             }
         }
         self.finish_download();
+        // A look that changed shows in the stills once the slider has been let go.
+        if let Some((entry, at)) = self.look_dirty {
+            if at.elapsed() > Duration::from_millis(300) && !ctx.input(|input| input.pointer.any_down()) {
+                self.look_dirty = None;
+                self.refresh_stills(entry);
+            }
+        }
         // A changed number of the previewed shader: compile it again once the drag rests.
         if self.rebuild_at.is_some_and(|at| at.elapsed() > Duration::from_millis(150)) {
             self.rebuild_at = None;
