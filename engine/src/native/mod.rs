@@ -428,14 +428,16 @@ pub fn run(
         }
         let late = frame_start.elapsed() > Duration::from_millis(20);
         late_frames += u64::from(late);
-        // A shader that runs late while AUTO has STROBE on cannot afford it: STROBE needs
-        // the heavier compositor. AUTO keeps it off that shader for the rest of the run.
+        // A shader that keeps running late is drawn smaller for the rest of the run, down
+        // to the smallest size the show uses. If it is late at that size while AUTO has
+        // STROBE on, which needs the heavier compositor, AUTO keeps STROBE off it.
         lag += (f32::from(u8::from(late)) - lag) * 0.01;
-        if lag > 0.04 && renderer.flash[3] > 0.0 && state.react == crate::audio::REACT_AUTO {
-            if let Some(shader) = state.selected_shader {
-                if no_strobe.insert(shader) {
-                    eprintln!("shader {shader} runs late with STROBE; AUTO leaves STROBE out on it");
-                }
+        if let Some(shader) = state.selected_shader.filter(|_| lag > 0.04 && state.shader && !state.blackout) {
+            if let Some(size) = renderer.lower(shader) {
+                eprintln!("shader {shader} runs late; drawn at {}x{} from now", size.0, size.1);
+                lag = 0.0;
+            } else if renderer.flash[3] > 0.0 && state.react == crate::audio::REACT_AUTO && no_strobe.insert(shader) {
+                eprintln!("shader {shader} runs late with STROBE; AUTO leaves STROBE out on it");
             }
         }
         if health_time.elapsed() > Duration::from_secs(1) {

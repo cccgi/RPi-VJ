@@ -516,6 +516,14 @@ impl Renderer {
             })
         }
     }
+    /// Render `shader` at the next smaller size already in use by the show, for the rest
+    /// of the run; returns that size, or `None` when it is at the smallest.
+    pub fn lower(&mut self, shader: usize) -> Option<(u32, u32)> {
+        let now = *self.shader_sizes.get(shader)?;
+        let next = self.shader_targets.iter().map(|(size, _)| *size).filter(|size| size.1 < now.1).max_by_key(|size| size.1)?;
+        self.shader_sizes[shader] = next;
+        Some(next)
+    }
     pub fn shader_errors(&self) -> &[Option<String>] {
         &self.errors
     }
