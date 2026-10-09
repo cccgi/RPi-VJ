@@ -222,6 +222,7 @@ pub fn run(
         }
         let moving = crate::audio::idle_audio(&heard, idle_clock.elapsed().as_secs_f32(), idle);
         let moving = reactor.apply(state.react, idle_dt, &moving);
+        renderer.flash = reactor.flash(state.react);
         let mut candidate_error = None;
         for (index, player) in players.iter_mut().enumerate() {
             if let Err(error) = player.poll() {

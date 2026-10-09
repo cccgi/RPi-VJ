@@ -199,6 +199,8 @@ pub struct Renderer {
     pub geo_level: [f32; 5],
     /// 1 while the audio is the silence stand-in, 0 with real sound.
     pub geo_idle: f32,
+    /// Beat flash on the shader layer: brightness, colour wash, hue turn, 1 when in use.
+    pub flash: [f32; 4],
 }
 /// Diagnostic override: when either variable is set, every shader renders at this size
 /// regardless of its manifest `render_height`.
@@ -500,6 +502,7 @@ impl Renderer {
                 geo_peak: [0.02; 5],
                 geo_level: [0.0; 5],
                 geo_idle: 0.0,
+                flash: [1.0, 0.0, 0.0, 0.0],
             })
         }
     }
@@ -681,7 +684,8 @@ impl Renderer {
         let geo_on = m[..4].iter().any(|v| *v > 0.0)
             || segments > 0.0
             || turn != 0.0
-            || pan != [0.0, 0.0];
+            || pan != [0.0, 0.0]
+            || self.flash[3] > 0.0;
         if state.shader && !state.blackout {
             if let Some(index) = state.selected_shader { self.compile_selected(index); }
         }
@@ -798,6 +802,20 @@ impl Renderer {
                 if let Some(location) = gl.get_uniform_location(p.id, name) {
                     gl.uniform_4_f32(Some(&location), value[0], value[1], value[2], value[3]);
                 }
+            }
+            if geo_on {
+                // The hue turn is a rotation about grey, worked out here once a frame
+                // instead of per pixel.
+                let [gain, wash, hue, on] = self.flash;
+                let (sin, cos) = (hue * std::f32::consts::TAU).sin_cos();
+                let (third, root) = ((1.0 - cos) / 3.0, sin / 3f32.sqrt());
+                let (same, up, down) = ((cos + third) * gain, (third + root) * gain, (third - root) * gain);
+                let turn = [same, up, down, down, same, up, up, down, same];
+                let tint = [same + 0.2 * down + 0.1 * up, up + 0.2 * same + 0.1 * down, down + 0.2 * up + 0.1 * same]
+                    .map(|v| v / gain.max(0.001) * wash);
+                p.float(gl, "u_flash", on);
+                gl.uniform_matrix_3_f32_slice(gl.get_uniform_location(p.id, "u_flash_turn").as_ref(), false, &turn);
+                gl.uniform_3_f32(gl.get_uniform_location(p.id, "u_flash_tint").as_ref(), tint[0], tint[1], tint[2]);
             }
             p.float(gl, "u_fx_amount", state.video_effect_amount);
             p.float(gl, "u_sfx_amount", state.shader_effect_amount);

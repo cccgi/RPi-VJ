@@ -270,7 +270,7 @@ mod tests {
         // Its neighbours show the current setting and step on when pressed.
         assert_eq!((keys[27].label.as_str(), keys[28].label.as_str()), ("MIC", "PUMP"));
         state.apply(keys[27].command.unwrap()).unwrap();
-        for name in ["GLIDE", "STEP", "RIDE", "TWIST", "PUMP"] {
+        for name in ["STROBE", "STEP", "RIDE", "TWIST", "PUMP"] {
             state.apply(keys[28].command.unwrap()).unwrap();
             let keys = page(&show, &state);
             assert_eq!((keys[27].label.as_str(), keys[28].label.as_str()), ("LINE", name));

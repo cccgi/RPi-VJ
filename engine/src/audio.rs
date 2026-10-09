@@ -93,13 +93,14 @@ pub fn idle_audio(frame: &AudioFrame, time: f32, amount: f32) -> AudioFrame {
     out
 }
 /// The ways shaders can follow the music, in the order the key steps through them.
-pub const REACT_MODES: [&str; 5] = ["PUMP", "GLIDE", "STEP", "RIDE", "TWIST"];
+pub const REACT_MODES: [&str; 5] = ["PUMP", "STROBE", "STEP", "RIDE", "TWIST"];
 /// Share of the zoom and of the turn in each pose that STEP walks through.
 const STEP_POSES: [(f32, f32); 4] = [(1.0, 0.2), (0.3, 1.0), (0.7, 0.5), (0.1, 0.8)];
 /// Reshapes the levels handed to the shaders, so one shader answers the music in
 /// several ways without being changed itself:
 /// - PUMP: the levels as heard; every kick shows.
-/// - GLIDE: slow followers and no hits; the picture swells and sinks with the energy.
+/// - STROBE: the picture only swells gently, and the light does the work: every beat
+///   flashes it bright from near dark, washes it with colour and turns its hues.
 /// - STEP: each beat snaps to a new pose, which holds until the next beat.
 /// - RIDE: a steady travel in and out whose speed and depth follow the energy.
 /// - TWIST: bass and mids trade places, so kicks turn the picture and melody pumps it.
@@ -113,8 +114,22 @@ pub struct Reactor {
     since_beat: f32,
     in_beat: bool,
     phase: f32,
+    /// STROBE: the flash fading after a beat, the hue turn it left, and how surely there
+    /// is a beat to flash on.
+    flash: f32,
+    hue: f32,
+    beating: f32,
 }
 impl Reactor {
+    /// For the compositor: brightness, colour wash, hue turn (0..1), and 1 while STROBE
+    /// is on. Without a beat the picture is left as it is rather than held dark.
+    pub fn flash(&self, mode: u8) -> [f32; 4] {
+        if mode != 1 {
+            return [1.0, 0.0, 0.0, 0.0];
+        }
+        let lit = 0.25 + 1.5 * self.flash;
+        [1.0 + (lit - 1.0) * self.beating, 0.6 * self.flash * self.beating, self.hue, 1.0]
+    }
     pub fn apply(&mut self, mode: u8, dt: f32, audio: &AudioFrame) -> AudioFrame {
         let heard = [audio.bass, audio.mid, audio.treble, audio.volume, audio.sub, audio.low_mid, audio.high_mid];
         for (slow, level) in self.slow.iter_mut().zip(heard) {
@@ -126,7 +141,15 @@ impl Reactor {
         let beat = audio.onset > 0.4 && !self.in_beat;
         self.in_beat = audio.onset > 0.4;
         self.since_beat += dt;
+        self.flash *= (-dt / 0.1).exp();
+        if self.since_beat > 1.0 {
+            self.beating *= (-dt / 0.5).exp();
+        }
         if beat {
+            self.flash = 1.0;
+            self.beating = 1.0;
+            // The golden angle: successive beats never land on neighbouring hues.
+            self.hue = (self.hue + 0.382).fract();
             self.since_beat = 0.0;
             self.steps += 1;
             let (zoom, turn) = STEP_POSES[self.steps % STEP_POSES.len()];
@@ -574,6 +597,34 @@ mod tests {
         run[300..].windows(2).map(|pair| (pair[1].0 - pair[0].0).abs()).fold(0.0, f32::max)
     }
     #[test]
+    fn strobe_flashes_on_the_beat_and_leaves_a_beatless_picture_alone() {
+        let (dt, beat) = (1.0 / 60.0, 60.0 / 128.0);
+        let mut reactor = Reactor::default();
+        assert_eq!(reactor.flash(1), [1.0, 0.0, 0.0, 1.0]);
+        let (mut brightest, mut darkest, mut hues) = (0.0f32, 9.0f32, Vec::new());
+        for frame in 0..600 {
+            let since = (frame as f32 * dt / beat).fract();
+            let audio = AudioFrame { volume: 0.5, onset: (1.0 - since * 6.0).max(0.0), ..AudioFrame::default() };
+            reactor.apply(1, dt, &audio);
+            let [gain, wash, hue, on] = reactor.flash(1);
+            assert!(on == 1.0 && (0.0..=0.6).contains(&wash));
+            if frame > 60 {
+                brightest = brightest.max(gain);
+                darkest = darkest.min(gain);
+                hues.push(hue);
+            }
+            assert_eq!(reactor.flash(0), [1.0, 0.0, 0.0, 0.0]);
+        }
+        assert!(brightest > 1.6 && darkest < 0.35, "{brightest} {darkest}");
+        hues.dedup();
+        assert!(hues.len() > 15, "{} hues", hues.len());
+        // The music stops having a beat: brightness returns to normal.
+        for _ in 0..300 {
+            reactor.apply(1, dt, &AudioFrame { volume: 0.5, ..AudioFrame::default() });
+        }
+        assert!((reactor.flash(1)[0] - 1.0).abs() < 0.02);
+    }
+    #[test]
     fn react_modes_reshape_how_the_levels_move() {
         let pump = react(0);
         assert!(roughest(&pump) > 0.5 && pump.iter().any(|frame| frame.1 > 0.9));
@@ -584,7 +635,7 @@ mod tests {
             assert!(run.iter().all(|frame| frame.1 == 0.0), "mode {mode} passes hits on");
             assert!(run[300..].iter().any(|frame| frame.0 > 0.15), "mode {mode} stays flat");
         }
-        // GLIDE and RIDE have no jumps; TWIST moves the kick off the bass.
+        // STROBE and RIDE move without jumps; TWIST moves the kick off the bass.
         for mode in [1, 3, 4] {
             assert!(roughest(&react(mode)) < 0.05, "mode {mode}: {}", roughest(&react(mode)));
         }

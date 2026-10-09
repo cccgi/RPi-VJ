@@ -25,6 +25,9 @@ uniform sampler2D u_hud_tex;
 in vec2 v_guv;          // shader-layer coordinate, warped in the vertex stage
 uniform vec4 u_geo2;    // ripple amplitude, ripple phase, mirror segments
 uniform vec4 u_geo3;    // wave amplitude, wave phase, canvas scroll x and y
+uniform float u_flash;      // 1 while the beat flash is in use
+uniform mat3 u_flash_turn;  // hue turn, scaled by the flash brightness
+uniform vec3 u_flash_tint;  // colour wash, scaled by its strength
 #endif
 uniform int u_hud;
 
@@ -166,6 +169,14 @@ void main() {
     shaderSample.rgb = mix(shaderSample.rgb, vec3(se), u_sfx_amount);
   }
   if (u_sfx > 0) shaderSample.rgb = clamp(fxColor(shaderSample.rgb, uv, u_sfx, u_sfx_amount), 0.0, 1.0);
+#ifdef GEO
+  // Beat flash: turn the hues, strobe the brightness, and splash a tint that also
+  // reaches the dark parts of the picture.
+  if (u_flash > 0.5) {
+    shaderSample.rgb = clamp(u_flash_turn * shaderSample.rgb
+                             + u_flash_tint * (0.3 + 0.7 * luma(shaderSample.rgb)), 0.0, 1.0);
+  }
+#endif
 
 
   // Displace warps the base using the top layer's red/green, so it must offset
