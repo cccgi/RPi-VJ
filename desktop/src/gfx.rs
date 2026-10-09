@@ -145,10 +145,32 @@ uniform float u_brightness;
 uniform float u_contrast;
 uniform float u_gamma;
 uniform float u_invert;
+uniform float u_tile[7];
 in vec2 uv;
 out vec4 color;
+const float ASPECT = 16.0 / 9.0;
 void main() {
     vec3 c = texture(u_src, uv).rgb;
+    int tiling = int(u_tile[0] + 0.5);
+    if (tiling > 0) {
+        // The finished picture laid out as tiles: turned, zoomed and moved as a whole.
+        vec2 q = mat2(u_tile[1], -u_tile[2], u_tile[2], u_tile[1]) * ((uv - 0.5) * vec2(ASPECT, 1.0)) / max(u_tile[5], 0.01);
+        vec2 p = q / vec2(ASPECT, 1.0) + 0.5 + vec2(u_tile[3] / ASPECT, u_tile[4]);
+        vec2 f = fract(p);
+        if (tiling == 1) c = texture(u_src, f).rgb;
+        if (tiling == 2) c = texture(u_src, 1.0 - abs(1.0 - mod(p, 2.0))).rgb;
+        if (tiling == 3) {
+            // Near a tile's edge the picture gives way to itself shifted by half a tile,
+            // which has no edge there, so neighbouring tiles meet without a seam.
+            float reach = max(u_tile[6], 0.001);
+            float wx = smoothstep(0.0, reach, f.x) * smoothstep(0.0, reach, 1.0 - f.x);
+            float wy = smoothstep(0.0, reach, f.y) * smoothstep(0.0, reach, 1.0 - f.y);
+            vec3 shifted_x = texture(u_src, vec2(fract(f.x + 0.5), f.y)).rgb;
+            vec3 shifted_y = texture(u_src, vec2(f.x, fract(f.y + 0.5))).rgb;
+            vec3 shifted_both = texture(u_src, fract(f + 0.5)).rgb;
+            c = mix(mix(shifted_both, shifted_y, wx), mix(shifted_x, texture(u_src, f).rgb, wx), wy);
+        }
+    }
     float angle = u_hue * 6.2831853;
     vec3 axis = vec3(0.57735);
     c = c * cos(angle) + cross(axis, c) * sin(angle) + axis * dot(axis, c) * (1.0 - cos(angle));
@@ -650,7 +672,10 @@ impl Gfx {
     }
     /// Colour work on one picture: hue turn (0..1), saturation, brightness, contrast,
     /// gamma, and invert (0 or 1), in that order of `grade`.
-    pub fn grade(&self, target: &Target, source: glow::Texture, grade: [f32; 6]) {
+    /// `tile` lays the picture out as tiles first: kind (0 none, 1 repeat, 2 mirrored,
+    /// 3 seamless), turn as cos and sin, move across and up in picture heights, zoom,
+    /// and how far in from a tile's edge the seamless blend reaches.
+    pub fn grade(&self, target: &Target, source: glow::Texture, grade: [f32; 6], tile: [f32; 7]) {
         let (gl, p) = (&self.gl, &self.grade);
         // SAFETY: as in `new`; locations belong to the grade program.
         unsafe {
@@ -661,6 +686,7 @@ impl Gfx {
             for (name, value) in ["u_hue", "u_saturation", "u_brightness", "u_contrast", "u_gamma", "u_invert"].into_iter().zip(grade) {
                 gl.uniform_1_f32(p.uniforms.get(name), value);
             }
+            gl.uniform_1_f32_slice(p.uniforms.get("u_tile"), &tile);
             gl.draw_arrays(glow::TRIANGLES, 0, 3);
             self.end();
         }

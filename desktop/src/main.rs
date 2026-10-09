@@ -188,6 +188,8 @@ struct Options {
     undo_test: bool,
     /// Show the Assets tab as thumbnails, with its first folder opened.
     tiles: bool,
+    /// Tile the shader put live with `--live`, zoomed out, in this way.
+    tile: usize,
     /// Start with the grid scrolled this far sideways.
     scroll: f32,
     /// Open the editor for the first cell of the second layer.
@@ -235,6 +237,7 @@ impl Options {
                 "--midi-test" => options.midi_test = true,
                 "--open" => options.open = Some(value().into()),
                 "--edit-test" => options.edit_test = true,
+                "--tile" => options.tile = value().parse().unwrap_or(0),
                 "--scroll" => options.scroll = value().parse().unwrap_or(0.0),
                 "--cell-fx" => options.cell_fx = true,
                 "--drag-test" => options.drag_test = true,
@@ -335,6 +338,10 @@ struct Look {
     contrast: f32,
     gamma: f32,
     invert: bool,
+    /// How the picture fills the frame when zoomed out or moved (`TILINGS`), and for the
+    /// seamless kind how far in from a tile's edge the blend reaches.
+    tile: usize,
+    tile_blend: f32,
     /// Which sliders follow the music, and how: a bit each for pump, strobe, twist and
     /// auto, for zoom, turn, across, up, speed, hue, saturation, brightness, contrast
     /// and gamma in that order.
@@ -357,6 +364,8 @@ impl Default for Look {
             contrast: 1.0,
             gamma: 1.0,
             invert: false,
+            tile: 0,
+            tile_blend: 0.15,
             mods: [0; 10],
             react_mode: None,
             params: Vec::new(),
@@ -380,19 +389,24 @@ impl Look {
             self.gamma * (1.0 + follow(9)),
             f32::from(u8::from(self.invert)),
         ];
+        let zoom = self.zoom * (1.0 + 0.5 * follow(0));
+        let canvas = [angle.cos(), angle.sin(), self.pan[0] + 0.2 * follow(2), self.pan[1] + 0.2 * follow(3)];
+        // Tiled, the shader draws its picture plainly and the tiles are zoomed, turned and moved.
+        let tiled = self.tile > 0;
         Live {
-            zoom: self.zoom * (1.0 + 0.5 * follow(0)),
-            canvas: [angle.cos(), angle.sin(), self.pan[0] + 0.2 * follow(2), self.pan[1] + 0.2 * follow(3)],
+            zoom: if tiled { 1.0 } else { zoom },
+            canvas: if tiled { [1.0, 0.0, 0.0, 0.0] } else { canvas },
             speed: self.speed + 2.0 * follow(4),
             // The colour settings, when any of them is off its neutral value.
-            grade: (grade != [0.0, 1.0, 1.0, 1.0, 1.0, 0.0]).then_some(grade),
+            grade: (grade != NEUTRAL).then_some(grade),
+            tile: tiled.then_some([self.tile as f32, canvas[0], canvas[1], canvas[2], canvas[3], zoom, self.tile_blend]),
         }
     }
     fn json(&self) -> serde_json::Value {
         serde_json::json!({
             "zoom": self.zoom, "rotate": self.rotate, "pan": self.pan, "speed": self.speed, "react": self.react,
             "hue": self.hue, "saturation": self.saturation, "brightness": self.brightness, "contrast": self.contrast,
-            "gamma": self.gamma, "invert": self.invert, "react_mode": self.react_mode, "mods": self.mods, "params": self.params,
+            "gamma": self.gamma, "invert": self.invert, "react_mode": self.react_mode, "tile": TILINGS[self.tile.min(TILINGS.len() - 1)], "tile_blend": self.tile_blend, "mods": self.mods, "params": self.params,
         })
     }
     fn from(saved: &serde_json::Value) -> Self {
@@ -410,6 +424,8 @@ impl Look {
             contrast: number("contrast", 1.0),
             gamma: number("gamma", 1.0),
             invert: saved["invert"].as_bool().unwrap_or(false),
+            tile: TILINGS.iter().position(|name| Some(*name) == saved["tile"].as_str()).unwrap_or(0),
+            tile_blend: number("tile_blend", 0.15).clamp(0.01, 0.5),
             mods: std::array::from_fn(|slider| saved["mods"][slider].as_u64().unwrap_or(0) as u8 & 15),
             react_mode: saved["react_mode"].as_u64().map(|mode| (mode as u8).min(REACT_MODES.len() as u8 - 1)),
             params: saved["params"].as_array().into_iter().flatten().filter_map(pair).collect(),
@@ -422,7 +438,13 @@ struct Live {
     canvas: [f32; 4],
     speed: f32,
     grade: Option<[f32; 6]>,
+    /// The tiling for `gfx::Gfx::grade`, when the look tiles.
+    tile: Option<[f32; 7]>,
 }
+/// Colour settings that change nothing.
+const NEUTRAL: [f32; 6] = [0.0, 1.0, 1.0, 1.0, 1.0, 0.0];
+/// How a shader's picture fills the frame when it is zoomed out or moved.
+const TILINGS: [&str; 4] = ["Shader's own canvas", "Tile", "Mirror", "Seamless tile"];
 /// The four small boxes beside an editor slider: which kinds of music-following move it.
 fn follow_boxes(ui: &mut egui::Ui, bits: &mut u8) {
     ui.spacing_mut().item_spacing.x = 1.0;
@@ -504,12 +526,12 @@ fn playing(layer: &Layer) -> Option<usize> {
 }
 /// A layer's picture with its shader's colour settings applied, if it has any.
 fn graded(gfx: &gfx::Gfx, looks: &HashMap<usize, Look>, signals: [f32; 4], layer: &Layer, into: &gfx::Target) -> glow::Texture {
-    match playing(layer).and_then(|entry| looks.get(&entry)).and_then(|look| look.live(signals).grade) {
-        Some(grade) => {
-            gfx.grade(into, layer.target.texture, grade);
+    match playing(layer).and_then(|entry| looks.get(&entry)).map(|look| look.live(signals)) {
+        Some(live) if live.grade.is_some() || live.tile.is_some() => {
+            gfx.grade(into, layer.target.texture, live.grade.unwrap_or(NEUTRAL), live.tile.unwrap_or([0.0; 7]));
             into.texture
         }
-        None => layer.target.texture,
+        _ => layer.target.texture,
     }
 }
 /// Shadertoy ids out of pasted text: links, or bare six-character ids.
@@ -1271,6 +1293,9 @@ impl App {
                 Some(entry) => {
                     app.place(1, 0, vec![Source::Shader(entry)]);
                     app.launch(1, 0);
+                    if app.options.tile > 0 {
+                        app.looks.insert(entry, Look { tile: app.options.tile.min(3), zoom: 0.4, ..Look::default() });
+                    }
                 }
                 None => eprintln!("no shader {id} in the library"),
             }
@@ -2274,11 +2299,29 @@ impl App {
         egui::CollapsingHeader::new("Transform").default_open(true).show(ui, |ui| {
             ui.horizontal(|ui| {
                 follow_boxes(ui, &mut look.mods[0]);
-                let moved = ui.add(egui::Slider::new(&mut look.zoom, 0.2..=5.0).logarithmic(true).text("zoom"));
+                let moved = ui.add(egui::Slider::new(&mut look.zoom, 0.1..=10.0).logarithmic(true).text("zoom"));
                 if double_clicked(ui, &moved) {
                     look.zoom = 1.0;
                 }
             });
+            ui.horizontal(|ui| {
+                egui::ComboBox::from_id_salt("look-tile").width(150.0).selected_text(TILINGS[look.tile]).show_ui(ui, |ui| {
+                    for (kind, name) in TILINGS.iter().enumerate() {
+                        ui.selectable_value(&mut look.tile, kind, *name);
+                    }
+                });
+                ui.label("fill").on_hover_text(
+                    "What zooming out and moving show. The shader's own canvas: more of what the shader draws. \
+                     Tile: the picture repeated. Mirror: repeated, every other one flipped. \
+                     Seamless tile: repeated, with the edges blended so the tiles meet without a seam.",
+                );
+            });
+            if look.tile == 3 {
+                let moved = ui.add(egui::Slider::new(&mut look.tile_blend, 0.02..=0.5).text("edge blend"));
+                if double_clicked(ui, &moved) {
+                    look.tile_blend = 0.15;
+                }
+            }
             ui.horizontal(|ui| {
                 follow_boxes(ui, &mut look.mods[1]);
                 let moved = ui.add(egui::Slider::new(&mut look.rotate, -180.0..=180.0).suffix("°").text("turn"));
