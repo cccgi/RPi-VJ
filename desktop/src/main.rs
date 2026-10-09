@@ -1,10 +1,13 @@
-//! RPi-VJ Desktop, phase 3: a composition of layers, each a row of cells holding shaders
+//! RPi-VJ Desktop, phase 4: a composition of layers, each a row of cells holding shaders
 //! or video clips with a play time each, played by hand, in sequence or shuffled; a
-//! library with folders and a checked list that plays by itself; per-layer opacity,
-//! blend, effect and react mode; a small preview; projection on a chosen monitor.
+//! library with folders, a checked list that plays by itself and presets of it;
+//! per-layer opacity, blend, effect and react mode; MIDI control by learning;
+//! compositions saved to and opened from files; a small preview; projection on a
+//! chosen monitor.
 mod audio_in;
 mod gfx;
 mod library;
+mod midi;
 mod mpv;
 
 use anyhow::Result;
@@ -58,6 +61,10 @@ struct Options {
     sequence: bool,
     /// Check this many shaders of the Pi bank and play them from the library, a second each.
     autoplay: usize,
+    /// Open this composition file at start.
+    open: Option<PathBuf>,
+    /// Bind and send a few MIDI messages, and take the checked list through a preset.
+    midi_test: bool,
     /// Save the output picture, or a picture of the app window, here after `frames`
     /// frames and leave.
     snapshot: Option<PathBuf>,
@@ -86,6 +93,8 @@ impl Options {
                 "--fx" => options.fx = value().parse().unwrap_or(0),
                 "--sequence" => options.sequence = true,
                 "--autoplay" => options.autoplay = value().parse().unwrap_or(0),
+                "--midi-test" => options.midi_test = true,
+                "--open" => options.open = Some(value().into()),
                 "--snapshot" => options.snapshot = Some(value().into()),
                 "--ui-snapshot" => options.ui_snapshot = Some(value().into()),
                 "--gain" => options.gain = value().parse().ok(),
@@ -104,6 +113,7 @@ impl Options {
             || self.clip.is_some()
             || self.fill > 0
             || self.autoplay > 0
+            || self.open.is_some()
             || self.snapshot.is_some()
             || self.ui_snapshot.is_some()
             || self.exit_after.is_some()
@@ -196,6 +206,71 @@ enum View {
     PiBank,
     Folder(usize),
 }
+/// Something a MIDI knob or pad can be bound to.
+#[derive(Clone, Copy, PartialEq, Debug)]
+enum Control {
+    Gain,
+    Lead,
+    Opacity(usize),
+    FxAmount(usize),
+    Eject(usize),
+    Cell(usize, usize),
+    AutoOpacity,
+    AutoToggle,
+    AutoNext,
+}
+impl Control {
+    /// How it is written in the saved state.
+    fn name(self) -> String {
+        match self {
+            Control::Gain => "gain".into(),
+            Control::Lead => "lead".into(),
+            Control::Opacity(layer) => format!("opacity:{layer}"),
+            Control::FxAmount(layer) => format!("fx:{layer}"),
+            Control::Eject(layer) => format!("eject:{layer}"),
+            Control::Cell(layer, column) => format!("cell:{layer}:{column}"),
+            Control::AutoOpacity => "auto_opacity".into(),
+            Control::AutoToggle => "auto_toggle".into(),
+            Control::AutoNext => "auto_next".into(),
+        }
+    }
+    fn parse(name: &str) -> Option<Self> {
+        let mut parts = name.split(':');
+        let (kind, mut number) = (parts.next()?, || parts.next()?.parse::<usize>().ok());
+        Some(match kind {
+            "gain" => Control::Gain,
+            "lead" => Control::Lead,
+            "opacity" => Control::Opacity(number()?),
+            "fx" => Control::FxAmount(number()?),
+            "eject" => Control::Eject(number()?),
+            "cell" => Control::Cell(number()?, number()?),
+            "auto_opacity" => Control::AutoOpacity,
+            "auto_toggle" => Control::AutoToggle,
+            "auto_next" => Control::AutoNext,
+            _ => return None,
+        })
+    }
+}
+/// A MIDI message as a binding knows it: kind (0x90 note, 0xB0 controller), channel, number.
+type MidiKey = (u8, u8, u8);
+/// What the library plays by itself, kept under a name.
+struct Preset {
+    name: String,
+    ids: Vec<String>,
+    shuffle: bool,
+    seconds: f32,
+    on_sections: bool,
+    react: u8,
+    opacity: f32,
+    blend: usize,
+}
+/// In MIDI learn, note where a control sits and what was done to it.
+fn spot(actions: &mut Vec<Action>, learn: bool, response: &egui::Response, control: Control) {
+    if learn {
+        let picked = response.clicked() || response.drag_started();
+        actions.push(Action::Spot(response.rect, control, picked, response.secondary_clicked()));
+    }
+}
 /// What the UI asks for while it is being drawn; carried out once drawing is done.
 enum Action {
     Launch(usize, usize),
@@ -212,6 +287,11 @@ enum Action {
     AddToFolder(usize, Vec<usize>),
     RemoveFromFolder(usize, Vec<usize>),
     DeleteFolder(usize),
+    /// MIDI learn: a control's place, whether it was picked, whether to forget its binding.
+    Spot(egui::Rect, Control, bool, bool),
+    LoadPreset(usize),
+    DeletePreset(usize),
+    OpenComposition(serde_json::Value),
 }
 /// The checked shaders of the library being played one after another.
 struct AutoPlay {
@@ -251,6 +331,14 @@ struct App {
     auto_sections: bool,
     auto_changes: u32,
     seed: u64,
+    presets: Vec<Preset>,
+    preset_name: String,
+    // MIDI.
+    midi: midi::Midi,
+    bindings: Vec<(MidiKey, Control)>,
+    learn: bool,
+    learn_target: Option<Control>,
+    midi_last: Option<String>,
     // Composition.
     layers: Vec<Layer>,
     columns: usize,
@@ -357,6 +445,13 @@ impl App {
             auto_seconds: 20.0,
             auto_sections: true,
             auto_changes: 0,
+            presets: Vec::new(),
+            preset_name: String::new(),
+            midi: midi::open(),
+            bindings: Vec::new(),
+            learn: false,
+            learn_target: None,
+            midi_last: None,
             seed: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(1, |t| t.as_nanos() as u64) | 1,
             stack: [gfx.target(RENDER_SIZES[size])?, gfx.target(RENDER_SIZES[size])?],
             out_target: gfx.target(RENDER_SIZES[size])?,
@@ -456,6 +551,24 @@ impl App {
             app.auto_seconds = 1.0;
             app.start_autoplay();
         }
+        if let Some(text) = app.options.open.as_ref().and_then(|path| std::fs::read_to_string(path).ok()) {
+            if let Ok(saved) = serde_json::from_str(&text) {
+                app.apply(Action::OpenComposition(saved));
+            }
+        }
+        if app.options.midi_test {
+            // A knob on the second layer's opacity, a pad on its third cell, and the
+            // checked list out through a preset and back.
+            app.bindings = vec![((0xB0, 0, 1), Control::Opacity(1)), ((0x90, 0, 5), Control::Cell(1, 2))];
+            for message in [[0xB0, 1, 32], [0x90, 5, 100], [0x80, 5, 0]] {
+                let _ = app.midi.inject.send(message);
+            }
+            app.preset_name = "test".into();
+            app.save_preset();
+            app.stop_autoplay();
+            app.checked.clear();
+            app.apply(Action::LoadPreset(0));
+        }
         if let Some(display) = app.options.output {
             app.output_on = true;
             app.output_display = display.saturating_sub(1).min(app.displays.len().saturating_sub(1));
@@ -467,6 +580,94 @@ impl App {
     }
     fn make_layer(&self, name: String) -> Result<Layer> {
         new_layer(&self.gfx, name, self.columns, self.size)
+    }
+    /// Keep the checked list and how it plays under the name in the preset box.
+    fn save_preset(&mut self) {
+        let name = self.preset_name.trim().to_owned();
+        if name.is_empty() {
+            return;
+        }
+        let preset = Preset {
+            name: name.clone(),
+            ids: self.checked.iter().map(|entry| self.library[*entry].id.clone()).collect(),
+            shuffle: self.auto_shuffle,
+            seconds: self.auto_seconds,
+            on_sections: self.auto_sections,
+            react: self.auto.react,
+            opacity: self.auto.opacity,
+            blend: self.auto.blend,
+        };
+        match self.presets.iter_mut().find(|known| known.name == name) {
+            Some(known) => *known = preset,
+            None => self.presets.push(preset),
+        }
+    }
+    /// Take what MIDI has sent: bind it in learn mode, else move what it is bound to.
+    fn handle_midi(&mut self) {
+        while let Ok([status, number, value]) = self.midi.incoming.try_recv() {
+            let (kind, channel) = (status & 0xF0, status & 0x0F);
+            let note_on = kind == 0x90 && value > 0;
+            if kind != 0xB0 && !note_on {
+                continue;
+            }
+            let key: MidiKey = (kind, channel, number);
+            self.midi_last = Some(format!(
+                "{} {number} ch {} = {value}",
+                if kind == 0xB0 { "knob" } else { "pad" },
+                channel + 1
+            ));
+            if self.learn {
+                if let Some(target) = self.learn_target.take() {
+                    self.bindings.retain(|(bound, control)| *bound != key && *control != target);
+                    self.bindings.push((key, target));
+                }
+                continue;
+            }
+            let bound: Vec<Control> = self.bindings.iter().filter(|(k, _)| *k == key).map(|(_, control)| *control).collect();
+            for control in bound {
+                self.control(control, f32::from(value) / 127.0, note_on || value >= 64);
+            }
+        }
+    }
+    /// Move a bound control: `value` (0..=1) for knobs, `pressed` for pads.
+    fn control(&mut self, control: Control, value: f32, pressed: bool) {
+        match control {
+            Control::Gain => self.gain = 0.05 * (16.0f32 / 0.05).powf(value),
+            Control::Lead => self.lead_ms = value * 250.0,
+            Control::Opacity(layer) => {
+                if let Some(layer) = self.layers.get_mut(layer) {
+                    layer.opacity = value;
+                }
+            }
+            Control::FxAmount(layer) => {
+                if let Some(layer) = self.layers.get_mut(layer) {
+                    layer.fx_amount = value;
+                }
+            }
+            Control::AutoOpacity => self.auto.opacity = value,
+            Control::Eject(layer) if pressed && layer < self.layers.len() => self.eject(layer),
+            Control::Cell(layer, column) if pressed && layer < self.layers.len() && column < self.columns => {
+                self.launch(layer, column)
+            }
+            Control::AutoToggle if pressed => {
+                if self.autoplay.is_some() {
+                    self.stop_autoplay();
+                } else {
+                    self.start_autoplay();
+                }
+            }
+            Control::AutoNext if pressed => self.autoplay_next(),
+            _ => {}
+        }
+    }
+    /// Empty the composition: every cell, layer and player.
+    fn clear_composition(&mut self) {
+        for layer in std::mem::take(&mut self.layers) {
+            for cell in layer.cells.into_iter().flatten() {
+                self.release(cell);
+            }
+            self.gfx.discard(layer.target);
+        }
     }
     fn random(&mut self) -> usize {
         self.seed ^= self.seed << 13;
@@ -783,6 +984,39 @@ impl App {
                 self.folders.remove(folder);
                 self.view = View::All;
             }
+            // Handled where the actions are gone through, with the painter at hand.
+            Action::Spot(..) => {}
+            Action::LoadPreset(index) => {
+                let Some(preset) = self.presets.get(index) else { return };
+                self.checked = preset.ids.iter().filter_map(|id| self.index_of.get(id).copied()).collect();
+                self.auto_shuffle = preset.shuffle;
+                self.auto_seconds = preset.seconds;
+                self.auto_sections = preset.on_sections;
+                self.auto.react = preset.react;
+                self.auto.opacity = preset.opacity;
+                self.auto.blend = preset.blend;
+                self.preset_name = preset.name.clone();
+                // Recalled to be played: start at once.
+                self.stop_autoplay();
+                self.start_autoplay();
+            }
+            Action::DeletePreset(index) => {
+                if index < self.presets.len() {
+                    self.presets.remove(index);
+                }
+            }
+            Action::OpenComposition(saved) => {
+                let before = (std::mem::take(&mut self.layers), self.columns);
+                if self.load_layers(&saved) {
+                    let opened = std::mem::replace(&mut self.layers, before.0);
+                    self.clear_composition();
+                    self.layers = opened;
+                    self.selected_layer = self.selected_layer.min(self.layers.len() - 1);
+                } else {
+                    (self.layers, self.columns) = before;
+                    self.message = Some("that file holds no composition".into());
+                }
+            }
         }
     }
     /// One frame of sound and picture: the Pi's chain up to the predictor, then each
@@ -983,6 +1217,22 @@ impl App {
             "columns": self.columns,
             "layers": layers,
             "folders": folders,
+            "presets": self.presets.iter().map(|preset| serde_json::json!({
+                "name": preset.name,
+                "ids": preset.ids,
+                "shuffle": preset.shuffle,
+                "seconds": preset.seconds,
+                "on_sections": preset.on_sections,
+                "react": preset.react,
+                "opacity": preset.opacity,
+                "blend": preset.blend,
+            })).collect::<Vec<_>>(),
+            "midi": self.bindings.iter().map(|((kind, channel, number), control)| serde_json::json!({
+                "kind": kind,
+                "channel": channel,
+                "number": number,
+                "control": control.name(),
+            })).collect::<Vec<_>>(),
             "gain": self.gain,
             "lead_ms": self.lead_ms,
             "size": self.size,
@@ -1010,12 +1260,9 @@ impl App {
             self.message = Some(format!("could not save to {}: {error}", path.display()));
         }
     }
-    /// Bring back what `save_state` wrote; false when there is nothing usable.
-    fn load_state(&mut self, audio: &mut Option<String>) -> bool {
-        let Some(text) = self.state_path.as_ref().and_then(|path| std::fs::read_to_string(path).ok()) else {
-            return false;
-        };
-        let Ok(state) = serde_json::from_str::<serde_json::Value>(&text) else { return false };
+    /// Build the layers a saved state or composition file describes; false, with nothing
+    /// changed that matters, when it describes none.
+    fn load_layers(&mut self, state: &serde_json::Value) -> bool {
         let layers = state["layers"].as_array().cloned().unwrap_or_default();
         if layers.is_empty() {
             return false;
@@ -1048,11 +1295,42 @@ impl App {
             }
             self.layers.push(layer);
         }
+        true
+    }
+    /// Bring back what `save_state` wrote; false when there is nothing usable.
+    fn load_state(&mut self, audio: &mut Option<String>) -> bool {
+        let Some(text) = self.state_path.as_ref().and_then(|path| std::fs::read_to_string(path).ok()) else {
+            return false;
+        };
+        let Ok(state) = serde_json::from_str::<serde_json::Value>(&text) else { return false };
+        if !self.load_layers(&state) {
+            return false;
+        }
+        let number = |value: &serde_json::Value, otherwise: f32| value.as_f64().map_or(otherwise, |v| v as f32);
         for folder in state["folders"].as_array().into_iter().flatten() {
             self.folders.push(Folder {
                 name: folder["name"].as_str().unwrap_or("Folder").to_owned(),
                 ids: folder["ids"].as_array().into_iter().flatten().filter_map(|id| id.as_str().map(str::to_owned)).collect(),
             });
+        }
+        let whole = |value: &serde_json::Value| value.as_u64().unwrap_or(0);
+        for preset in state["presets"].as_array().into_iter().flatten() {
+            self.presets.push(Preset {
+                name: preset["name"].as_str().unwrap_or("preset").to_owned(),
+                ids: preset["ids"].as_array().into_iter().flatten().filter_map(|id| id.as_str().map(str::to_owned)).collect(),
+                shuffle: preset["shuffle"].as_bool().unwrap_or(false),
+                seconds: number(&preset["seconds"], 20.0).clamp(1.0, 36000.0),
+                on_sections: preset["on_sections"].as_bool().unwrap_or(true),
+                react: (whole(&preset["react"]) as u8).min(REACT_MODES.len() as u8 - 1),
+                opacity: number(&preset["opacity"], 1.0).clamp(0.0, 1.0),
+                blend: (whole(&preset["blend"]) as usize).min(gfx::BLENDS.len() - 1),
+            });
+        }
+        for binding in state["midi"].as_array().into_iter().flatten() {
+            if let Some(control) = binding["control"].as_str().and_then(Control::parse) {
+                let key = (whole(&binding["kind"]) as u8, whole(&binding["channel"]) as u8, whole(&binding["number"]) as u8);
+                self.bindings.push((key, control));
+            }
         }
         let checked = state["checked"].as_array().into_iter().flatten();
         self.checked = checked.filter_map(|id| self.index_of.get(id.as_str()?).copied()).collect();
@@ -1075,7 +1353,8 @@ impl App {
         self.selected_layer = self.selected_layer.min(self.layers.len() - 1);
         true
     }
-    fn top_bar(&mut self, ui: &mut egui::Ui) {
+    fn top_bar(&mut self, ui: &mut egui::Ui, actions: &mut Vec<Action>) {
+        let learn = self.learn;
         ui.horizontal_wrapped(|ui| {
             ui.label("Audio in");
             let current = self.source.map(|index| self.sources[index].label()).unwrap_or_else(|| "none".into());
@@ -1090,7 +1369,8 @@ impl App {
             if let Some(index) = chosen {
                 self.listen(index);
             }
-            ui.add(egui::Slider::new(&mut self.gain, 0.05..=16.0).logarithmic(true).text("FFT gain"));
+            let gain = ui.add(egui::Slider::new(&mut self.gain, 0.05..=16.0).logarithmic(true).text("FFT gain"));
+            spot(actions, learn, &gain, Control::Gain);
             let db = |sample: f32| 20.0 * sample.max(1e-4).log10();
             let place = |sample: f32| ((db(sample) + 48.0) / 48.0).clamp(0.0, 1.0);
             let clipping = self.clipped.is_some_and(|at| at.elapsed() < Duration::from_secs(2));
@@ -1117,7 +1397,8 @@ impl App {
                 self.heard.beat_sure * 100.0,
                 if self.predictor.bpm() > 0.0 { "predicting" } else { "following" }
             ));
-            ui.add(egui::Slider::new(&mut self.lead_ms, 0.0..=250.0).suffix(" ms").text("beat lead"));
+            let lead = ui.add(egui::Slider::new(&mut self.lead_ms, 0.0..=250.0).suffix(" ms").text("beat lead"));
+            spot(actions, learn, &lead, Control::Lead);
             ui.separator();
             ui.checkbox(&mut self.output_on, "Project on");
             let label = self.displays.get(self.output_display).map_or("no monitor", |display| display.label.as_str());
@@ -1138,7 +1419,26 @@ impl App {
                 }
             }
             ui.label(format!("{:.0} fps", self.fps));
+            ui.separator();
+            if ui.toggle_value(&mut self.learn, "MIDI learn").changed() {
+                self.learn_target = None;
+            }
+            let devices = match self.midi.names.len() {
+                0 => "no MIDI device".to_owned(),
+                1 => self.midi.names[0].clone(),
+                count => format!("{count} MIDI devices"),
+            };
+            ui.weak(format!("{devices}{}", self.midi_last.as_ref().map(|last| format!("  ·  {last}")).unwrap_or_default()));
         });
+        if self.learn {
+            ui.colored_label(
+                egui::Color32::from_rgb(240, 200, 60),
+                match self.learn_target {
+                    Some(_) => "Now move the knob or press the pad for it.",
+                    None => "Click a framed control or cell, then move a knob or press a pad. Right-click a blue one to forget it.",
+                },
+            );
+        }
         if let Some(error) = &self.audio_error {
             ui.colored_label(RED, format!("Audio: {error}"));
         }
@@ -1219,12 +1519,21 @@ impl App {
                     }
                 }
             }
-            if self.autoplay.is_some() {
-                if ui.button("Stop").clicked() {
+            let learn = self.learn;
+            let label = if self.autoplay.is_some() { "Stop" } else { "Play checked" };
+            let toggle = ui.add_enabled(self.autoplay.is_some() || !self.checked.is_empty(), egui::Button::new(label));
+            spot(actions, learn, &toggle, Control::AutoToggle);
+            if toggle.clicked() && !learn {
+                if self.autoplay.is_some() {
                     self.stop_autoplay();
+                } else {
+                    self.start_autoplay();
                 }
-            } else if ui.add_enabled(!self.checked.is_empty(), egui::Button::new("Play checked")).clicked() {
-                self.start_autoplay();
+            }
+            let next = ui.add_enabled(self.autoplay.is_some(), egui::Button::new("Next"));
+            spot(actions, learn, &next, Control::AutoNext);
+            if next.clicked() && !learn {
+                self.autoplay_next();
             }
             ui.checkbox(&mut self.auto_shuffle, "shuffle");
         });
@@ -1241,7 +1550,8 @@ impl App {
         if let Some(play) = &self.autoplay {
             ui.horizontal(|ui| {
                 ui.spacing_mut().slider_width = 70.0;
-                ui.add(egui::Slider::new(&mut self.auto.opacity, 0.0..=1.0).show_value(false)).on_hover_text("Opacity");
+                let opacity = ui.add(egui::Slider::new(&mut self.auto.opacity, 0.0..=1.0).show_value(false)).on_hover_text("Opacity");
+                spot(actions, self.learn, &opacity, Control::AutoOpacity);
                 egui::ComboBox::from_id_salt("auto-blend").width(84.0).selected_text(gfx::BLENDS[self.auto.blend]).show_ui(ui, |ui| {
                     for (mode, name) in gfx::BLENDS.iter().enumerate() {
                         ui.selectable_value(&mut self.auto.blend, mode, *name);
@@ -1250,6 +1560,32 @@ impl App {
                 ui.colored_label(GREEN, format!("{} of {}", play.at + 1, play.order.len()));
             });
         }
+        // Presets: the checked list and how it plays, kept under a name and played on recall.
+        ui.horizontal(|ui| {
+            ui.add(egui::TextEdit::singleline(&mut self.preset_name).hint_text("preset name").desired_width(96.0));
+            if ui.add_enabled(!self.preset_name.trim().is_empty(), egui::Button::new("Save preset")).clicked() {
+                self.save_preset();
+            }
+            ui.add_enabled_ui(!self.presets.is_empty(), |ui| {
+                ui.menu_button("Load preset", |ui| {
+                    for (index, preset) in self.presets.iter().enumerate() {
+                        if ui.button(format!("{}  ({})", preset.name, preset.ids.len())).clicked() {
+                            actions.push(Action::LoadPreset(index));
+                            ui.close_menu();
+                        }
+                    }
+                    ui.separator();
+                    ui.menu_button("Delete", |ui| {
+                        for (index, preset) in self.presets.iter().enumerate() {
+                            if ui.button(&preset.name).clicked() {
+                                actions.push(Action::DeletePreset(index));
+                                ui.close_menu();
+                            }
+                        }
+                    });
+                });
+            });
+        });
         let mut toggled = Vec::new();
         let modifiers = ui.input(|input| input.modifiers);
         let selection = self.selection.clone();
@@ -1347,6 +1683,7 @@ impl App {
     }
     fn layer_header(&mut self, ui: &mut egui::Ui, index: usize, actions: &mut Vec<Action>) {
         let selected = self.selected_layer == index;
+        let learn = self.learn;
         let mut select = false;
         let layer = &mut self.layers[index];
         ui.allocate_ui_with_layout(egui::vec2(HEADER_WIDTH, CELL.y), egui::Layout::top_down(egui::Align::LEFT), |ui| {
@@ -1357,13 +1694,16 @@ impl App {
                 if ui.selectable_label(selected, egui::RichText::new(&layer.name).strong()).clicked() {
                     select = true;
                 }
-                if ui.small_button("Eject").clicked() {
+                let eject = ui.small_button("Eject");
+                spot(actions, learn, &eject, Control::Eject(index));
+                if eject.clicked() && !learn {
                     actions.push(Action::Eject(index));
                 }
                 ui.checkbox(&mut layer.bypass, "Bypass");
             });
             ui.horizontal(|ui| {
-                ui.add(egui::Slider::new(&mut layer.opacity, 0.0..=1.0).show_value(false)).on_hover_text("Opacity");
+                let opacity = ui.add(egui::Slider::new(&mut layer.opacity, 0.0..=1.0).show_value(false)).on_hover_text("Opacity");
+                spot(actions, learn, &opacity, Control::Opacity(index));
                 egui::ComboBox::from_id_salt(("blend", index)).width(84.0).selected_text(gfx::BLENDS[layer.blend]).show_ui(ui, |ui| {
                     for (mode, name) in gfx::BLENDS.iter().enumerate() {
                         ui.selectable_value(&mut layer.blend, mode, *name);
@@ -1381,8 +1721,10 @@ impl App {
                         ui.selectable_value(&mut layer.fx, effect, *name);
                     }
                 });
-                ui.add_enabled(layer.fx > 0, egui::Slider::new(&mut layer.fx_amount, 0.0..=1.0).show_value(false))
+                let amount = ui
+                    .add_enabled(layer.fx > 0 || learn, egui::Slider::new(&mut layer.fx_amount, 0.0..=1.0).show_value(false))
                     .on_hover_text("Effect amount");
+                spot(actions, learn, &amount, Control::FxAmount(index));
             });
             ui.horizontal(|ui| {
                 let before = layer.auto;
@@ -1468,6 +1810,9 @@ impl App {
         painter.rect_stroke(rect, 3.0, stroke, egui::StrokeKind::Inside);
         if let Some(dropped) = response.dnd_release_payload::<Dragged>() {
             actions.push(Action::Place(layer_index, column, dropped.0.clone()));
+        } else if self.learn {
+            spot(actions, true, &response, Control::Cell(layer_index, column));
+            return;
         } else if response.clicked() && cell.is_some() {
             actions.push(Action::Launch(layer_index, column));
         }
@@ -1521,6 +1866,24 @@ impl App {
                     let layer = self.selected_layer;
                     let column = self.layers[layer].cells.iter().position(Option::is_none).unwrap_or(self.columns);
                     actions.push(Action::Place(layer, column, picked.into_iter().map(Source::Clip).collect()));
+                }
+            }
+            if ui.button("Open…").clicked() {
+                let picked = rfd::FileDialog::new().add_filter("Composition", &["json"]).pick_file();
+                let read = picked.and_then(|path| std::fs::read_to_string(path).ok());
+                match read.and_then(|text| serde_json::from_str(&text).ok()) {
+                    Some(saved) => actions.push(Action::OpenComposition(saved)),
+                    None => {}
+                }
+            }
+            if ui.button("Save as…").clicked() {
+                let picked = rfd::FileDialog::new().add_filter("Composition", &["json"]).set_file_name("composition.json").save_file();
+                if let Some(path) = picked {
+                    let state = self.state();
+                    let composition = serde_json::json!({ "version": 1, "columns": state["columns"], "layers": state["layers"] });
+                    if let Err(error) = std::fs::write(&path, serde_json::to_vec_pretty(&composition).unwrap_or_default()) {
+                        self.message = Some(format!("could not save {}: {error}", path.display()));
+                    }
                 }
             }
             ui.weak("Click a cell to launch it. The top layer is drawn last.");
@@ -1638,7 +2001,7 @@ impl App {
                 .flat_map(|layer| layer.error.iter().chain(layer.cells.iter().flatten().filter_map(|cell| cell.error.as_ref())))
                 .collect();
             println!(
-                "frames={} seconds={:.1} fps={:.1} tempo={:.1} sure={:.2} | audio {:?} rate {:?} error {:?} peak {:.4} | cells {} folders {} | library changes {} drawn {} | layers live {:?} drawn {:?} errors {:?} | output {:?}",
+                "frames={} seconds={:.1} fps={:.1} tempo={:.1} sure={:.2} | audio {:?} rate {:?} error {:?} peak {:.4} | cells {} folders {} | library changes {} drawn {} | layers live {:?} drawn {:?} errors {:?} | output {:?} | midi {:?} bound {} opacity {:.2} presets {} checked {}",
                 self.frames,
                 self.start.elapsed().as_secs_f32(),
                 self.frames as f32 / self.start.elapsed().as_secs_f32(),
@@ -1655,7 +2018,12 @@ impl App {
                 self.layers.iter().map(|layer| layer.active).collect::<Vec<_>>(),
                 self.layers.iter().map(|layer| layer.drawn).collect::<Vec<_>>(),
                 errors,
-                self.output_rect.get()
+                self.output_rect.get(),
+                self.midi.names,
+                self.bindings.len(),
+                self.layers.get(1).map_or(0.0, |layer| layer.opacity),
+                self.presets.len(),
+                self.checked.len()
             );
             self.options.exit_after = None;
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
@@ -1684,13 +2052,36 @@ impl eframe::App for App {
             self.out_texture = Some(frame.register_native_glow_texture(self.out_target.texture));
         }
         self.take_dropped_files(ctx);
+        self.handle_midi();
         let mut actions = Vec::new();
-        egui::TopBottomPanel::top("top").show(ctx, |ui| self.top_bar(ui));
+        egui::TopBottomPanel::top("top").show(ctx, |ui| self.top_bar(ui, &mut actions));
         egui::SidePanel::left("library").default_width(330.0).show(ctx, |ui| self.library_panel(ui, &mut actions));
         egui::SidePanel::right("output").default_width(300.0).show(ctx, |ui| self.preview(ui));
         egui::CentralPanel::default().show(ctx, |ui| self.grid(ui, &mut actions));
+        // In MIDI learn every bindable control gets a frame: yellow for the one waiting
+        // for its knob or pad, blue for one that is bound, grey for one that is free.
+        let frames = ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground, egui::Id::new("midi-learn")));
         for action in actions {
-            self.apply(action);
+            let Action::Spot(rect, control, picked, forget) = action else {
+                self.apply(action);
+                continue;
+            };
+            if forget {
+                self.bindings.retain(|(_, bound)| *bound != control);
+            } else if picked {
+                self.learn_target = Some(control);
+            }
+            let bound = self.bindings.iter().find(|(_, known)| *known == control).map(|(key, _)| *key);
+            let stroke = match (self.learn_target == Some(control), bound) {
+                (true, _) => (3.0, egui::Color32::from_rgb(240, 200, 60)),
+                (_, Some(_)) => (2.0, egui::Color32::from_rgb(70, 140, 255)),
+                _ => (1.0, egui::Color32::from_gray(120)),
+            };
+            frames.rect_stroke(rect.expand(1.0), 3.0, stroke, egui::StrokeKind::Outside);
+            if let Some((kind, _, number)) = bound {
+                let tag = format!("{}{number}", if kind == 0xB0 { "K" } else { "P" });
+                frames.text(rect.right_top(), egui::Align2::RIGHT_BOTTOM, tag, egui::FontId::proportional(10.0), stroke.1);
+            }
         }
         if self.output_on {
             self.project(ctx);

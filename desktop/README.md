@@ -1,7 +1,7 @@
 # RPi-VJ Desktop
 
 A Windows VJ app that shares the Pi engine's audio analysis, beat prediction, react
-modes and shader format. Phase 3 of five: a composition of layers filled from a
+modes and shader format. Phase 4 of five: a composition of layers filled from a
 shader library and video clips.
 
 ## Run
@@ -46,6 +46,16 @@ written every 20 seconds and on exit.
   layer of their own above the composition, in list order or shuffled, each for the
   time set, with the react mode chosen beside it, optionally also changing on song
   sections. The one playing is green in the list.
+- **Library presets:** type a name and press "Save preset" to keep the ticked list
+  together with shuffle, time, sections, react mode, opacity and blend. "Load preset"
+  brings one back and starts playing it at once; its "Delete" submenu removes one.
+- **MIDI:** every MIDI input is listened to. Press "MIDI learn", click a framed
+  control or cell, then move the knob or press the pad for it. Knobs take FFT gain,
+  beat lead, each layer's opacity and effect amount, and the autoplay opacity; pads
+  take cells, each layer's Eject, and the autoplay's Play/Stop and Next. A bound
+  control has a blue frame; right-click it in learn mode to forget the binding.
+- **Composition files:** "Save as…" writes the layers to a file, "Open…" replaces the
+  grid with a file's.
 - **Per layer:** opacity, blend mode (Add, Screen, Mix, Multiply, Lighten, Difference),
   react mode (PUMP, STROBE, STEP, RIDE, TWIST, AUTO), one effect with an amount
   (Mirror, Pixelate, RGB split, Invert, Mono, Hue, Kaleido), Bypass and Eject. The top
@@ -67,6 +77,9 @@ of the way.
 | `--live <id>` | Put this shader on the second layer and launch it |
 | `--fill <n>` | Put the first n shaders of the Pi show on the second layer |
 | `--fx <n>` | Give the second layer effect number n |
+| `--sequence` / `--autoplay <n>` | Play the second layer in sequence; tick and play n library shaders, a second each |
+| `--open <file>` | Open this composition file at start |
+| `--midi-test` | Bind and send a few MIDI messages and take the ticked list through a preset |
 | `--clip <file>` | Put this clip on the first layer and launch it |
 | `--gain <x>` | Start with this FFT gain |
 | `--output <n>` | Start projecting on monitor n |

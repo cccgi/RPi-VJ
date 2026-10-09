@@ -15,4 +15,5 @@ cpal = "0.15"
 display-info = "0.5"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 libloading = "0.8"
+midir = "0.10"
 rfd = "0.15"
