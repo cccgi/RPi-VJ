@@ -61,6 +61,11 @@ struct Options {
     sequence: bool,
     /// Check this many shaders of the Pi bank and play them from the library, a second each.
     autoplay: usize,
+    /// Open the Effects tab, preview this shader id, detach the preview, draw every hover picture.
+    tab: usize,
+    preview: Option<String>,
+    detach: bool,
+    thumbs: bool,
     /// Open this composition file at start.
     open: Option<PathBuf>,
     /// Bind and send a few MIDI messages, and take the checked list through a preset.
@@ -95,6 +100,10 @@ impl Options {
                 "--autoplay" => options.autoplay = value().parse().unwrap_or(0),
                 "--midi-test" => options.midi_test = true,
                 "--open" => options.open = Some(value().into()),
+                "--tab" => options.tab = value().parse().unwrap_or(0),
+                "--preview" => options.preview = Some(value()),
+                "--detach" => options.detach = true,
+                "--thumbs" => options.thumbs = true,
                 "--snapshot" => options.snapshot = Some(value().into()),
                 "--ui-snapshot" => options.ui_snapshot = Some(value().into()),
                 "--gain" => options.gain = value().parse().ok(),
@@ -114,6 +123,8 @@ impl Options {
             || self.fill > 0
             || self.autoplay > 0
             || self.open.is_some()
+            || self.preview.is_some()
+            || self.thumbs
             || self.snapshot.is_some()
             || self.ui_snapshot.is_some()
             || self.exit_after.is_some()
@@ -151,6 +162,54 @@ enum Source {
 }
 /// What is being dragged: from the library, or files chosen for a layer.
 struct Dragged(Vec<Source>);
+/// An effect being dragged from the Effects tab, by its number.
+struct DraggedEffect(usize);
+/// One link of an effect chain.
+#[derive(Clone)]
+struct Effect {
+    /// Index into `gfx::EFFECTS`.
+    kind: usize,
+    amount: f32,
+    bypass: bool,
+}
+/// The size of the pictures shown when a library shader is hovered.
+const PREVIEW: (u32, u32) = (320, 180);
+/// A picture through a chain of effects; the texture that holds the result.
+#[allow(clippy::too_many_arguments)]
+fn run_effects(
+    gfx: &gfx::Gfx,
+    scratch: &[gfx::Target; 2],
+    source: glow::Texture,
+    effects: &[Effect],
+    time: f32,
+    beat: f32,
+    bass: f32,
+) -> glow::Texture {
+    let (mut picture, mut next) = (source, 0);
+    for effect in effects.iter().filter(|effect| !effect.bypass && effect.kind > 0) {
+        gfx.effect(&scratch[next], picture, effect.kind as i32, effect.amount, time, beat, bass);
+        picture = scratch[next].texture;
+        next ^= 1;
+    }
+    picture
+}
+fn effects_json(effects: &[Effect]) -> serde_json::Value {
+    effects
+        .iter()
+        .map(|effect| serde_json::json!({ "name": gfx::EFFECTS[effect.kind].0, "amount": effect.amount, "bypass": effect.bypass }))
+        .collect()
+}
+fn effects_from(saved: &serde_json::Value) -> Vec<Effect> {
+    let known = |effect: &serde_json::Value| {
+        let kind = gfx::EFFECTS.iter().position(|(name, _)| Some(*name) == effect["name"].as_str())?;
+        Some(Effect {
+            kind,
+            amount: effect["amount"].as_f64().map_or(0.5, |amount| amount as f32).clamp(0.0, 1.0),
+            bypass: effect["bypass"].as_bool().unwrap_or(false),
+        })
+    };
+    saved.as_array().into_iter().flatten().filter_map(known).collect()
+}
 struct Cell {
     source: Source,
     /// A shader's compiled program and its still picture, made soon after it is placed.
@@ -174,8 +233,7 @@ struct Layer {
     active: Option<usize>,
     opacity: f32,
     blend: usize,
-    fx: usize,
-    fx_amount: f32,
+    effects: Vec<Effect>,
     react: u8,
     bypass: bool,
     /// Index into `AUTO_MODES`.
@@ -319,6 +377,14 @@ enum Action {
     DeleteFolder(usize),
     /// MIDI learn: a control's place, whether it was picked, whether to forget its binding.
     Spot(egui::Rect, Control, bool, bool),
+    /// Effect chains: of a layer, or of the whole composition for `None`.
+    AddEffect(Option<usize>, usize),
+    RemoveEffect(Option<usize>, usize),
+    MoveEffect(Option<usize>, usize, bool),
+    /// Library: run one in the preview, mark favourites, remove from or restore to the library.
+    Preview(usize),
+    Favorite(Vec<usize>, bool),
+    Remove(Vec<usize>, bool),
     LoadPreset(usize),
     DeletePreset(usize),
     OpenComposition(serde_json::Value),
@@ -363,6 +429,29 @@ struct App {
     seed: u64,
     presets: Vec<Preset>,
     preset_name: String,
+    /// Which tab of the left panel is open: 0 shaders, 1 effects.
+    tab: usize,
+    fx_filter: String,
+    /// Groups worked out from the catalog, and the one chosen: 0 all, 1 favourites,
+    /// 2 removed, then `groups` in order.
+    groups: Vec<(String, BTreeSet<usize>)>,
+    group: usize,
+    favorites: BTreeSet<usize>,
+    removed: BTreeSet<usize>,
+    /// Hover pictures: loaded ones, the ones that cannot be made, the one asked for, and
+    /// where a run over the whole library has got to.
+    thumbs: HashMap<usize, egui::TextureHandle>,
+    thumb_failed: BTreeSet<usize>,
+    thumb_wanted: Option<usize>,
+    thumb_run: Option<usize>,
+    thumb_target: gfx::Target,
+    /// A library shader running in the preview only, not in the output.
+    pre: Layer,
+    pre_texture: Option<egui::TextureId>,
+    detached: bool,
+    /// Effects on the whole composition, and two targets effects are worked through.
+    master: Vec<Effect>,
+    scratch: [gfx::Target; 2],
     // MIDI.
     midi: midi::Midi,
     bindings: Vec<(MidiKey, Control)>,
@@ -424,8 +513,7 @@ fn new_layer(gfx: &gfx::Gfx, name: String, columns: usize, size: usize) -> Resul
         active: None,
         opacity: 1.0,
         blend: 0,
-        fx: 0,
-        fx_amount: 0.5,
+        effects: Vec::new(),
         react: 0,
         bypass: false,
         auto: 0,
@@ -484,6 +572,22 @@ impl App {
             auto_changes: 0,
             presets: Vec::new(),
             preset_name: String::new(),
+            tab: 0,
+            fx_filter: String::new(),
+            groups: library::groups(&library),
+            group: 0,
+            favorites: BTreeSet::new(),
+            removed: BTreeSet::new(),
+            thumbs: HashMap::new(),
+            thumb_failed: BTreeSet::new(),
+            thumb_wanted: None,
+            thumb_run: None,
+            thumb_target: gfx.target(PREVIEW)?,
+            pre: new_layer(&gfx, "Preview".into(), 1, size)?,
+            pre_texture: None,
+            detached: false,
+            master: Vec::new(),
+            scratch: [gfx.target(RENDER_SIZES[size])?, gfx.target(RENDER_SIZES[size])?],
             lights: HashMap::new(),
             led: [0, 1, 127, 127, 0],
             apc: false,
@@ -575,9 +679,10 @@ impl App {
             app.place(1, 0, sources);
             app.launch(1, 0);
         }
-        app.layers[1].fx = app.options.fx.min(gfx::EFFECTS.len() - 1);
         if app.options.fx > 0 {
-            app.layers[1].fx_amount = 0.7;
+            // `--fx 7,8` chains effects 7 and 8.
+            let kind = app.options.fx.min(gfx::EFFECTS.len() - 1);
+            app.layers[1].effects.push(Effect { kind, amount: 0.7, bypass: false });
         }
         if let Some(clip) = app.options.clip.clone() {
             app.place(0, 0, vec![Source::Clip(clip)]);
@@ -598,6 +703,15 @@ impl App {
             if let Ok(saved) = serde_json::from_str(&text) {
                 app.apply(Action::OpenComposition(saved));
             }
+        }
+        app.tab = app.options.tab.min(1);
+        app.detached |= app.options.detach;
+        if app.options.thumbs {
+            app.thumb_run = Some(0);
+        }
+        if let Some(entry) = app.options.preview.as_ref().and_then(|id| app.index_of.get(id).copied()) {
+            app.apply(Action::Preview(entry));
+            app.favorites.insert(entry);
         }
         if app.options.midi_test {
             // A knob on the second layer's opacity, a pad on its third cell, and the
@@ -722,7 +836,7 @@ impl App {
             Control::Gain => (self.gain / 0.05).ln() / (16.0f32 / 0.05).ln(),
             Control::Lead => self.lead_ms / 250.0,
             Control::Opacity(layer) => self.layers.get(layer)?.opacity,
-            Control::FxAmount(layer) => self.layers.get(layer)?.fx_amount,
+            Control::FxAmount(layer) => self.layers.get(layer)?.effects.first()?.amount,
             Control::AutoOpacity => self.auto.opacity,
             _ => return None,
         })
@@ -788,8 +902,8 @@ impl App {
                 }
             }
             Control::FxAmount(layer) => {
-                if let Some(layer) = self.layers.get_mut(layer) {
-                    layer.fx_amount = value;
+                if let Some(first) = self.layers.get_mut(layer).and_then(|layer| layer.effects.first_mut()) {
+                    first.amount = value;
                 }
             }
             Control::AutoOpacity => self.auto.opacity = value,
@@ -806,6 +920,87 @@ impl App {
             }
             Control::AutoNext if pressed => self.autoplay_next(),
             _ => {}
+        }
+    }
+    /// The effect chain of a layer, or of the composition for `None`.
+    fn chain(&mut self, target: Option<usize>) -> Option<&mut Vec<Effect>> {
+        match target {
+            Some(layer) => self.layers.get_mut(layer).map(|layer| &mut layer.effects),
+            None => Some(&mut self.master),
+        }
+    }
+    fn close_preview(&mut self) {
+        self.pre.active = None;
+        if let Some(old) = self.pre.cells[0].take() {
+            self.release(old);
+        }
+    }
+    fn thumb_path(&self, entry: usize) -> PathBuf {
+        self.root.join("target/desktop/thumbs").join(format!("{}.jpg", self.library[entry].id))
+    }
+    /// Draw a shader's still picture and keep it as a file, unless that is done already.
+    fn render_thumb(&mut self, entry: usize) -> Result<()> {
+        let path = self.thumb_path(entry);
+        if path.is_file() {
+            return Ok(());
+        }
+        let program = self.build(entry)?;
+        let audio = still_audio();
+        self.gfx.shader_pass(
+            &program,
+            &self.thumb_target,
+            &gfx::Frame {
+                time: 6.0,
+                dt: 1.0 / 60.0,
+                frame: 360,
+                bpm: 128.0,
+                tempo: rpi_vj_native::audio::Tempo::free(6.0, 128.0, 0.0),
+                audio: &audio,
+                flow: &[6.0; 4],
+                spec_flow: &[3.0; 32],
+            },
+        );
+        self.gfx.delete(program);
+        std::fs::create_dir_all(path.parent().unwrap_or(&self.root))?;
+        image::save_buffer(&path, &self.gfx.read(&self.thumb_target), PREVIEW.0, PREVIEW.1, image::ColorType::Rgb8)?;
+        Ok(())
+    }
+    /// The hover picture that was asked for, and a little of a run over the whole library.
+    fn make_thumbs(&mut self, ctx: &egui::Context) {
+        if let Some(entry) = self.thumb_wanted.take() {
+            let loaded = self.render_thumb(entry).and_then(|()| Ok(image::open(self.thumb_path(entry))?.to_rgb8()));
+            match loaded {
+                Ok(picture) => {
+                    let size = [picture.width() as usize, picture.height() as usize];
+                    let image = egui::ColorImage::from_rgb(size, picture.as_raw());
+                    let texture = ctx.load_texture(format!("thumb-{entry}"), image, egui::TextureOptions::LINEAR);
+                    self.thumbs.insert(entry, texture);
+                }
+                Err(_) => {
+                    self.thumb_failed.insert(entry);
+                }
+            }
+        }
+        if let Some(mut at) = self.thumb_run {
+            let budget = Instant::now();
+            while at < self.library.len() && budget.elapsed() < Duration::from_millis(20) {
+                if self.library[at].runnable() && self.render_thumb(at).is_err() {
+                    self.thumb_failed.insert(at);
+                }
+                at += 1;
+            }
+            self.thumb_run = (at < self.library.len()).then_some(at);
+        }
+    }
+    /// Whether the chosen group holds this shader. Removed shaders show only in "Removed".
+    fn in_group(&self, entry: usize) -> bool {
+        let removed = self.removed.contains(&entry);
+        match self.group {
+            2 => removed,
+            _ if removed => false,
+            0 => true,
+            1 => self.favorites.contains(&entry),
+            group => self.groups.get(group - 3).is_some_and(|(_, members)| members.contains(&entry)),
         }
     }
     /// Empty the composition: every cell, layer and player.
@@ -1075,13 +1270,14 @@ impl App {
             gfx.discard(std::mem::replace(old, made));
             Ok(())
         };
-        for target in self.stack.iter_mut().chain([&mut self.out_target]) {
+        for target in self.stack.iter_mut().chain(&mut self.scratch).chain([&mut self.out_target]) {
             fresh(target, &self.gfx)?;
         }
-        for layer in self.layers.iter_mut().chain([&mut self.auto]) {
+        for layer in self.layers.iter_mut().chain([&mut self.auto, &mut self.pre]) {
             fresh(&mut layer.target, &self.gfx)?;
         }
         self.out_texture = None;
+        self.pre_texture = None;
         self.size = size;
         Ok(())
     }
@@ -1106,6 +1302,55 @@ impl App {
                 }
             }
             Action::Send(entry) => self.send(entry),
+            Action::AddEffect(target, kind) => {
+                if let Some(chain) = self.chain(target) {
+                    chain.push(Effect { kind, amount: 0.5, bypass: false });
+                }
+            }
+            Action::RemoveEffect(target, at) => {
+                if let Some(chain) = self.chain(target).filter(|chain| at < chain.len()) {
+                    chain.remove(at);
+                }
+            }
+            Action::MoveEffect(target, at, up) => {
+                if let Some(chain) = self.chain(target) {
+                    let to = if up { at.wrapping_sub(1) } else { at + 1 };
+                    if at < chain.len() && to < chain.len() {
+                        chain.swap(at, to);
+                    }
+                }
+            }
+            Action::Preview(entry) => match self.build(entry) {
+                Ok(program) => {
+                    let mut cell = Cell::new(Source::Shader(entry));
+                    (cell.program, cell.prepared) = (Some(program), true);
+                    if let Some(old) = self.pre.cells[0].replace(cell) {
+                        self.release(old);
+                    }
+                    self.pre.active = Some(0);
+                }
+                Err(error) => self.message = Some(format!("{}: {error:#}", self.library[entry].title())),
+            },
+            Action::Favorite(entries, on) => {
+                for entry in entries {
+                    if on {
+                        self.favorites.insert(entry);
+                    } else {
+                        self.favorites.remove(&entry);
+                    }
+                }
+            }
+            Action::Remove(entries, on) => {
+                for entry in entries {
+                    if on {
+                        self.removed.insert(entry);
+                        self.selection.remove(&entry);
+                        self.checked.remove(&entry);
+                    } else {
+                        self.removed.remove(&entry);
+                    }
+                }
+            }
             Action::SetSeconds(layer, column, seconds) => {
                 if let Some(cell) = &mut self.layers[layer].cells[column] {
                     cell.seconds = seconds.clamp(1.0, 36000.0);
@@ -1206,7 +1451,7 @@ impl App {
         let found = self.predictor.bpm();
         let bpm = if found > 0.0 { found } else { 128.0 };
         let (time, frame) = (self.start.elapsed().as_secs_f32(), self.frames as i32);
-        for layer in self.layers.iter_mut().chain([&mut self.auto]) {
+        for layer in self.layers.iter_mut().chain([&mut self.auto, &mut self.pre]) {
             layer.drawn = false;
             if new_section {
                 layer.reactor.new_section();
@@ -1252,11 +1497,11 @@ impl App {
                 &self.stack[next],
                 &gfx::Mix {
                     base: below,
-                    top: Some(layer.target.texture),
+                    top: Some(run_effects(&self.gfx, &self.scratch, layer.target.texture, &layer.effects, time, moving.onset, moving.bass)),
                     opacity: layer.opacity,
                     mode: layer.blend as i32,
-                    fx: layer.fx as i32,
-                    fx_amount: layer.fx_amount,
+                    fx: 0,
+                    fx_amount: 0.0,
                     flash: layer.flash,
                 },
             );
@@ -1264,7 +1509,10 @@ impl App {
             next ^= 1;
         }
         match below {
-            Some(picture) => self.gfx.mix(&self.out_target, &gfx::Mix::copy(picture)),
+            Some(picture) => {
+                let picture = run_effects(&self.gfx, &self.scratch, picture, &self.master, time, moving.onset, moving.bass);
+                self.gfx.mix(&self.out_target, &gfx::Mix::copy(picture));
+            }
             None => self.gfx.clear(&self.out_target),
         }
         // Layers on Sequence or Shuffle, and the library's checked list, move on.
@@ -1349,8 +1597,7 @@ impl App {
                     "name": layer.name,
                     "opacity": layer.opacity,
                     "blend": layer.blend,
-                    "fx": layer.fx,
-                    "fx_amount": layer.fx_amount,
+                    "effects": effects_json(&layer.effects),
                     "react": layer.react,
                     "auto": layer.auto,
                     "on_sections": layer.on_sections,
@@ -1375,6 +1622,10 @@ impl App {
                 "opacity": preset.opacity,
                 "blend": preset.blend,
             })).collect::<Vec<_>>(),
+            "favorites": self.favorites.iter().map(|entry| self.library[*entry].id.as_str()).collect::<Vec<_>>(),
+            "removed": self.removed.iter().map(|entry| self.library[*entry].id.as_str()).collect::<Vec<_>>(),
+            "master": effects_json(&self.master),
+            "detached": self.detached,
             "led": self.led,
             "apc": self.apc,
             "midi": self.bindings.iter().map(|((kind, channel, number), control)| serde_json::json!({
@@ -1424,8 +1675,11 @@ impl App {
             let Ok(mut layer) = self.make_layer(saved["name"].as_str().unwrap_or("Layer").to_owned()) else { return false };
             layer.opacity = number(&saved["opacity"], 1.0).clamp(0.0, 1.0);
             layer.blend = (saved["blend"].as_u64().unwrap_or(0) as usize).min(gfx::BLENDS.len() - 1);
-            layer.fx = (saved["fx"].as_u64().unwrap_or(0) as usize).min(gfx::EFFECTS.len() - 1);
-            layer.fx_amount = number(&saved["fx_amount"], 0.5).clamp(0.0, 1.0);
+            layer.effects = effects_from(&saved["effects"]);
+            // A file from before effect chains held one effect by number.
+            if let Some(kind) = saved["fx"].as_u64().map(|kind| kind as usize).filter(|kind| (1..8).contains(kind)) {
+                layer.effects.push(Effect { kind, amount: number(&saved["fx_amount"], 0.5).clamp(0.0, 1.0), bypass: false });
+            }
             let react = |value: &serde_json::Value| value.as_u64().map(|mode| (mode as u8).min(REACT_MODES.len() as u8 - 1));
             layer.react = react(&saved["react"]).unwrap_or(0);
             layer.auto = (saved["auto"].as_u64().unwrap_or(0) as usize).min(AUTO_MODES.len() - 1);
@@ -1476,6 +1730,12 @@ impl App {
                 blend: (whole(&preset["blend"]) as usize).min(gfx::BLENDS.len() - 1),
             });
         }
+        let entries = |value: &serde_json::Value| -> BTreeSet<usize> {
+            value.as_array().into_iter().flatten().filter_map(|id| self.index_of.get(id.as_str()?).copied()).collect()
+        };
+        (self.favorites, self.removed) = (entries(&state["favorites"]), entries(&state["removed"]));
+        self.master = effects_from(&state["master"]);
+        self.detached = state["detached"].as_bool().unwrap_or(false);
         if let Some(led) = state["led"].as_array().filter(|led| led.len() == 5) {
             self.led = std::array::from_fn(|index| (whole(&led[index]) as u8).min(127));
         }
@@ -1657,6 +1917,7 @@ impl App {
             .filter(|index| {
                 let entry = &self.library[*index];
                 (self.show_unrunnable || entry.runnable())
+                    && self.in_group(*index)
                     && (needle.is_empty()
                         || entry.name.to_lowercase().contains(&needle)
                         || entry.author.to_lowercase().contains(&needle)
@@ -1665,7 +1926,14 @@ impl App {
             .collect()
     }
     fn library_panel(&mut self, ui: &mut egui::Ui, actions: &mut Vec<Action>) {
-        ui.heading("Library");
+        ui.horizontal(|ui| {
+            ui.selectable_value(&mut self.tab, 0, egui::RichText::new("Shaders").heading());
+            ui.selectable_value(&mut self.tab, 1, egui::RichText::new("Effects").heading());
+        });
+        if self.tab == 1 {
+            self.effects_panel(ui, actions);
+            return;
+        }
         // Folders: pick one to look into, or drop shaders on one to add them.
         let runnable = self.library.iter().filter(|entry| entry.runnable()).count();
         let mut rows = vec![(View::All, format!("All shaders ({runnable})")), (View::PiBank, format!("On the Pi ({})", self.bank.len()))];
@@ -1707,8 +1975,35 @@ impl App {
             ui.add(egui::TextEdit::singleline(&mut self.filter).hint_text("search name, author or id").desired_width(200.0));
             ui.checkbox(&mut self.show_unrunnable, "multipass");
         });
+        // Groups worked out from tags, code and author; favourites and removed ones too.
+        ui.horizontal(|ui| {
+            let count = |members: usize| format!("({members})");
+            let name = |group: usize| match group {
+                0 => "All groups".to_owned(),
+                1 => format!("Favourites {}", count(self.favorites.len())),
+                2 => format!("Removed {}", count(self.removed.len())),
+                group => format!("{} {}", self.groups[group - 3].0, count(self.groups[group - 3].1.len())),
+            };
+            let mut group = self.group;
+            egui::ComboBox::from_id_salt("group").width(190.0).height(500.0).selected_text(name(group)).show_ui(ui, |ui| {
+                for choice in 0..self.groups.len() + 3 {
+                    ui.selectable_value(&mut group, choice, name(choice));
+                }
+            });
+            self.group = group;
+            match self.thumb_run {
+                Some(at) => {
+                    ui.weak(format!("pictures {at} of {}", self.library.len()));
+                }
+                None => {
+                    if ui.button("Make all pictures").on_hover_text("Draw every shader's hover picture now, once").clicked() {
+                        self.thumb_run = Some(0);
+                    }
+                }
+            }
+        });
         let shown = self.shown();
-        ui.weak(format!("{} shown, {} selected. Drag to a layer or a folder; double-click to launch.", shown.len(), self.selection.len()));
+        ui.weak(format!("{} shown, {} selected. Drag to a layer or a folder; double-click to preview.", shown.len(), self.selection.len()));
         // The checked shaders play by themselves, on a layer of their own above the composition.
         ui.horizontal(|ui| {
             let mut all = !shown.is_empty() && shown.iter().all(|entry| self.checked.contains(entry));
@@ -1789,6 +2084,7 @@ impl App {
             });
         });
         let mut toggled = Vec::new();
+        let mut wanted = None;
         let modifiers = ui.input(|input| input.modifiers);
         let selection = self.selection.clone();
         // What a row asked for: (place in `shown`, library index, whether it was a click).
@@ -1805,10 +2101,11 @@ impl App {
                 if ui.add_enabled(entry.runnable(), egui::Checkbox::without_text(&mut check)).changed() {
                     toggled.push(index);
                 }
+                let star = if self.favorites.contains(&index) { "★ " } else { "" };
                 let mut text = egui::RichText::new(if entry.author.is_empty() {
-                    entry.title().to_owned()
+                    format!("{star}{}", entry.title())
                 } else {
-                    format!("{}  ·  {}", entry.title(), entry.author)
+                    format!("{star}{}  ·  {}", entry.title(), entry.author)
                 });
                 if !entry.runnable() {
                     text = text.weak();
@@ -1820,8 +2117,23 @@ impl App {
                 let response = ui
                     .add_enabled(entry.runnable(), egui::SelectableLabel::new(selected, text))
                     .interact(egui::Sense::click_and_drag());
+                // Hovering shows the shader's picture, drawn the first time it is asked for.
+                if response.hovered() && entry.runnable() && !self.thumbs.contains_key(&index) && !self.thumb_failed.contains(&index) {
+                    wanted = Some(index);
+                }
+                let response = response.on_hover_ui(|ui| match self.thumbs.get(&index) {
+                    Some(picture) => {
+                        ui.image(egui::load::SizedTexture::new(picture.id(), egui::vec2(PREVIEW.0 as f32, PREVIEW.1 as f32)));
+                    }
+                    None if self.thumb_failed.contains(&index) => {
+                        ui.label("no picture: this shader does not compile");
+                    }
+                    None => {
+                        ui.label("drawing its picture…");
+                    }
+                });
                 if response.double_clicked() {
-                    actions.push(Action::Send(index));
+                    actions.push(Action::Preview(index));
                 } else if response.clicked() {
                     asked = Some((place, index, true));
                 } else if response.drag_started() && !selected {
@@ -1837,6 +2149,25 @@ impl App {
                 }
                 response.context_menu(|ui| {
                     let picked: Vec<usize> = if selected { selection.iter().copied().collect() } else { vec![index] };
+                    if ui.button("Preview").clicked() {
+                        actions.push(Action::Preview(index));
+                        ui.close_menu();
+                    }
+                    if ui.button("Send to the selected layer").clicked() {
+                        actions.push(Action::Send(index));
+                        ui.close_menu();
+                    }
+                    let starred = self.favorites.contains(&index);
+                    if ui.button(if starred { "Remove from favourites" } else { "Favourite" }).clicked() {
+                        actions.push(Action::Favorite(picked.clone(), !starred));
+                        ui.close_menu();
+                    }
+                    let gone = self.removed.contains(&index);
+                    if ui.button(if gone { "Restore to the library" } else { "Remove from the library" }).clicked() {
+                        actions.push(Action::Remove(picked.clone(), !gone));
+                        ui.close_menu();
+                    }
+                    ui.separator();
                     ui.menu_button("Add to folder", |ui| {
                         for (folder, known) in self.folders.iter().enumerate() {
                             if ui.button(&known.name).clicked() {
@@ -1863,6 +2194,9 @@ impl App {
                 self.checked.insert(index);
             }
         }
+        if wanted.is_some() {
+            self.thumb_wanted = wanted;
+        }
         if let Some((place, index, clicked)) = asked {
             let anchor = self.anchor.and_then(|anchor| shown.iter().position(|entry| *entry == anchor));
             match (clicked, modifiers.shift, modifiers.command, anchor) {
@@ -1883,12 +2217,80 @@ impl App {
             }
         }
     }
+    /// The Effects tab: drag one onto a layer or onto the composition's box on the right,
+    /// or double-click to put it on the selected layer.
+    fn effects_panel(&mut self, ui: &mut egui::Ui, actions: &mut Vec<Action>) {
+        ui.add(egui::TextEdit::singleline(&mut self.fx_filter).hint_text("search effects").desired_width(200.0));
+        ui.weak("Drag onto a layer, or onto the composition box on the right. Double-click adds to the selected layer.");
+        let needle = self.fx_filter.to_lowercase();
+        egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
+            for heading in ["Colour", "Distort", "Stylize", "Audio"] {
+                let listed: Vec<usize> = (1..gfx::EFFECTS.len())
+                    .filter(|kind| gfx::EFFECTS[*kind].1 == heading && gfx::EFFECTS[*kind].0.to_lowercase().contains(&needle))
+                    .collect();
+                if listed.is_empty() {
+                    continue;
+                }
+                ui.add_space(4.0);
+                ui.strong(heading);
+                for kind in listed {
+                    let response = ui.selectable_label(false, gfx::EFFECTS[kind].0).interact(egui::Sense::click_and_drag());
+                    if response.double_clicked() {
+                        actions.push(Action::AddEffect(Some(self.selected_layer), kind));
+                    }
+                    if response.dragged() {
+                        response.dnd_set_drag_payload(DraggedEffect(kind));
+                    }
+                }
+            }
+        });
+    }
+    /// One effect chain's rows: on or off, name, amount, order, remove; and a box to drop on.
+    fn chain_rows(&mut self, ui: &mut egui::Ui, target: Option<usize>, title: String, actions: &mut Vec<Action>) {
+        ui.separator();
+        let zone = ui
+            .group(|ui| {
+                ui.set_width(ui.available_width());
+                ui.strong(title);
+                let Some(chain) = self.chain(target) else { return };
+                if chain.is_empty() {
+                    ui.weak("no effects; drop one here");
+                }
+                let last = chain.len().saturating_sub(1);
+                for (at, effect) in chain.iter_mut().enumerate() {
+                    ui.horizontal(|ui| {
+                        ui.spacing_mut().slider_width = 80.0;
+                        let mut on = !effect.bypass;
+                        ui.checkbox(&mut on, "").on_hover_text("On");
+                        effect.bypass = !on;
+                        ui.add_sized([70.0, 18.0], egui::Label::new(gfx::EFFECTS[effect.kind].0).truncate());
+                        ui.add(egui::Slider::new(&mut effect.amount, 0.0..=1.0).show_value(false));
+                        if ui.add_enabled(at > 0, egui::Button::new("up").small()).clicked() {
+                            actions.push(Action::MoveEffect(target, at, true));
+                        }
+                        if ui.add_enabled(at < last, egui::Button::new("dn").small()).clicked() {
+                            actions.push(Action::MoveEffect(target, at, false));
+                        }
+                        if ui.small_button("x").clicked() {
+                            actions.push(Action::RemoveEffect(target, at));
+                        }
+                    });
+                }
+            })
+            .response;
+        if let Some(dropped) = zone.dnd_release_payload::<DraggedEffect>() {
+            actions.push(Action::AddEffect(target, dropped.0));
+        }
+        if zone.dnd_hover_payload::<DraggedEffect>().is_some() {
+            ui.painter().rect_stroke(zone.rect, 3.0, (2.0, GREEN), egui::StrokeKind::Inside);
+        }
+    }
     fn layer_header(&mut self, ui: &mut egui::Ui, index: usize, actions: &mut Vec<Action>) {
         let selected = self.selected_layer == index;
         let learn = self.learn;
         let mut select = false;
         let layer = &mut self.layers[index];
-        ui.allocate_ui_with_layout(egui::vec2(HEADER_WIDTH, CELL.y), egui::Layout::top_down(egui::Align::LEFT), |ui| {
+        let header = ui.allocate_ui_with_layout(egui::vec2(HEADER_WIDTH, CELL.y), egui::Layout::top_down(egui::Align::LEFT), |ui| {
             ui.set_min_size(egui::vec2(HEADER_WIDTH, CELL.y));
             ui.spacing_mut().slider_width = 74.0;
             ui.spacing_mut().item_spacing.y = 3.0;
@@ -1918,15 +2320,19 @@ impl App {
                 });
             });
             ui.horizontal(|ui| {
-                egui::ComboBox::from_id_salt(("fx", index)).width(84.0).selected_text(gfx::EFFECTS[layer.fx]).show_ui(ui, |ui| {
-                    for (effect, name) in gfx::EFFECTS.iter().enumerate() {
-                        ui.selectable_value(&mut layer.fx, effect, *name);
-                    }
-                });
-                let amount = ui
-                    .add_enabled(layer.fx > 0 || learn, egui::Slider::new(&mut layer.fx_amount, 0.0..=1.0).show_value(false))
-                    .on_hover_text("Effect amount");
-                spot(actions, learn, &amount, Control::FxAmount(index));
+                ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Truncate);
+                if let Some(first) = layer.effects.first_mut() {
+                    let amount = ui
+                        .add(egui::Slider::new(&mut first.amount, 0.0..=1.0).show_value(false))
+                        .on_hover_text("Amount of the first effect");
+                    spot(actions, learn, &amount, Control::FxAmount(index));
+                }
+                let names: Vec<&str> = layer.effects.iter().map(|effect| gfx::EFFECTS[effect.kind].0).collect();
+                if names.is_empty() {
+                    ui.weak("no effects; drop one here");
+                } else {
+                    ui.label(format!("FX: {}", names.join(", ")));
+                }
             });
             ui.horizontal(|ui| {
                 let before = layer.auto;
@@ -1945,7 +2351,14 @@ impl App {
             });
         })
         .response
-        .context_menu(|ui| {
+        .interact(egui::Sense::click());
+        if let Some(dropped) = header.dnd_release_payload::<DraggedEffect>() {
+            actions.push(Action::AddEffect(Some(index), dropped.0));
+        }
+        if header.dnd_hover_payload::<DraggedEffect>().is_some() {
+            ui.painter().rect_stroke(header.rect, 3.0, (2.0, GREEN), egui::StrokeKind::Inside);
+        }
+        header.context_menu(|ui| {
             if ui.button("Clear layer").clicked() {
                 actions.push(Action::ClearLayer(index));
                 ui.close_menu();
@@ -2002,7 +2415,10 @@ impl App {
                 painter.rect_filled(bar, 0.0, GREEN);
             }
         }
-        let stroke = if response.dnd_hover_payload::<Dragged>().is_some() {
+        if let Some(dropped) = response.dnd_release_payload::<DraggedEffect>() {
+            actions.push(Action::AddEffect(Some(layer_index), dropped.0));
+        }
+        let stroke = if response.dnd_hover_payload::<Dragged>().is_some() || response.dnd_hover_payload::<DraggedEffect>().is_some() {
             (2.0, egui::Color32::from_rgb(240, 200, 60))
         } else if cell.is_some() && layer.active == Some(column) {
             (3.0, GREEN)
@@ -2105,12 +2521,50 @@ impl App {
             }
         });
     }
-    fn preview(&mut self, ui: &mut egui::Ui) {
-        ui.heading("Output");
-        if let Some(texture) = self.out_texture {
+    /// The picture the preview shows: a library shader being tried out, else the output.
+    fn preview_picture(&self) -> Option<egui::TextureId> {
+        if self.pre.active.is_some() { self.pre_texture } else { self.out_texture }
+    }
+    /// The preview in a window of its own; true when that window was closed.
+    fn preview_window(&self, ctx: &egui::Context) -> bool {
+        let builder = egui::ViewportBuilder::default().with_title("RPi-VJ preview").with_inner_size([640.0, 360.0]);
+        ctx.show_viewport_immediate(egui::ViewportId::from_hash_of("preview"), builder, |ctx, _| {
+            egui::CentralPanel::default().frame(egui::Frame::new().fill(egui::Color32::BLACK)).show(ctx, |ui| {
+                if let Some(texture) = self.preview_picture() {
+                    let area = ui.max_rect();
+                    let fit = (area.width() / 16.0).min(area.height() / 9.0);
+                    let rect = egui::Rect::from_center_size(area.center(), egui::vec2(fit * 16.0, fit * 9.0));
+                    ui.painter().image(texture, rect, FLIPPED, egui::Color32::WHITE);
+                }
+            });
+            ctx.input(|input| input.viewport().close_requested())
+        })
+    }
+    fn preview(&mut self, ui: &mut egui::Ui, actions: &mut Vec<Action>) {
+        let trying = self.pre.active.and_then(|_| self.pre.cells[0].as_ref()).map(|cell| cell.source.clone());
+        ui.horizontal(|ui| {
+            ui.heading(if trying.is_some() { "Preview" } else { "Output" });
+            if ui.button(if self.detached { "Attach" } else { "Detach" }).on_hover_text("Show the picture in a window of its own").clicked() {
+                self.detached = !self.detached;
+            }
+        });
+        if let Some(texture) = self.preview_picture().filter(|_| !self.detached) {
             let width = ui.available_width();
             let size = egui::vec2(width, width * 9.0 / 16.0);
             ui.add(egui::Image::new(egui::load::SizedTexture::new(texture, size)).uv(FLIPPED));
+        }
+        if let Some(Source::Shader(entry)) = trying {
+            ui.horizontal(|ui| {
+                ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Truncate);
+                if ui.button("To selected layer").clicked() {
+                    actions.push(Action::Send(entry));
+                    self.close_preview();
+                }
+                if ui.button("Close").clicked() {
+                    self.close_preview();
+                }
+                ui.label(self.library[entry].title());
+            });
         }
         ui.add_space(6.0);
         for layer in [&self.auto].into_iter().filter(|_| self.autoplay.is_some()).chain(self.layers.iter().rev()) {
@@ -2132,6 +2586,12 @@ impl App {
         if let Some(message) = &self.message {
             ui.colored_label(RED, message);
         }
+        egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
+            let layer = self.selected_layer.min(self.layers.len().saturating_sub(1));
+            let title = format!("{} effects", self.layers[layer].name);
+            self.chain_rows(ui, Some(layer), title, actions);
+            self.chain_rows(ui, None, "Composition effects".into(), actions);
+        });
     }
     fn project(&self, ctx: &egui::Context) {
         let (Some(texture), Some(display)) = (self.out_texture, self.displays.get(self.output_display)) else { return };
@@ -2203,7 +2663,7 @@ impl App {
                 .flat_map(|layer| layer.error.iter().chain(layer.cells.iter().flatten().filter_map(|cell| cell.error.as_ref())))
                 .collect();
             println!(
-                "frames={} seconds={:.1} fps={:.1} tempo={:.1} sure={:.2} | audio {:?} rate {:?} error {:?} peak {:.4} | cells {} folders {} | library changes {} drawn {} | layers live {:?} drawn {:?} errors {:?} | output {:?} | midi {:?} out {:?} sent {} bound {} opacity {:.2} presets {} checked {}",
+                "frames={} seconds={:.1} fps={:.1} tempo={:.1} sure={:.2} | audio {:?} rate {:?} error {:?} peak {:.4} | cells {} folders {} | library changes {} drawn {} | layers live {:?} drawn {:?} errors {:?} | output {:?} | midi {:?} out {:?} sent {} bound {} opacity {:.2} presets {} checked {} | groups {} pictures failed {} run {:?} preview {}",
                 self.frames,
                 self.start.elapsed().as_secs_f32(),
                 self.frames as f32 / self.start.elapsed().as_secs_f32(),
@@ -2227,7 +2687,11 @@ impl App {
                 self.bindings.len(),
                 self.layers.get(1).map_or(0.0, |layer| layer.opacity),
                 self.presets.len(),
-                self.checked.len()
+                self.checked.len(),
+                self.groups.len(),
+                self.thumb_failed.len(),
+                self.thumb_run,
+                self.pre.drawn
             );
             self.options.exit_after = None;
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
@@ -2255,13 +2719,20 @@ impl eframe::App for App {
         if self.out_texture.is_none() {
             self.out_texture = Some(frame.register_native_glow_texture(self.out_target.texture));
         }
+        if self.pre_texture.is_none() {
+            self.pre_texture = Some(frame.register_native_glow_texture(self.pre.target.texture));
+        }
+        self.make_thumbs(ctx);
         self.take_dropped_files(ctx);
         self.handle_midi();
         self.light();
         let mut actions = Vec::new();
         egui::TopBottomPanel::top("top").show(ctx, |ui| self.top_bar(ui, &mut actions));
         egui::SidePanel::left("library").default_width(330.0).show(ctx, |ui| self.library_panel(ui, &mut actions));
-        egui::SidePanel::right("output").default_width(300.0).show(ctx, |ui| self.preview(ui));
+        egui::SidePanel::right("output").default_width(320.0).show(ctx, |ui| self.preview(ui, &mut actions));
+        if self.detached && self.preview_window(ctx) {
+            self.detached = false;
+        }
         egui::CentralPanel::default().show(ctx, |ui| self.grid(ui, &mut actions));
         // In MIDI learn every bindable control gets a frame: yellow for the one waiting
         // for its knob or pad, blue for one that is bound, grey for one that is free.

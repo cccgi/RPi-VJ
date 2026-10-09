@@ -74,8 +74,129 @@ void main() {
 ";
 /// How a layer is laid over the layers below it, in the order of `u_mode`.
 pub const BLENDS: [&str; 6] = ["Add", "Screen", "Mix", "Multiply", "Lighten", "Difference"];
-/// What a layer does to its own picture before it is mixed, in the order of `u_fx`.
-pub const EFFECTS: [&str; 8] = ["None", "Mirror", "Pixelate", "RGB split", "Invert", "Mono", "Hue", "Kaleido"];
+/// The effects, by `u_fx` number, each with the heading it is listed under.
+pub const EFFECTS: [(&str, &str); 26] = [
+    ("None", ""),
+    ("Mirror", "Distort"),
+    ("Pixelate", "Distort"),
+    ("RGB split", "Stylize"),
+    ("Invert", "Colour"),
+    ("Mono", "Colour"),
+    ("Hue", "Colour"),
+    ("Kaleido", "Distort"),
+    ("Blur", "Stylize"),
+    ("Edges", "Stylize"),
+    ("Posterize", "Colour"),
+    ("Wave", "Distort"),
+    ("Tile", "Distort"),
+    ("Contrast", "Colour"),
+    ("Saturate", "Colour"),
+    ("Vignette", "Stylize"),
+    ("Threshold", "Colour"),
+    ("Scanlines", "Stylize"),
+    ("Grain", "Stylize"),
+    ("Glitch", "Distort"),
+    ("Rotate", "Distort"),
+    ("Bass zoom", "Audio"),
+    ("Beat strobe", "Audio"),
+    ("Tunnel", "Distort"),
+    ("Colorize", "Colour"),
+    ("Flip", "Distort"),
+];
+const FX: &str = "#version 300 es
+precision highp float;
+uniform sampler2D u_src;
+uniform int u_fx;
+uniform float u_amount;
+uniform float u_time;
+uniform float u_beat;
+uniform float u_bass;
+uniform vec2 u_px;
+in vec2 uv;
+out vec4 color;
+const float TAU = 6.2831853;
+const float ASPECT = 16.0 / 9.0;
+void main() {
+    float a = u_amount;
+    vec2 p = uv;
+    if (u_fx == 1) {
+        p.x = 0.5 - abs(p.x - 0.5);
+        if (a > 0.5) p.y = 0.5 - abs(p.y - 0.5);
+    }
+    if (u_fx == 2) {
+        vec2 cells = vec2(ASPECT, 1.0) * mix(240.0, 10.0, a);
+        p = (floor(p * cells) + 0.5) / cells;
+    }
+    if (u_fx == 7) {
+        vec2 q = (p - 0.5) * vec2(ASPECT, 1.0);
+        float slice = TAU / floor(mix(3.0, 12.0, a));
+        float angle = abs(mod(atan(q.y, q.x), slice) - slice * 0.5);
+        p = vec2(cos(angle), sin(angle)) * length(q) / vec2(ASPECT, 1.0) + 0.5;
+    }
+    if (u_fx == 11) {
+        p.x += sin(p.y * 20.0 + u_time * 2.0) * 0.05 * a;
+        p.y += cos(p.x * 16.0 + u_time * 1.6) * 0.05 * a;
+    }
+    if (u_fx == 12) p = fract(p * floor(mix(1.0, 6.0, a) + 0.5));
+    if (u_fx == 19) {
+        float band = floor(p.y * 24.0);
+        float chance = fract(sin(band * 91.7 + floor(u_time * 12.0) * 13.3) * 43758.5);
+        if (chance < a * 0.6) p.x = fract(p.x + (chance - 0.3) * 0.4 * a);
+    }
+    if (u_fx == 20) {
+        float angle = a * TAU;
+        vec2 q = mat2(cos(angle), -sin(angle), sin(angle), cos(angle)) * ((p - 0.5) * vec2(ASPECT, 1.0));
+        p = q / vec2(ASPECT, 1.0) + 0.5;
+    }
+    if (u_fx == 21) p = (p - 0.5) / (1.0 + a * 0.6 * u_bass) + 0.5;
+    if (u_fx == 23) {
+        vec2 q = (p - 0.5) * vec2(ASPECT, 1.0);
+        p = vec2(atan(q.y, q.x) / TAU + 0.5, fract(mix(0.15, 0.6, a) / max(length(q), 0.02) + u_time * 0.2));
+    }
+    if (u_fx == 25) {
+        p.x = 1.0 - p.x;
+        if (a > 0.5) p.y = 1.0 - p.y;
+    }
+    vec3 c = texture(u_src, p).rgb;
+    if (u_fx == 3) {
+        vec2 shift = vec2(0.03 * a, 0.0);
+        c = vec3(texture(u_src, p + shift).r, c.g, texture(u_src, p - shift).b);
+    }
+    if (u_fx == 8) {
+        vec3 sum = vec3(0.0);
+        for (int x = -2; x <= 2; x++)
+            for (int y = -2; y <= 2; y++)
+                sum += texture(u_src, p + vec2(float(x), float(y)) * u_px * a * 6.0).rgb;
+        c = sum / 25.0;
+    }
+    if (u_fx == 9) {
+        vec3 across = texture(u_src, p + vec2(u_px.x, 0.0)).rgb - texture(u_src, p - vec2(u_px.x, 0.0)).rgb;
+        vec3 down = texture(u_src, p + vec2(0.0, u_px.y)).rgb - texture(u_src, p - vec2(0.0, u_px.y)).rgb;
+        c = mix(c, vec3(length(across) + length(down)) * 3.0, a);
+    }
+    float luma = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    if (u_fx == 4) c = mix(c, 1.0 - c, a);
+    if (u_fx == 5) c = mix(c, vec3(luma), a);
+    if (u_fx == 6) {
+        float angle = a * TAU;
+        vec3 axis = vec3(0.57735);
+        c = c * cos(angle) + cross(axis, c) * sin(angle) + axis * dot(axis, c) * (1.0 - cos(angle));
+    }
+    if (u_fx == 10) {
+        float steps = mix(16.0, 2.0, a);
+        c = floor(c * steps + 0.5) / steps;
+    }
+    if (u_fx == 13) c = (c - 0.5) * (1.0 + a * 2.0) + 0.5;
+    if (u_fx == 14) c = mix(vec3(luma), c, 1.0 + a * 2.0);
+    if (u_fx == 15) c *= 1.0 - a * smoothstep(0.3, 0.9, length(uv - 0.5) * 1.4);
+    if (u_fx == 16) c = vec3(step(mix(0.15, 0.85, a), luma));
+    if (u_fx == 17) c *= 1.0 - a * 0.7 * step(0.5, fract(uv.y / u_px.y * 0.25));
+    if (u_fx == 18) c += (fract(sin(dot(uv / u_px + u_time * 60.0, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) * a * 0.6;
+    if (u_fx == 22) c *= mix(1.0, 0.15 + 1.6 * u_beat, a);
+    if (u_fx == 24) c = vec3(luma) * (0.5 + 0.5 * cos(TAU * (a + vec3(0.0, 0.33, 0.67)))) * 1.6;
+    color = vec4(clamp(c, 0.0, 1.0), 1.0);
+}
+";
 
 /// An input texture of a shader: one upload shared by every shader that binds the same
 /// file with the same sampling.
@@ -129,6 +250,7 @@ pub struct Gfx {
     /// handed over as desktop GLSL 3.30, which reads the same for what the bank uses.
     es: bool,
     mix: Program,
+    fx: Program,
     textures: RefCell<HashMap<String, Rc<Texture>>>,
 }
 pub fn spectrum_bands(audio: &AudioFrame) -> [f32; 32] {
@@ -149,7 +271,8 @@ impl Gfx {
             let probe = "#version 300 es\nprecision highp float;\nout vec4 c;\nvoid main(){c=vec4(1.0);}\n";
             let es = compile(&gl, VERTEX, probe).map(|id| gl.delete_program(id)).is_ok();
             let mix = build(&gl, es, MIX, &[])?;
-            Ok(Self { gl, vao, es, mix, textures: RefCell::default() })
+            let fx = build(&gl, es, FX, &[])?;
+            Ok(Self { gl, vao, es, mix, fx, textures: RefCell::default() })
         }
     }
     pub fn dialect(&self) -> &'static str {
@@ -439,6 +562,27 @@ impl Gfx {
             gl.draw_arrays(glow::TRIANGLES, 0, 3);
             gl.active_texture(glow::TEXTURE1);
             gl.bind_texture(glow::TEXTURE_2D, None);
+            self.end();
+        }
+    }
+    /// One effect: `source` through effect number `fx` into `target`. `beat` and `bass`
+    /// drive the effects that follow the music.
+    #[allow(clippy::too_many_arguments)]
+    pub fn effect(&self, target: &Target, source: glow::Texture, fx: i32, amount: f32, time: f32, beat: f32, bass: f32) {
+        let (gl, p) = (&self.gl, &self.fx);
+        // SAFETY: as in `new`; locations belong to the effect program.
+        unsafe {
+            self.begin(target, p);
+            gl.active_texture(glow::TEXTURE0);
+            gl.bind_texture(glow::TEXTURE_2D, Some(source));
+            gl.uniform_1_i32(p.uniforms.get("u_src"), 0);
+            gl.uniform_1_i32(p.uniforms.get("u_fx"), fx);
+            gl.uniform_1_f32(p.uniforms.get("u_amount"), amount);
+            gl.uniform_1_f32(p.uniforms.get("u_time"), time);
+            gl.uniform_1_f32(p.uniforms.get("u_beat"), beat);
+            gl.uniform_1_f32(p.uniforms.get("u_bass"), bass);
+            gl.uniform_2_f32(p.uniforms.get("u_px"), 1.0 / target.size.0 as f32, 1.0 / target.size.1 as f32);
+            gl.draw_arrays(glow::TRIANGLES, 0, 3);
             self.end();
         }
     }

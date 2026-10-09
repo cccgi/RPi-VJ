@@ -9,6 +9,10 @@ pub struct Entry {
     /// `selfcontained`, `original18`, `needs_texture` or `multipass`.
     pub class: String,
     pub path: PathBuf,
+    /// The author's own tags, lower case.
+    pub tags: Vec<String>,
+    /// The code looks like a raymarcher.
+    pub raymarch: bool,
 }
 impl Entry {
     /// Multipass shaders need buffer passes, which the single-pass engine does not have.
@@ -50,11 +54,62 @@ pub fn load(root: &Path) -> Result<Vec<Entry>> {
                 author: text(&shader["author"]),
                 class: text(&shader["class"]),
                 path,
+                tags: shader["tags"].as_array().into_iter().flatten().filter_map(|tag| Some(tag.as_str()?.to_lowercase())).collect(),
+                raymarch: shader["features"]["raymarch"].as_bool().unwrap_or(false),
             })
         })
         .collect();
     entries.sort_by_key(|entry| entry.title().to_lowercase());
     Ok(entries)
+}
+/// Groups worked out from each shader's tags, code and author, largest subjects first,
+/// then one per author with ten or more shaders. A shader can be in several.
+pub fn groups(entries: &[Entry]) -> Vec<(String, std::collections::BTreeSet<usize>)> {
+    const SUBJECTS: [(&str, &[&str]); 11] = [
+        ("Fractals", &["fractal", "fractals", "mandelbrot", "julia", "menger", "mandelbulb", "kifs", "ifs"]),
+        ("Raymarched 3D", &["raymarch", "raymarching", "sdf", "3d", "volumetric", "voxel", "dda"]),
+        ("Tunnels", &["tunnel"]),
+        ("Tiny code", &["golf", "short", "small"]),
+        ("2D", &["2d"]),
+        ("Abstract", &["abstract"]),
+        ("Glow", &["glow"]),
+        ("Space", &["space", "stars", "galaxy", "nebula"]),
+        ("Nature", &["cloud", "clouds", "fire", "water", "terrain", "ocean", "sea"]),
+        ("Spirals", &["spiral"]),
+        ("Noise", &["noise", "procedural", "fbm"]),
+    ];
+    let mut found: Vec<(String, std::collections::BTreeSet<usize>)> = SUBJECTS.iter().map(|(name, _)| ((*name).to_owned(), Default::default())).collect();
+    let mut other = std::collections::BTreeSet::new();
+    let mut textured = std::collections::BTreeSet::new();
+    let mut authors: std::collections::BTreeMap<&str, std::collections::BTreeSet<usize>> = Default::default();
+    for (index, entry) in entries.iter().enumerate().filter(|(_, entry)| entry.runnable()) {
+        let mut placed = false;
+        for (subject, (name, words)) in SUBJECTS.iter().enumerate() {
+            let fits = entry.tags.iter().any(|tag| words.contains(&tag.as_str()))
+                || (*name == "Raymarched 3D" && entry.raymarch)
+                || (*name == "Tiny code" && entry.name.to_lowercase().contains("chars"));
+            if fits {
+                found[subject].1.insert(index);
+                placed = true;
+            }
+        }
+        if !placed {
+            other.insert(index);
+        }
+        if entry.class == "needs_texture" {
+            textured.insert(index);
+        }
+        if !entry.author.is_empty() {
+            authors.entry(&entry.author).or_default().insert(index);
+        }
+    }
+    found.push(("Uses textures".into(), textured));
+    found.push(("Everything else".into(), other));
+    let mut by_author: Vec<_> = authors.into_iter().filter(|(_, set)| set.len() >= 10).collect();
+    by_author.sort_by_key(|(_, set)| std::cmp::Reverse(set.len()));
+    found.extend(by_author.into_iter().map(|(author, set)| (format!("By {author}"), set)));
+    found.retain(|(_, set)| !set.is_empty());
+    found
 }
 /// Input textures per shader id, from the asset store's manifest: the `iChannelN` inputs
 /// of each shader's image pass that a file in the store satisfies.

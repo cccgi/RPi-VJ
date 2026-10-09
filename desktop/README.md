@@ -46,6 +46,23 @@ written every 20 seconds and on exit.
   layer of their own above the composition, in list order or shuffled, each for the
   time set, with the react mode chosen beside it, optionally also changing on song
   sections. The one playing is green in the list.
+- **Shader library extras:** hovering a shader shows its picture ("Make all pictures"
+  draws them all once; they are kept in `target/desktop/thumbs/`). Double-click runs
+  it in the preview only, with "To selected layer" and "Close" under the picture.
+  Right-click to favourite it or remove it from the library; "Favourites" and
+  "Removed" are in the group list, and a removed shader can be restored from there.
+  The group list also holds groups worked out from each shader's tags, code and
+  author (Fractals, Raymarched 3D, Tunnels, Tiny code, Space, Nature and so on, then
+  one per author with ten or more shaders).
+- **Effects tab:** beside "Shaders" at the top of the left panel. Drag an effect onto
+  a layer (its controls or any of its cells) or onto the "Composition effects" box on
+  the right; double-click adds it to the selected layer. Each layer and the
+  composition has a chain, worked through from the top: every effect has an on/off
+  box, an amount, "up"/"dn" to reorder and "x" to remove. The selected layer's chain
+  and the composition's are shown under the preview.
+- **Preview:** shows the output, or a library shader being tried out. "Detach" puts it
+  in a window of its own that can be resized and moved to another monitor; closing
+  that window puts it back. Attached, drag the panel's left edge to resize it.
 - **Library presets:** type a name and press "Save preset" to keep the ticked list
   together with shuffle, time, sections, react mode, opacity and blend. "Load preset"
   brings one back and starts playing it at once; its "Delete" submenu removes one.
@@ -54,6 +71,16 @@ written every 20 seconds and on exit.
   beat lead, each layer's opacity and effect amount, and the autoplay opacity; pads
   take cells, each layer's Eject, and the autoplay's Play/Stop and Next. A bound
   control has a blue frame; right-click it in learn mode to forget the binding.
+- **MIDI lights:** every MIDI output is opened. A bound pad shows whether its cell is
+  empty, filled or playing; a bound button whether it is on; a bound knob gets its
+  value back, for encoders with a light ring. The values sent are in the "MIDI" menu
+  and start with the connected controller's colours.
+- **APC Key 25:** when one is connected its layout is on (the "MIDI" menu turns it
+  off). The pad grid is the composition: bottom row the first layer, eight columns.
+  Arrows move the grid a bank of eight columns left or right and one layer up or
+  down, and are lit while there is more that way. The buttons beside the rows eject
+  that layer; "stop all clips" ejects all. Knobs 1 to 5 are the opacities of the five
+  layers shown, 6 the autoplay opacity, 7 the beat lead, 8 the FFT gain.
 - **Composition files:** "Save as…" writes the layers to a file, "Open…" replaces the
   grid with a file's.
 - **Per layer:** opacity, blend mode (Add, Screen, Mix, Multiply, Lighten, Difference),
@@ -80,6 +107,7 @@ of the way.
 | `--sequence` / `--autoplay <n>` | Play the second layer in sequence; tick and play n library shaders, a second each |
 | `--open <file>` | Open this composition file at start |
 | `--midi-test` | Bind and send a few MIDI messages and take the ticked list through a preset |
+| `--tab <n>` / `--preview <id>` / `--detach` / `--thumbs` | Open the Effects tab; preview a shader; detach the preview; draw every hover picture |
 | `--clip <file>` | Put this clip on the first layer and launch it |
 | `--gain <x>` | Start with this FFT gain |
 | `--output <n>` | Start projecting on monitor n |
