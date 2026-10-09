@@ -335,6 +335,10 @@ struct Look {
     contrast: f32,
     gamma: f32,
     invert: bool,
+    /// Which sliders follow the music, and how: a bit each for pump, strobe, twist and
+    /// auto, for zoom, turn, across, up, speed, hue, saturation, brightness, contrast
+    /// and gamma in that order.
+    mods: [u8; 10],
     /// Its own react mode, which then wins over the cell's, the layer's and the autoplay's.
     react_mode: Option<u8>,
     params: Vec<(String, f32)>,
@@ -353,26 +357,42 @@ impl Default for Look {
             contrast: 1.0,
             gamma: 1.0,
             invert: false,
+            mods: [0; 10],
             react_mode: None,
             params: Vec::new(),
         }
     }
 }
 impl Look {
-    fn canvas(&self) -> [f32; 4] {
-        let angle = self.rotate.to_radians();
-        [angle.cos(), angle.sin(), self.pan[0], self.pan[1]]
-    }
-    /// The colour settings, when any of them is off its neutral value.
-    fn grade(&self) -> Option<[f32; 6]> {
-        let grade = [self.hue, self.saturation, self.brightness, self.contrast, self.gamma, f32::from(u8::from(self.invert))];
-        (grade != [0.0, 1.0, 1.0, 1.0, 1.0, 0.0]).then_some(grade)
+    /// The look as it stands this frame: every slider at its setting, moved by the
+    /// music where its boxes are ticked. `signals` are pump (the bass), strobe (the
+    /// beat's flash), twist (the mids) and auto (one of those, changing with the music).
+    fn live(&self, signals: [f32; 4]) -> Live {
+        let follow = |slider: usize| -> f32 {
+            (0..4).filter(|bit| self.mods[slider] & (1 << bit) != 0).map(|bit| signals[bit]).sum::<f32>().min(1.5)
+        };
+        let angle = (self.rotate + 45.0 * follow(1)).to_radians();
+        let grade = [
+            self.hue + 0.25 * follow(5),
+            self.saturation + 0.8 * follow(6),
+            self.brightness + 0.8 * follow(7),
+            self.contrast + 0.8 * follow(8),
+            self.gamma * (1.0 + follow(9)),
+            f32::from(u8::from(self.invert)),
+        ];
+        Live {
+            zoom: self.zoom * (1.0 + 0.5 * follow(0)),
+            canvas: [angle.cos(), angle.sin(), self.pan[0] + 0.2 * follow(2), self.pan[1] + 0.2 * follow(3)],
+            speed: self.speed + 2.0 * follow(4),
+            // The colour settings, when any of them is off its neutral value.
+            grade: (grade != [0.0, 1.0, 1.0, 1.0, 1.0, 0.0]).then_some(grade),
+        }
     }
     fn json(&self) -> serde_json::Value {
         serde_json::json!({
             "zoom": self.zoom, "rotate": self.rotate, "pan": self.pan, "speed": self.speed, "react": self.react,
             "hue": self.hue, "saturation": self.saturation, "brightness": self.brightness, "contrast": self.contrast,
-            "gamma": self.gamma, "invert": self.invert, "react_mode": self.react_mode, "params": self.params,
+            "gamma": self.gamma, "invert": self.invert, "react_mode": self.react_mode, "mods": self.mods, "params": self.params,
         })
     }
     fn from(saved: &serde_json::Value) -> Self {
@@ -390,10 +410,38 @@ impl Look {
             contrast: number("contrast", 1.0),
             gamma: number("gamma", 1.0),
             invert: saved["invert"].as_bool().unwrap_or(false),
+            mods: std::array::from_fn(|slider| saved["mods"][slider].as_u64().unwrap_or(0) as u8 & 15),
             react_mode: saved["react_mode"].as_u64().map(|mode| (mode as u8).min(REACT_MODES.len() as u8 - 1)),
             params: saved["params"].as_array().into_iter().flatten().filter_map(pair).collect(),
         }
     }
+}
+/// A look worked out for one frame.
+struct Live {
+    zoom: f32,
+    canvas: [f32; 4],
+    speed: f32,
+    grade: Option<[f32; 6]>,
+}
+/// The four small boxes beside an editor slider: which kinds of music-following move it.
+fn follow_boxes(ui: &mut egui::Ui, bits: &mut u8) {
+    ui.spacing_mut().item_spacing.x = 1.0;
+    ui.spacing_mut().button_padding = egui::vec2(3.0, 1.0);
+    for (bit, (letter, meaning)) in [
+        ("P", "Pump: this slider swells with the bass"),
+        ("S", "Strobe: this slider jumps on every beat"),
+        ("T", "Twist: this slider follows the mids"),
+        ("A", "Auto: one of the three, changing with the music"),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let mut on = *bits & (1 << bit) != 0;
+        if ui.toggle_value(&mut on, egui::RichText::new(letter).small()).on_hover_text(meaning).changed() {
+            *bits ^= 1 << bit;
+        }
+    }
+    ui.add_space(3.0);
 }
 /// A number a shader declares up front, `#define NAME 1.5` or `const float NAME = 1.5;`:
 /// its name, its value, and whether it is written as a whole number.
@@ -455,8 +503,8 @@ fn playing(layer: &Layer) -> Option<usize> {
     }
 }
 /// A layer's picture with its shader's colour settings applied, if it has any.
-fn graded(gfx: &gfx::Gfx, looks: &HashMap<usize, Look>, layer: &Layer, into: &gfx::Target) -> glow::Texture {
-    match playing(layer).and_then(|entry| looks.get(&entry)).and_then(Look::grade) {
+fn graded(gfx: &gfx::Gfx, looks: &HashMap<usize, Look>, signals: [f32; 4], layer: &Layer, into: &gfx::Target) -> glow::Texture {
+    match playing(layer).and_then(|entry| looks.get(&entry)).and_then(|look| look.live(signals).grade) {
         Some(grade) => {
             gfx.grade(into, layer.target.texture, grade);
             into.texture
@@ -896,6 +944,11 @@ struct App {
     drag_notes: std::cell::RefCell<Vec<String>>,
     /// How far the grid's cells are scrolled sideways.
     grid_x: f32,
+    /// What a slider that follows the music follows this frame: pump, strobe, twist and
+    /// auto; and which of the first three auto is on, and since when.
+    signals: [f32; 4],
+    signal_auto: usize,
+    signal_since: Instant,
     /// Where the editor is folded away; whether an effect goes to the layer (it was
     /// highlighted last) or to the highlighted cells; a target for transitions.
     editor_open: bool,
@@ -1099,6 +1152,9 @@ impl App {
             seen_cell: std::cell::Cell::new(None),
             drag_notes: std::cell::RefCell::new(Vec::new()),
             grid_x: 0.0,
+            signals: [0.0; 4],
+            signal_auto: 0,
+            signal_since: now,
             editor_open: true,
             editing: None,
             focus_layer: true,
@@ -2003,6 +2059,10 @@ impl App {
     fn layer_next(&mut self, index: usize, new_section: bool) -> Option<usize> {
         let layer = &self.layers[index];
         let active = layer.active?;
+        // Editing a shader holds the layer on it: no moving on under the editor's hands.
+        if self.editing.is_some() && playing(layer) == self.editing {
+            return None;
+        }
         let cell = layer.cells[active].as_ref()?;
         let elapsed = layer.launched.elapsed().as_secs_f32();
         let due = elapsed >= cell.seconds || (layer.on_sections && new_section && elapsed > SECTION_MIN);
@@ -2188,8 +2248,12 @@ impl App {
                 self.editor_open = !self.editor_open;
             }
             ui.strong("Shader editor");
-            if self.editing == Some(entry) && ui.small_button("x").on_hover_text("Close the editor").clicked() {
+            if self.editing == Some(entry) && ui.small_button("x").on_hover_text("Close the editor; layers held on this shader move on again").clicked() {
                 self.editing = None;
+                // What was held starts its time afresh, not already overdue.
+                for layer in self.layers.iter_mut().chain([&mut self.auto]).filter(|layer| playing(layer) == Some(entry)) {
+                    layer.launched = Instant::now();
+                }
             }
             ui.add(egui::Label::new(self.library[entry].title()).truncate());
             if self.editor_open && ui.small_button("Reset").on_hover_text("Back to the shader as it came").clicked() {
@@ -2202,31 +2266,49 @@ impl App {
         if !self.editor_open {
             return;
         }
-        ui.weak("Double-click a slider to put it back.");
-        ui.spacing_mut().slider_width = 130.0;
+        if self.editing == Some(entry) {
+            ui.weak("Layers playing this shader stay on it while this editor is open.");
+        }
+        ui.weak("Double-click a slider to put it back. P S T A make a slider follow the music: pump (bass), strobe (beats), twist (mids), auto.");
+        ui.spacing_mut().slider_width = 92.0;
         egui::CollapsingHeader::new("Transform").default_open(true).show(ui, |ui| {
-            let moved = ui.add(egui::Slider::new(&mut look.zoom, 0.2..=5.0).logarithmic(true).text("zoom"));
-            if double_clicked(ui, &moved) {
-                look.zoom = 1.0;
-            }
-            let moved = ui.add(egui::Slider::new(&mut look.rotate, -180.0..=180.0).suffix("°").text("turn"));
-            if double_clicked(ui, &moved) {
-                look.rotate = 0.0;
-            }
-            let moved = ui.add(egui::Slider::new(&mut look.pan[0], -1.0..=1.0).text("across"));
-            if double_clicked(ui, &moved) {
-                look.pan[0] = 0.0;
-            }
-            let moved = ui.add(egui::Slider::new(&mut look.pan[1], -1.0..=1.0).text("up"));
-            if double_clicked(ui, &moved) {
-                look.pan[1] = 0.0;
-            }
+            ui.horizontal(|ui| {
+                follow_boxes(ui, &mut look.mods[0]);
+                let moved = ui.add(egui::Slider::new(&mut look.zoom, 0.2..=5.0).logarithmic(true).text("zoom"));
+                if double_clicked(ui, &moved) {
+                    look.zoom = 1.0;
+                }
+            });
+            ui.horizontal(|ui| {
+                follow_boxes(ui, &mut look.mods[1]);
+                let moved = ui.add(egui::Slider::new(&mut look.rotate, -180.0..=180.0).suffix("°").text("turn"));
+                if double_clicked(ui, &moved) {
+                    look.rotate = 0.0;
+                }
+            });
+            ui.horizontal(|ui| {
+                follow_boxes(ui, &mut look.mods[2]);
+                let moved = ui.add(egui::Slider::new(&mut look.pan[0], -1.0..=1.0).text("across"));
+                if double_clicked(ui, &moved) {
+                    look.pan[0] = 0.0;
+                }
+            });
+            ui.horizontal(|ui| {
+                follow_boxes(ui, &mut look.mods[3]);
+                let moved = ui.add(egui::Slider::new(&mut look.pan[1], -1.0..=1.0).text("up"));
+                if double_clicked(ui, &moved) {
+                    look.pan[1] = 0.0;
+                }
+            });
         });
         egui::CollapsingHeader::new("Motion").default_open(true).show(ui, |ui| {
-            let moved = ui.add(egui::Slider::new(&mut look.speed, -2.0..=4.0).text("speed"));
-            if double_clicked(ui, &moved) {
-                look.speed = 1.0;
-            }
+            ui.horizontal(|ui| {
+                follow_boxes(ui, &mut look.mods[4]);
+                let moved = ui.add(egui::Slider::new(&mut look.speed, -2.0..=4.0).text("speed"));
+                if double_clicked(ui, &moved) {
+                    look.speed = 1.0;
+                }
+            });
             let moved = ui.add(egui::Slider::new(&mut look.react, 0.0..=2.0).text("follows the music"));
             if double_clicked(ui, &moved) {
                 look.react = 1.0;
@@ -2243,26 +2325,41 @@ impl App {
             });
         });
         egui::CollapsingHeader::new("Colour").default_open(true).show(ui, |ui| {
-            let moved = ui.add(egui::Slider::new(&mut look.hue, 0.0..=1.0).text("hue"));
-            if double_clicked(ui, &moved) {
-                look.hue = 0.0;
-            }
-            let moved = ui.add(egui::Slider::new(&mut look.saturation, 0.0..=2.0).text("saturation"));
-            if double_clicked(ui, &moved) {
-                look.saturation = 1.0;
-            }
-            let moved = ui.add(egui::Slider::new(&mut look.brightness, 0.0..=2.0).text("brightness"));
-            if double_clicked(ui, &moved) {
-                look.brightness = 1.0;
-            }
-            let moved = ui.add(egui::Slider::new(&mut look.contrast, 0.0..=2.0).text("contrast"));
-            if double_clicked(ui, &moved) {
-                look.contrast = 1.0;
-            }
-            let moved = ui.add(egui::Slider::new(&mut look.gamma, 0.3..=3.0).logarithmic(true).text("gamma"));
-            if double_clicked(ui, &moved) {
-                look.gamma = 1.0;
-            }
+            ui.horizontal(|ui| {
+                follow_boxes(ui, &mut look.mods[5]);
+                let moved = ui.add(egui::Slider::new(&mut look.hue, 0.0..=1.0).text("hue"));
+                if double_clicked(ui, &moved) {
+                    look.hue = 0.0;
+                }
+            });
+            ui.horizontal(|ui| {
+                follow_boxes(ui, &mut look.mods[6]);
+                let moved = ui.add(egui::Slider::new(&mut look.saturation, 0.0..=2.0).text("saturation"));
+                if double_clicked(ui, &moved) {
+                    look.saturation = 1.0;
+                }
+            });
+            ui.horizontal(|ui| {
+                follow_boxes(ui, &mut look.mods[7]);
+                let moved = ui.add(egui::Slider::new(&mut look.brightness, 0.0..=2.0).text("brightness"));
+                if double_clicked(ui, &moved) {
+                    look.brightness = 1.0;
+                }
+            });
+            ui.horizontal(|ui| {
+                follow_boxes(ui, &mut look.mods[8]);
+                let moved = ui.add(egui::Slider::new(&mut look.contrast, 0.0..=2.0).text("contrast"));
+                if double_clicked(ui, &moved) {
+                    look.contrast = 1.0;
+                }
+            });
+            ui.horizontal(|ui| {
+                follow_boxes(ui, &mut look.mods[9]);
+                let moved = ui.add(egui::Slider::new(&mut look.gamma, 0.3..=3.0).logarithmic(true).text("gamma"));
+                if double_clicked(ui, &moved) {
+                    look.gamma = 1.0;
+                }
+            });
             ui.checkbox(&mut look.invert, "invert");
         });
         egui::CollapsingHeader::new("The shader's own numbers").default_open(true).show(ui, |ui| {
@@ -2787,6 +2884,13 @@ impl App {
         let found = self.predictor.bpm();
         let bpm = if found > 0.0 { found } else { 128.0 };
         let (time, frame) = (self.start.elapsed().as_secs_f32(), self.frames as i32);
+        // Auto moves to the next of pump, strobe and twist at a new section, or after a while.
+        if new_section || self.signal_since.elapsed() > Duration::from_secs(8) {
+            self.signal_auto = (self.signal_auto + 1) % 3;
+            self.signal_since = now;
+        }
+        let three = [moving.bass, moving.onset, moving.mid].map(|level| level.clamp(0.0, 1.0));
+        self.signals = [three[0], three[1], three[2], three[self.signal_auto]];
         for layer in self.layers.iter_mut().chain([&mut self.auto, &mut self.pre]) {
             layer.drawn = false;
             if new_section {
@@ -2800,7 +2904,8 @@ impl App {
                     let react = look.and_then(|look| look.react_mode).or(cell.react).unwrap_or(layer.react);
                     let audio = scaled(&layer.reactor.apply(react, dt, &moving), look.map_or(1.0, |look| look.react));
                     layer.flash = layer.reactor.flash(react);
-                    layer.time += dt * look.map_or(1.0, |look| look.speed);
+                    let live = look.map(|look| look.live(self.signals));
+                    layer.time += dt * live.as_ref().map_or(1.0, |live| live.speed);
                     for (clock, energy) in layer.flow.iter_mut().zip([audio.volume, audio.bass, audio.mid, audio.treble]) {
                         *clock += dt * (FLOW_RATE.0 + energy * FLOW_RATE.1);
                     }
@@ -2820,8 +2925,8 @@ impl App {
                             audio: &audio,
                             flow: &layer.flow,
                             spec_flow: &layer.spec_flow,
-                            canvas: look.map_or([1.0, 0.0, 0.0, 0.0], Look::canvas),
-                            zoom: look.map_or(1.0, |look| look.zoom),
+                            canvas: live.as_ref().map_or([1.0, 0.0, 0.0, 0.0], |live| live.canvas),
+                            zoom: live.as_ref().map_or(1.0, |live| live.zoom),
                         },
                     );
                     layer.drawn = true;
@@ -2844,7 +2949,7 @@ impl App {
         let (mut below, mut next) = (None, 0);
         for layer in self.layers.iter().chain([&self.auto]).filter(|layer| layer.drawn && !layer.bypass) {
             // Colours, the cell's own effects, the change from the cell before, the layer's effects.
-            let picture = graded(&self.gfx, &self.looks, layer, &self.graded);
+            let picture = graded(&self.gfx, &self.looks, self.signals, layer, &self.graded);
             let own = layer.active.and_then(|column| layer.cells[column].as_ref()).map(|cell| cell.effects.as_slice()).unwrap_or(&[]);
             let (mut picture, first) = run_effects(&self.gfx, &self.scratch, picture, own, 0, time, moving.onset, moving.bass);
             let since = layer.switched.elapsed().as_secs_f32();
@@ -2878,7 +2983,7 @@ impl App {
         // The preview is not part of the output; it gets its shader's colours and a
         // picture of its own.
         if self.pre.drawn {
-            let picture = graded(&self.gfx, &self.looks, &self.pre, &self.graded);
+            let picture = graded(&self.gfx, &self.looks, self.signals, &self.pre, &self.graded);
             self.gfx.mix(&self.pre_out, &gfx::Mix::copy(picture));
         }
         // Layers on Sequence or Shuffle, and the library's checked list, move on.
@@ -2889,7 +2994,8 @@ impl App {
         }
         if self.autoplay.is_some() {
             let elapsed = self.auto.launched.elapsed().as_secs_f32();
-            let due = elapsed >= self.auto_seconds || (self.auto_sections && new_section && elapsed > SECTION_MIN);
+            let held = self.editing.is_some() && playing(&self.auto) == self.editing;
+            let due = !held && (elapsed >= self.auto_seconds || (self.auto_sections && new_section && elapsed > SECTION_MIN));
             if self.auto.active.is_none() || due {
                 self.autoplay_next();
             } else {
