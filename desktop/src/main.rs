@@ -148,6 +148,29 @@ struct Collection {
 }
 /// How a layer moves on by itself, in the order of `Layer::auto`.
 const AUTO_MODES: [&str; 3] = ["Manual", "Sequence", "Shuffle"];
+/// What makes an autoplay move on, as the drop-down lists it.
+const ADVANCES: [&str; 3] = ["Timer", "Song sections", "Both"];
+/// The drop-down for what makes an autoplay move on. "Song sections" is the Pi's way:
+/// the section detector alone decides, which is a change wherever the music changes
+/// character and at the latest after a minute of the same.
+fn advance_choice(ui: &mut egui::Ui, salt: impl std::hash::Hash, timed: &mut bool, sections: &mut bool) {
+    let mut choice = match (*timed, *sections) {
+        (false, true) => 1,
+        (true, true) => 2,
+        _ => 0,
+    };
+    egui::ComboBox::from_id_salt(salt)
+        .width(104.0)
+        .selected_text(ADVANCES[choice])
+        .show_ui(ui, |ui| {
+            for (index, name) in ADVANCES.iter().enumerate() {
+                ui.selectable_value(&mut choice, index, *name);
+            }
+        })
+        .response
+        .on_hover_text("Move on when the time is up, when the song changes section (a drop, a breakdown, a new track), or at whichever comes first");
+    (*timed, *sections) = [(true, false), (false, true), (true, true)][choice];
+}
 /// A change of song section moves on only after this long on one cell, seconds.
 const SECTION_MIN: f32 = 4.0;
 const HEADER_WIDTH: f32 = 250.0;
@@ -190,6 +213,8 @@ struct Options {
     tiles: bool,
     /// Tile the shader put live with `--live`, zoomed out, in this way.
     tile: usize,
+    /// With `--sequence` and `--autoplay`: move on at song sections only, not by the timer.
+    sections_only: bool,
     /// Start with the grid scrolled this far sideways.
     scroll: f32,
     /// Open the editor for the first cell of the second layer.
@@ -238,6 +263,7 @@ impl Options {
                 "--open" => options.open = Some(value().into()),
                 "--edit-test" => options.edit_test = true,
                 "--tile" => options.tile = value().parse().unwrap_or(0),
+                "--sections-only" => options.sections_only = true,
                 "--scroll" => options.scroll = value().parse().unwrap_or(0.0),
                 "--cell-fx" => options.cell_fx = true,
                 "--drag-test" => options.drag_test = true,
@@ -722,6 +748,8 @@ struct Layer {
     auto: usize,
     /// Move on at a new section of the song as well as when the time is up.
     on_sections: bool,
+    /// Move on when the live cell's time is up.
+    timed: bool,
     /// When the live cell was launched, and the cells played since the last shuffle round.
     launched: Instant,
     played: Vec<usize>,
@@ -933,6 +961,7 @@ struct App {
     auto_shuffle: bool,
     auto_seconds: f32,
     auto_sections: bool,
+    auto_timed: bool,
     auto_changes: u32,
     seed: u64,
     presets: Vec<Preset>,
@@ -1092,7 +1121,8 @@ fn new_layer(gfx: &gfx::Gfx, name: String, columns: usize, size: usize) -> Resul
         react: 0,
         bypass: false,
         auto: 0,
-        on_sections: false,
+        on_sections: true,
+        timed: true,
         launched: Instant::now(),
         played: Vec::new(),
         time: 0.0,
@@ -1163,6 +1193,7 @@ impl App {
             auto_shuffle: false,
             auto_seconds: 20.0,
             auto_sections: true,
+            auto_timed: true,
             auto_changes: 0,
             presets: Vec::new(),
             preset_name: String::new(),
@@ -1297,6 +1328,11 @@ impl App {
         // Listen to the device used last time, else to what the computer is playing.
         let source = wanted_source
             .and_then(|label: String| app.sources.iter().position(|source| source.label() == label))
+            .or_else(|| {
+                // What the computer is playing: through its default output, not just any output.
+                let usual = audio_in::default_output();
+                app.sources.iter().position(|source| source.loopback && Some(&source.name) == usual.as_ref())
+            })
             .or_else(|| app.sources.iter().position(|source| source.loopback))
             .or((!app.sources.is_empty()).then_some(0));
         if let Some(source) = source {
@@ -1330,6 +1366,8 @@ impl App {
         }
         if app.options.sequence {
             app.layers[1].auto = 1;
+            app.layers[1].timed = !app.options.sections_only;
+            app.auto_timed = !app.options.sections_only;
             for cell in app.layers[1].cells.iter_mut().flatten() {
                 cell.seconds = 1.0;
             }
@@ -2104,7 +2142,7 @@ impl App {
         }
         let cell = layer.cells[active].as_ref()?;
         let elapsed = layer.launched.elapsed().as_secs_f32();
-        let due = elapsed >= cell.seconds || (layer.on_sections && new_section && elapsed > SECTION_MIN);
+        let due = (layer.timed && elapsed >= cell.seconds) || (layer.on_sections && new_section && elapsed > SECTION_MIN);
         let filled: Vec<usize> = (0..layer.cells.len()).filter(|column| layer.cells[*column].is_some()).collect();
         if layer.auto == 0 || !due || filled.len() < 2 {
             return None;
@@ -3068,7 +3106,8 @@ impl App {
         if self.autoplay.is_some() {
             let elapsed = self.auto.launched.elapsed().as_secs_f32();
             let held = self.editing.is_some() && playing(&self.auto) == self.editing;
-            let due = !held && (elapsed >= self.auto_seconds || (self.auto_sections && new_section && elapsed > SECTION_MIN));
+            let timer = self.auto_timed && elapsed >= self.auto_seconds;
+            let due = !held && (timer || (self.auto_sections && new_section && elapsed > SECTION_MIN));
             if self.auto.active.is_none() || due {
                 self.autoplay_next();
             } else {
@@ -3148,6 +3187,7 @@ impl App {
                     "react": layer.react,
                     "auto": layer.auto,
                     "on_sections": layer.on_sections,
+                    "timed": layer.timed,
                     "transition": gfx::TRANSITIONS[layer.transition],
                     "transition_seconds": layer.transition_seconds,
                     "cells": layer.cells.iter().map(cell).collect::<Vec<_>>(),
@@ -3196,6 +3236,7 @@ impl App {
                 "shuffle": self.auto_shuffle,
                 "seconds": self.auto_seconds,
                 "on_sections": self.auto_sections,
+                "timed": self.auto_timed,
                 "react": self.auto.react,
                 "opacity": self.auto.opacity,
                 "blend": self.auto.blend,
@@ -3237,6 +3278,7 @@ impl App {
             layer.react = react(&saved["react"]).unwrap_or(0);
             layer.auto = (saved["auto"].as_u64().unwrap_or(0) as usize).min(AUTO_MODES.len() - 1);
             layer.on_sections = saved["on_sections"].as_bool().unwrap_or(false);
+            layer.timed = saved["timed"].as_bool().unwrap_or(true);
             if let Some(kind) = gfx::TRANSITIONS.iter().position(|name| Some(*name) == saved["transition"].as_str()) {
                 layer.transition = kind;
             }
@@ -3396,6 +3438,7 @@ impl App {
         self.auto_shuffle = auto["shuffle"].as_bool().unwrap_or(false);
         self.auto_seconds = number(&auto["seconds"], 20.0).clamp(1.0, 36000.0);
         self.auto_sections = auto["on_sections"].as_bool().unwrap_or(true);
+        self.auto_timed = auto["timed"].as_bool().unwrap_or(true);
         self.auto.react = (auto["react"].as_u64().unwrap_or(0) as u8).min(REACT_MODES.len() as u8 - 1);
         self.auto.opacity = number(&auto["opacity"], 1.0).clamp(0.0, 1.0);
         self.auto.blend = (auto["blend"].as_u64().unwrap_or(2) as usize).min(gfx::BLENDS.len() - 1);
@@ -3695,8 +3738,8 @@ impl App {
                     ui.selectable_value(&mut self.auto.react, mode as u8, *name);
                 }
             });
-            ui.add(egui::DragValue::new(&mut self.auto_seconds).range(1.0..=36000.0).suffix(" s each"));
-            ui.checkbox(&mut self.auto_sections, "and on song sections");
+            ui.add_enabled(self.auto_timed, egui::DragValue::new(&mut self.auto_seconds).range(1.0..=36000.0).suffix(" s each"));
+            advance_choice(ui, "auto-advance", &mut self.auto_timed, &mut self.auto_sections);
         });
         let playing = self.autoplay.as_ref().map(|play| play.order[play.at]).filter(|_| self.auto.active.is_some());
         if let Some(play) = &self.autoplay {
@@ -4041,7 +4084,7 @@ impl App {
                         ui.selectable_value(&mut layer.auto, mode, *name);
                     }
                 });
-                ui.checkbox(&mut layer.on_sections, "on sections");
+                advance_choice(ui, ("advance", index), &mut layer.timed, &mut layer.on_sections);
                 // Switched on with nothing playing: start at the first cell.
                 if before == 0 && layer.auto != 0 && layer.active.is_none() {
                     if let Some(first) = layer.cells.iter().position(Option::is_some) {
@@ -4143,7 +4186,7 @@ impl App {
             if let Some(react) = cell.react {
                 tag(rect.left_top() + egui::vec2(5.0, 4.0), egui::Align2::LEFT_TOP, REACT_MODES[usize::from(react)].to_owned());
             }
-            if layer.active == Some(column) && layer.auto != 0 {
+            if layer.active == Some(column) && layer.auto != 0 && layer.timed {
                 // How much of its time the live cell has had.
                 let had = (layer.launched.elapsed().as_secs_f32() / cell.seconds).clamp(0.0, 1.0);
                 let bar = egui::Rect::from_min_size(picture.left_bottom() - egui::vec2(0.0, 3.0), egui::vec2(CELL.x * had, 3.0));
@@ -4507,7 +4550,7 @@ impl App {
                 .flat_map(|layer| layer.error.iter().chain(layer.cells.iter().flatten().filter_map(|cell| cell.error.as_ref())))
                 .collect();
             println!(
-                "frames={} seconds={:.1} fps={:.1} tempo={:.1} sure={:.2} | audio {:?} rate {:?} error {:?} peak {:.4} | cells {} folders {} | library changes {} drawn {} | layers live {:?} drawn {:?} errors {:?} | output {:?} | midi {:?} out {:?} sent {} bound {} opacity {:.2} presets {} checked {} | groups {} pictures failed {} run {:?} preview {} | filled {:?} picked {:?} | cell fx {} layer fx {} | drag {:#?}",
+                "frames={} seconds={:.1} fps={:.1} tempo={:.1} sure={:.2} | audio {:?} rate {:?} error {:?} peak {:.4} | cells {} folders {} | library changes {} drawn {} | sections {} | layers live {:?} drawn {:?} errors {:?} | output {:?} | midi {:?} out {:?} sent {} bound {} opacity {:.2} presets {} checked {} | groups {} pictures failed {} run {:?} preview {} | filled {:?} picked {:?} | cell fx {} layer fx {} | drag {:#?}",
                 self.frames,
                 self.start.elapsed().as_secs_f32(),
                 self.frames as f32 / self.start.elapsed().as_secs_f32(),
@@ -4521,6 +4564,7 @@ impl App {
                 self.folders.len(),
                 self.auto_changes,
                 self.auto.drawn,
+                self.section_count,
                 self.layers.iter().map(|layer| layer.active).collect::<Vec<_>>(),
                 self.layers.iter().map(|layer| layer.drawn).collect::<Vec<_>>(),
                 errors,

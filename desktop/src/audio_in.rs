@@ -43,6 +43,10 @@ pub struct Capture {
     _stream: cpal::Stream,
     pub rate: u32,
 }
+/// The name of the output device the system plays through by default.
+pub fn default_output() -> Option<String> {
+    cpal::default_host().default_output_device()?.name().ok()
+}
 pub fn sources() -> Vec<Source> {
     let host = cpal::default_host();
     let mut found = Vec::new();
