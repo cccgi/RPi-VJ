@@ -292,6 +292,10 @@ pub fn run(show: Show, path: &Path) -> Result<()> {
         if state.auto_shuffle && !state.blackout && (if state.shader { new_section || marked } else { switched_on }) {
             if let Some(shader) = bag.next(&state) {
                 if state.apply(Command::TriggerShader { shader }).is_ok() {
+                    // Turn the deck to the page that holds it, so its key is lit in view.
+                    if let Some(page) = crate::surface::page_of(&show, shader) {
+                        state.page = page;
+                    }
                     dirty = true;
                 }
             }
