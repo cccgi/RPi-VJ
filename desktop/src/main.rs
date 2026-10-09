@@ -188,6 +188,8 @@ struct Options {
     undo_test: bool,
     /// Show the Assets tab as thumbnails, with its first folder opened.
     tiles: bool,
+    /// Open the editor for the first cell of the second layer.
+    edit_test: bool,
     /// Put an effect on the first cell of the second layer.
     cell_fx: bool,
     /// Move two of the filled cells to the top layer.
@@ -230,6 +232,7 @@ impl Options {
                 "--autoplay" => options.autoplay = value().parse().unwrap_or(0),
                 "--midi-test" => options.midi_test = true,
                 "--open" => options.open = Some(value().into()),
+                "--edit-test" => options.edit_test = true,
                 "--cell-fx" => options.cell_fx = true,
                 "--drag-test" => options.drag_test = true,
                 "--tiles" => options.tiles = true,
@@ -790,6 +793,8 @@ enum Action {
     AddEffectToFocus(usize),
     /// Assets: put a file on the selected layer and launch it; fill and empty collections.
     SendClip(PathBuf),
+    /// Open the shader editor for a shader that is on a layer.
+    Edit(usize),
     Undo,
     Redo,
     AddToCollection(usize, Vec<PathBuf>),
@@ -885,6 +890,8 @@ struct App {
     /// Where the editor is folded away; whether an effect goes to the layer (it was
     /// highlighted last) or to the highlighted cells; a target for transitions.
     editor_open: bool,
+    /// The shader whose editor a double-click on a cell opened.
+    editing: Option<usize>,
     focus_layer: bool,
     crossing: gfx::Target,
     /// Assets: the folder being looked at and what is in it (path, is a folder), the
@@ -1081,6 +1088,7 @@ impl App {
             seen_cell: std::cell::Cell::new(None),
             drag_notes: std::cell::RefCell::new(Vec::new()),
             editor_open: true,
+            editing: None,
             focus_layer: true,
             crossing: gfx.target(RENDER_SIZES[size])?,
             assets_dir: std::env::var_os("USERPROFILE").map(PathBuf::from).map(|home| if home.join("Videos").is_dir() { home.join("Videos") } else { home }).unwrap_or_else(|| PathBuf::from("/")),
@@ -1255,6 +1263,13 @@ impl App {
             }
             app.apply(Action::Preview(entry));
             app.favorites.insert(entry);
+        }
+        if app.options.edit_test {
+            // What a double-click on the first cell of the second layer asks for.
+            if let Some(Source::Shader(entry)) = app.layers[1].cells[0].as_ref().map(|cell| cell.source.clone()) {
+                app.apply(Action::Launch(1, 0));
+                app.apply(Action::Edit(entry));
+            }
         }
         if app.options.cell_fx {
             // Click a cell, then double-click an effect: it lands on that cell, not the layer.
@@ -1744,7 +1759,7 @@ impl App {
                         if *is_folder {
                             // The triangle opens the folder in place; a double-click on its name goes into it.
                             let open = self.assets_open.contains(path);
-                            if ui.small_button(if open { "▼" } else { "▶" }).clicked() {
+                            if ui.small_button(if open { "🔽" } else { "▶" }).clicked() {
                                 toggle = Some(path.clone());
                             }
                         } else {
@@ -2139,7 +2154,8 @@ impl App {
     /// Under the preview: what can be changed about the shader being tried out. The
     /// changes stay with the shader and apply wherever it plays.
     fn editor(&mut self, ui: &mut egui::Ui, actions: &mut Vec<Action>) {
-        let Some(entry) = self.previewed() else { return };
+        // The shader a cell was double-clicked for, else the one in the preview.
+        let Some(entry) = self.editing.or(self.previewed()) else { return };
         if self.declared.as_ref().map(|(known, _)| *known) != Some(entry) {
             let text = self.source_text(entry).unwrap_or_default();
             let mut found: Vec<(String, f32, bool)> = Vec::new();
@@ -2155,10 +2171,14 @@ impl App {
         let edited = self.edited_path(entry).is_file();
         ui.separator();
         ui.horizontal(|ui| {
-            if ui.small_button(if self.editor_open { "▼" } else { "▶" }).on_hover_text("Fold the editor away").clicked() {
+            if ui.small_button(if self.editor_open { "🔽" } else { "▶" }).on_hover_text("Fold the editor away").clicked() {
                 self.editor_open = !self.editor_open;
             }
             ui.strong("Shader editor");
+            if self.editing == Some(entry) && ui.small_button("x").on_hover_text("Close the editor").clicked() {
+                self.editing = None;
+            }
+            ui.add(egui::Label::new(self.library[entry].title()).truncate());
             if self.editor_open && ui.small_button("Reset").on_hover_text("Back to the shader as it came").clicked() {
                 look = Look::default();
             }
@@ -2283,7 +2303,9 @@ impl App {
             if compiled {
                 self.declared = None;
                 self.refresh_cells(entry);
-                actions.push(Action::Preview(entry));
+                if self.previewed() == Some(entry) {
+                    actions.push(Action::Preview(entry));
+                }
             }
         }
         if revert {
@@ -2563,6 +2585,10 @@ impl App {
                         self.release(old);
                     }
                     self.pre.active = Some(0);
+                    // The editor follows the preview, unless this is the shader it already shows.
+                    if self.editing != Some(entry) {
+                        self.editing = None;
+                    }
                 }
                 Err(error) => self.message = Some(format!("{}: {error:#}", self.library[entry].title())),
             },
@@ -2587,6 +2613,10 @@ impl App {
                         chain.push(Effect { kind, amount: 0.5, bypass: false });
                     }
                 }
+            }
+            Action::Edit(entry) => {
+                self.editing = Some(entry);
+                self.editor_open = true;
             }
             Action::Undo => self.step_history(true),
             Action::Redo => self.step_history(false),
@@ -3447,7 +3477,7 @@ impl App {
             let learn = self.learn;
             let playing = self.autoplay.is_some();
             let toggle = ui
-                .add_enabled(playing || !self.checked.is_empty(), egui::Button::new(if playing { "■" } else { "▶" }))
+                .add_enabled(playing || !self.checked.is_empty(), egui::Button::new(if playing { "⏹" } else { "▶" }))
                 .on_hover_text(if playing { "Stop the autoplay" } else { "Play the ticked shaders one after another" });
             spot(actions, learn, &toggle, Control::AutoToggle);
             if toggle.clicked() && !learn {
@@ -3785,7 +3815,7 @@ impl App {
                 // Play: this layer's cells one after another, from the first if none is live.
                 let running = layer.auto != 0 && layer.active.is_some();
                 let play = ui
-                    .small_button(if running { "■" } else { "▶" })
+                    .small_button(if running { "⏹" } else { "▶" })
                     .on_hover_text(if running { "Stop moving on by itself" } else { "Play this layer's cells one after another" });
                 if play.clicked() {
                     if running {
@@ -3954,6 +3984,11 @@ impl App {
         } else if self.learn {
             spot(actions, true, &response, Control::Cell(layer_index, column));
             return;
+        } else if response.double_clicked() && cell.is_some() {
+            // A double-click on a shader opens its editor under the preview.
+            if let Some(Source::Shader(entry)) = cell.map(|cell| &cell.source) {
+                actions.push(Action::Edit(*entry));
+            }
         } else if response.clicked() && cell.is_some() {
             // Ctrl adds to or takes from the selection, Shift selects a run; a plain
             // click launches.
@@ -4313,8 +4348,10 @@ impl eframe::App for App {
         // A changed number of the previewed shader: compile it again once the drag rests.
         if self.rebuild_at.is_some_and(|at| at.elapsed() > Duration::from_millis(150)) {
             self.rebuild_at = None;
-            if let Some(entry) = self.previewed() {
-                self.apply(Action::Preview(entry));
+            if let Some(entry) = self.editing.or(self.previewed()) {
+                if self.previewed() == Some(entry) {
+                    self.apply(Action::Preview(entry));
+                }
                 self.refresh_cells(entry);
             }
         }
