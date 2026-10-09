@@ -226,6 +226,9 @@ pub fn synthetic_audio(time: f32) -> AudioFrame {
         high_mid,
         spectrum,
         sequence: 0,
+        beat_period: 0.0,
+        beat_ahead: 0.0,
+        beat_sure: 0.0,
     }
 }
 /// Closed-form stand-ins for the renderer's integrated flow clocks.
@@ -248,6 +251,9 @@ pub fn max_audio() -> AudioFrame {
         high_mid: 1.0,
         spectrum: [1.0; BINS],
         sequence: 0,
+        beat_period: 0.0,
+        beat_ahead: 0.0,
+        beat_sure: 0.0,
     }
 }
 /// Flow clocks after `time` seconds at the highest rate the renderer can advance them.

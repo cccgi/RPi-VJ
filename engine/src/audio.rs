@@ -25,6 +25,7 @@ pub const SPEC_FLOW_RATE: (f32, f32) = (0.05, 2.0);
 pub struct StereoAnalyzer {
     left: Analyzer,
     right: Analyzer,
+    tempo: TempoTracker,
 }
 impl StereoAnalyzer {
     pub fn process(&mut self, samples: &[f32; HOP * 2]) -> AudioFrame {
@@ -33,7 +34,11 @@ impl StereoAnalyzer {
             .right
             .process(&std::array::from_fn(|i| samples[i * 2 + 1]));
         let power = |a: f32, b: f32| ((a * a + b * b) * 0.5).sqrt();
+        let (beat_period, beat_ahead, beat_sure) = self.tempo.push(self.left.flux.max(self.right.flux));
         AudioFrame {
+            beat_period,
+            beat_ahead,
+            beat_sure,
             bass: power(left.bass, right.bass),
             mid: power(left.mid, right.mid),
             treble: power(left.treble, right.treble),
@@ -62,6 +67,11 @@ pub struct AudioFrame {
     pub high_mid: f32,
     pub spectrum: [f32; BINS],
     pub sequence: u64,
+    /// From `TempoTracker`: seconds per beat (0 while unknown), seconds from this frame
+    /// to the next beat, and how sure that is (0..1).
+    pub beat_period: f32,
+    pub beat_ahead: f32,
+    pub beat_sure: f32,
 }
 /// Seconds for the idle sweep to rise from rest to its top and return.
 pub const IDLE_PERIOD: f32 = 44.0;
@@ -302,6 +312,9 @@ impl Default for AudioFrame {
             high_mid: 0.0,
             spectrum: [0.0; BINS],
             sequence: 0,
+            beat_period: 0.0,
+            beat_ahead: 0.0,
+            beat_sure: 0.0,
         }
     }
 }
@@ -315,6 +328,8 @@ pub struct Analyzer {
     frame: AudioFrame,
     flux_mean: f32,
     refractory: usize,
+    /// Rise of the spectrum in the last hop: the strength of whatever just began.
+    flux: f32,
 }
 impl Default for Analyzer {
     fn default() -> Self {
@@ -336,6 +351,7 @@ impl Analyzer {
             frame: AudioFrame::default(),
             flux_mean: 0.0,
             refractory: 0,
+            flux: 0.0,
         }
     }
     pub fn process(&mut self, samples: &[f32; HOP]) -> AudioFrame {
@@ -391,6 +407,7 @@ impl Analyzer {
             (self.history.iter().map(|x| (x - mean).powi(2)).sum::<f32>() / FFT_SIZE as f32).sqrt();
         let onset = rms > 0.003 && flux > (self.flux_mean * 1.8).max(0.08) && self.refractory == 0;
         self.flux_mean += 0.025 * (flux - self.flux_mean);
+        self.flux = flux;
         self.refractory = if onset {
             18
         } else {
@@ -415,6 +432,236 @@ fn smooth(previous: f32, next: f32) -> f32 {
     let tau = if next > previous { 0.010 } else { 0.080 };
     let alpha = 1.0 - (-(HOP as f32 / SAMPLE_RATE) / tau).exp();
     (previous + alpha * (next - previous)).clamp(0.0, 1.0)
+}
+const HOP_SECONDS: f32 = HOP as f32 / SAMPLE_RATE;
+/// Hops of onset strength the tempo tracker looks back over: about eight seconds.
+const TEMPO_HISTORY: usize = 1536;
+/// Hops of history before the first estimate, and hops between estimates.
+const TEMPO_WARMUP: usize = 750;
+const TEMPO_EVERY: usize = 48;
+/// Beat lengths considered, in hops: 181 down to 70 BPM.
+const TEMPO_SHORTEST: usize = 62;
+const TEMPO_LONGEST: usize = 160;
+/// Finds the tempo of the music and where its beats fall, so the next beat is known
+/// before it is heard. Every `TEMPO_EVERY` hops it compares the recent onset strength
+/// with itself shifted by each beat length (the best match is the tempo, with a
+/// preference for tempos near 125 BPM where a half or a double fits as well), then lays
+/// a grid of that length over the history at every offset (the best fit is the phase).
+/// `sure` says how far that best offset stands out from the others: steady drums score
+/// high, speech and beatless music low. Runs on the audio thread, well under a
+/// millisecond per estimate; allocates only when made.
+pub struct TempoTracker {
+    ring: Vec<f32>,
+    at: usize,
+    filled: usize,
+    line: Vec<f32>,
+    match_at: Vec<f32>,
+    fit: Vec<f32>,
+    /// Beat length and distance to the next beat, in hops.
+    period: f32,
+    ahead: f32,
+    sure: f32,
+}
+impl Default for TempoTracker {
+    fn default() -> Self {
+        Self {
+            ring: vec![0.0; TEMPO_HISTORY],
+            at: 0,
+            filled: 0,
+            line: vec![0.0; TEMPO_HISTORY],
+            match_at: vec![0.0; 2 * TEMPO_LONGEST + 2],
+            fit: vec![0.0; TEMPO_LONGEST + 1],
+            period: 0.0,
+            ahead: 0.0,
+            sure: 0.0,
+        }
+    }
+}
+/// Offset of the top of a parabola through three evenly spaced values, from the middle one.
+fn peak_offset(before: f32, top: f32, after: f32) -> f32 {
+    let bend = before - 2.0 * top + after;
+    if bend < 0.0 { (0.5 * (before - after) / bend).clamp(-0.5, 0.5) } else { 0.0 }
+}
+impl TempoTracker {
+    /// Take one hop's onset strength; returns seconds per beat (0 while unknown), seconds
+    /// until the next beat, and how sure that is.
+    pub fn push(&mut self, flux: f32) -> (f32, f32, f32) {
+        // The root keeps one loud hit from outweighing everything else in the history.
+        self.ring[self.at] = if flux.is_finite() { flux.max(0.0).sqrt() } else { 0.0 };
+        self.at = (self.at + 1) % TEMPO_HISTORY;
+        self.filled = (self.filled + 1).min(TEMPO_HISTORY);
+        if self.period > 0.0 {
+            self.ahead -= 1.0;
+            if self.ahead < 0.0 {
+                self.ahead += self.period;
+            }
+        }
+        if self.at % TEMPO_EVERY == 0 && self.filled >= TEMPO_WARMUP {
+            self.estimate();
+        }
+        (self.period * HOP_SECONDS, self.ahead * HOP_SECONDS, self.sure)
+    }
+    fn estimate(&mut self) {
+        let n = self.filled;
+        for (index, value) in self.line[..n].iter_mut().enumerate() {
+            *value = self.ring[(self.at + TEMPO_HISTORY - n + index) % TEMPO_HISTORY];
+        }
+        let line = &mut self.line[..n];
+        let mean = line.iter().sum::<f32>() / n as f32;
+        if mean < 1e-4 {
+            self.sure *= 0.5;
+            return;
+        }
+        line.iter_mut().for_each(|value| *value -= mean);
+        let longest = (2 * TEMPO_LONGEST + 1).min(n / 2);
+        for lag in TEMPO_SHORTEST - 1..=longest {
+            let sum: f32 = line[lag..].iter().zip(line.iter()).map(|(now, then)| now * then).sum();
+            self.match_at[lag] = sum / (n - lag) as f32;
+        }
+        // A beat length fits when the history matches itself one and two beats back.
+        let fit = |lag: usize, match_at: &[f32]| {
+            let twice = match_at[2 * lag - 1].max(match_at[2 * lag]).max(match_at[2 * lag + 1]);
+            let bpm = 60.0 / (lag as f32 * HOP_SECONDS);
+            let near = (-0.5 * ((bpm / 125.0).log2() / 0.5).powi(2)).exp();
+            (match_at[lag] + twice) * near
+        };
+        let (mut best, mut top) = (0, 0.0);
+        for lag in TEMPO_SHORTEST..=TEMPO_LONGEST {
+            self.fit[lag] += 0.4 * (fit(lag, &self.match_at) - self.fit[lag]);
+            if self.fit[lag] > top {
+                (best, top) = (lag, self.fit[lag]);
+            }
+        }
+        if best == 0 {
+            self.sure *= 0.5;
+            return;
+        }
+        // Stay with the tempo already in use unless another is clearly better.
+        let held = self.period.round() as usize;
+        if self.period > 0.0 && best.abs_diff(held) > 2 {
+            let (low, high) = (held.saturating_sub(1).max(TEMPO_SHORTEST), (held + 1).min(TEMPO_LONGEST));
+            let stay = (low..=high).max_by(|a, b| self.fit[*a].total_cmp(&self.fit[*b])).unwrap_or(held);
+            if top < 1.15 * self.fit[stay] {
+                best = stay;
+            }
+        }
+        let near = |lag: usize| if (TEMPO_SHORTEST..=TEMPO_LONGEST).contains(&lag) { self.fit[lag] } else { 0.0 };
+        let period = best as f32 + peak_offset(near(best - 1), near(best), near(best + 1));
+        // Lay the beat grid over the history at every offset back from the newest hop.
+        let span = period.ceil() as usize;
+        let mut scores = [0.0f32; TEMPO_LONGEST + 2];
+        for (offset, score) in scores[..span].iter_mut().enumerate() {
+            let (mut back, mut weight) = (offset as f32, 1.0);
+            while (back.round() as usize) < n {
+                *score += line[n - 1 - back.round() as usize] * weight;
+                back += period;
+                // Recent beats count for more, so a shifted phase is followed.
+                weight *= 0.93;
+            }
+        }
+        let scores = &scores[..span];
+        let offset = (0..span).max_by(|a, b| scores[*a].total_cmp(&scores[*b])).unwrap_or(0);
+        let mean = scores.iter().sum::<f32>() / span as f32;
+        let spread = (scores.iter().map(|score| (score - mean).powi(2)).sum::<f32>() / span as f32).sqrt();
+        let stands_out = (scores[offset] - mean) / spread.max(1e-9);
+        let exact = offset as f32
+            + peak_offset(scores[(offset + span - 1) % span], scores[offset], scores[(offset + 1) % span]);
+        self.period = period;
+        self.ahead = (period - exact).rem_euclid(period);
+        self.sure += 0.3 * (((stands_out - 3.5) / 2.0).clamp(0.0, 1.0) - self.sure);
+    }
+}
+/// How far ahead of the heard beat the predicted one is drawn, seconds. It covers what
+/// lies between a sound reaching the input and its picture reaching the eye: capture and
+/// analysis (about 25 ms), handing the result to the render loop (about 10 ms), rendering
+/// and scanning out a frame (about 25 ms), and the delay of the display (unknown; 20 ms
+/// assumed).
+pub const BEAT_LEAD: f32 = 0.08;
+/// Seconds for the predicted swell of the levels to fall away.
+const SWELL_FALL: f32 = 0.08;
+/// Replaces reactions that follow a beat with reactions that arrive with it. It runs a
+/// beat clock on the tempo and phase from `TempoTracker` and fires each beat `lead`
+/// seconds early: the onset pulse, and a swell of bass, sub and volume to the height
+/// they usually reach on the beat. The heard onset of that same beat, which comes late,
+/// is dropped. Hits off the beat are passed on as heard. When the tracker is unsure, or
+/// the beats stop bringing onsets (a breakdown), the heard levels pass unchanged.
+#[derive(Clone, Debug, Default)]
+pub struct BeatPredictor {
+    phase: f32,
+    shown: f32,
+    period: f32,
+    seen: u64,
+    since_fire: f32,
+    pulse: f32,
+    /// Onset, bass, sub and volume: highest around the current beat, and usual height.
+    peak: [f32; 4],
+    usual: [f32; 4],
+    past_half: bool,
+    /// Whether the tracker is trusted, and how far the hand-over has gone (0..1).
+    engaged: bool,
+    hand: f32,
+    /// How far the tracker's beat moves about between frames, seconds; for the log.
+    pub jitter: f32,
+}
+impl BeatPredictor {
+    pub fn apply(&mut self, dt: f32, lead: f32, audio: &AudioFrame) -> AudioFrame {
+        if !(audio.beat_period > 0.0 && audio.beat_sure > 0.0) {
+            self.period = 0.0;
+            self.usual = [0.0; 4];
+            return audio.clone();
+        }
+        let acquired = self.period > 0.0;
+        self.period += (audio.beat_period - self.period) * if acquired { 0.2 } else { 1.0 };
+        self.phase = (self.phase + dt / self.period).fract();
+        if audio.sequence != self.seen {
+            self.seen = audio.sequence;
+            // Frames reach the render loop at uneven moments; lean on them, do not jump.
+            let told = 1.0 - audio.beat_ahead / audio.beat_period;
+            let error = (told - self.phase + 0.5).rem_euclid(1.0) - 0.5;
+            let pull = if !acquired || error.abs() > 0.2 { 1.0 } else { 0.1 };
+            self.jitter += 0.02 * (error.abs() * self.period - self.jitter);
+            self.phase = (self.phase + error * pull).rem_euclid(1.0);
+        }
+        // The heard beat lands at phase 0; around it, note how high the levels go.
+        let heard = [audio.onset, audio.bass, audio.sub, audio.volume];
+        let near = self.phase < 0.2 || self.phase > 0.88;
+        if near {
+            for (peak, level) in self.peak.iter_mut().zip(heard) {
+                *peak = peak.max(level);
+            }
+        }
+        let past_half = (0.5..0.88).contains(&self.phase);
+        if past_half && !self.past_half {
+            for (usual, peak) in self.usual.iter_mut().zip(&mut self.peak) {
+                *usual += 0.5 * (*peak - *usual);
+                *peak = 0.0;
+            }
+        }
+        self.past_half = past_half;
+        // Fire on the frame nearest to `lead` before the beat.
+        let shown = (self.phase + (lead + 0.5 * dt) / self.period).fract();
+        self.since_fire += dt;
+        self.pulse *= (-dt / 0.05).exp();
+        if shown < self.shown && self.since_fire > 0.5 * self.period {
+            self.pulse = 1.0;
+            self.since_fire = 0.0;
+        }
+        self.shown = shown;
+        // An onset seen a frame late has already faded a little; count it as whole.
+        // Half trust would draw every beat twice, early and late: take over fully or not
+        // at all, and do not flicker between the two.
+        self.engaged = audio.beat_sure > if self.engaged { 0.25 } else { 0.45 };
+        self.hand += (f32::from(u8::from(self.engaged)) - self.hand) * (1.0 - (-dt / 0.4).exp());
+        let trust = self.hand * (self.usual[0] * 1.3).min(1.0);
+        let swell = if self.since_fire < lead { 1.0 } else { (-(self.since_fire - lead) / SWELL_FALL).exp() };
+        let mut out = audio.clone();
+        out.onset = (self.pulse * trust).max(audio.onset * if near { 1.0 - trust } else { 1.0 });
+        let lift = |heard: f32, usual: f32| heard.max(swell * usual * trust).min(1.0);
+        out.bass = lift(audio.bass, self.usual[1]);
+        out.sub = lift(audio.sub, self.usual[2]);
+        out.volume = lift(audio.volume, self.usual[3]);
+        out
+    }
 }
 /// Beat and bar phase in 0..1 and how far they can be trusted (0 = free-running clock).
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -657,6 +904,88 @@ mod tests {
             reactor.apply(1, dt, &AudioFrame { volume: 0.5, ..AudioFrame::default() });
         }
         assert!((reactor.flash(1)[0] - 1.0).abs() < 0.02);
+    }
+    /// One frame per hop of a drum loop at `bpm`: a kick on every beat, a snare on every
+    /// second one and hats between, over hiss. `drums` scales everything but the hiss.
+    fn drum_loop(bpm: f32, seconds: f32, drums: f32) -> Vec<AudioFrame> {
+        let mut analyzer = StereoAnalyzer::default();
+        let mut seed = 12345u32;
+        let mut noise = move || {
+            seed = seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+            (seed >> 8) as f32 / 8_388_608.0 - 1.0
+        };
+        let beat = 60.0 / bpm;
+        (0..(seconds / HOP_SECONDS) as usize)
+            .map(|hop| {
+                let mut block = [0.0f32; HOP * 2];
+                for (index, pair) in block.chunks_exact_mut(2).enumerate() {
+                    let time = (hop * HOP + index) as f32 / SAMPLE_RATE;
+                    let (count, since) = ((time / beat).floor(), (time / beat).fract() * beat);
+                    let half = ((time / beat + 0.5).fract()) * beat;
+                    let kick = (std::f32::consts::TAU * 55.0 * since).sin() * (-since * 25.0).exp() * 0.8;
+                    let snare = if count as usize % 2 == 1 { noise() * (-since * 30.0).exp() * 0.4 } else { 0.0 };
+                    let hat = noise() * (-half * 120.0).exp() * 0.15;
+                    let sample = (kick + snare + hat) * drums + noise() * 0.01;
+                    pair.copy_from_slice(&[sample, sample]);
+                }
+                analyzer.process(&block)
+            })
+            .collect()
+    }
+    #[test]
+    fn the_tempo_tracker_finds_tempo_and_phase_and_doubts_noise() {
+        for bpm in [92.0f32, 110.0, 128.0, 140.0, 174.0] {
+            let beat = 60.0 / bpm;
+            let frames = drum_loop(bpm, 14.0, 1.0);
+            for (hop, frame) in frames.iter().enumerate().skip(frames.len() - 400) {
+                let multiple = frame.beat_period / beat;
+                let ratio = if bpm > 170.0 && multiple > 1.5 { multiple / 2.0 } else { multiple };
+                assert!((ratio - 1.0).abs() < 0.005, "{bpm}: period {}", frame.beat_period);
+                // The next beat it names is a real one, give or take the analysis delay.
+                let next = (hop + 1) as f32 * HOP_SECONDS + frame.beat_ahead;
+                let off = (next / beat + 0.5).fract() * beat - 0.5 * beat;
+                assert!((-0.004..0.02).contains(&off), "{bpm}: off by {off} at hop {hop}");
+                assert!(frame.beat_sure > 0.6, "{bpm}: sure {}", frame.beat_sure);
+            }
+        }
+        let hiss = drum_loop(128.0, 14.0, 0.0);
+        assert!(hiss.iter().all(|frame| frame.beat_sure < 0.2));
+    }
+    /// The predictor run at 60 frames a second over hop frames; `(time, heard, shown)` onsets.
+    fn predicted(frames: &[AudioFrame]) -> Vec<(f32, f32, f32)> {
+        let dt = 1.0 / 60.0;
+        let mut predictor = BeatPredictor::default();
+        (1..(frames.len() as f32 * HOP_SECONDS / dt) as usize)
+            .map(|step| {
+                let time = step as f32 * dt;
+                let frame = &frames[((time / HOP_SECONDS) as usize).saturating_sub(1)];
+                let out = predictor.apply(dt, BEAT_LEAD, frame);
+                for (shown, heard) in [(out.bass, frame.bass), (out.sub, frame.sub), (out.volume, frame.volume)] {
+                    assert!((heard..=1.0).contains(&shown));
+                }
+                (time, frame.onset, out.onset)
+            })
+            .collect()
+    }
+    #[test]
+    fn predicted_beats_lead_the_heard_ones_and_noise_passes_untouched() {
+        let beat = 60.0 / 128.0;
+        let run = predicted(&drum_loop(128.0, 20.0, 1.0));
+        let settled = &run[run.len() - 480..];
+        let rises = |pick: fn(&(f32, f32, f32)) -> f32| -> Vec<f32> {
+            settled.windows(2).filter(|pair| pick(&pair[1]) - pick(&pair[0]) > 0.3).map(|pair| pair[1].0).collect()
+        };
+        let (heard, shown) = (rises(|frame| frame.1), rises(|frame| frame.2));
+        // Every beat is drawn a lead early, and its late heard onset is dropped; the hats
+        // between the beats still arrive as heard.
+        let to_beat = |time: &f32| beat - (time / beat).fract() * beat;
+        let early = shown.iter().filter(|time| (to_beat(time) - BEAT_LEAD).abs() < 0.03).count();
+        let late = shown.iter().filter(|time| to_beat(time) > beat - 0.1).count();
+        let on_beat = heard.iter().filter(|time| to_beat(time) > beat - 0.1).count();
+        assert!((16..=18).contains(&early) && late == 0 && on_beat >= 16, "{early} {late} {on_beat} {shown:?}");
+        assert_eq!(shown.len(), heard.len());
+        let hiss = drum_loop(128.0, 14.0, 0.0);
+        assert!(predicted(&hiss).iter().all(|frame| frame.1 == frame.2));
     }
     #[test]
     fn auto_moves_through_every_way_on_the_beat_and_without_one() {

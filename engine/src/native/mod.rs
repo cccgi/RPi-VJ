@@ -85,6 +85,7 @@ pub fn run(
     let mut last_audio = Instant::now();
     let (mut sections, mut section_count) = (crate::audio::SectionDetector::default(), 0u32);
     let (mut reactor, mut line_applied) = (crate::audio::Reactor::default(), None);
+    let mut predictor = crate::audio::BeatPredictor::default();
     let mut events = sdl.event_pump().map_err(anyhow::Error::msg)?;
     let mut state = State::from_show(&show);
     if !link.external() {
@@ -221,7 +222,9 @@ pub fn run(
             section_count = section_count.wrapping_add(1);
             reactor.new_section();
         }
-        let moving = crate::audio::idle_audio(&heard, idle_clock.elapsed().as_secs_f32(), idle);
+        // Beats the tempo tracker can foresee are drawn early enough to land with the sound.
+        let timed = predictor.apply(idle_dt, crate::audio::BEAT_LEAD, &heard);
+        let moving = crate::audio::idle_audio(&timed, idle_clock.elapsed().as_secs_f32(), idle);
         let moving = reactor.apply(state.react, idle_dt, &moving);
         renderer.flash = reactor.flash(state.react);
         let mut candidate_error = None;
@@ -396,11 +399,14 @@ pub fn run(
             let dropped = capture
                 .as_ref()
                 .map_or(0, |(_, _, n)| n.load(Ordering::Relaxed));
+            let tempo = if heard.beat_period > 0.0 { 60.0 / heard.beat_period } else { 0.0 };
             eprintln!(
-                "renderer frames={frames} late={late_frames} audio_dropped={dropped} warmed={warmed:?} bands={:.2?} macros={:.2?} gain={:.2} sections={section_count}",
+                "renderer frames={frames} late={late_frames} audio_dropped={dropped} warmed={warmed:?} bands={:.2?} macros={:.2?} gain={:.2} sections={section_count} tempo={tempo:.1} sure={:.2} jitter_ms={:.1}",
                 [heard.bass, heard.low_mid, heard.mid, heard.treble, heard.onset],
                 state.macros,
-                state.input_gain
+                state.input_gain,
+                heard.beat_sure,
+                predictor.jitter * 1000.0
             );
             health_time = Instant::now();
         }
