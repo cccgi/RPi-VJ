@@ -1040,6 +1040,8 @@ fn still_audio() -> AudioFrame {
 impl App {
     fn new(cc: &eframe::CreationContext<'_>, options: Options) -> Result<Self> {
         cc.egui_ctx.set_theme(egui::Theme::Dark);
+        // Scroll bars that are there whenever there is more to see, not only under the pointer.
+        cc.egui_ctx.all_styles_mut(|style| style.spacing.scroll = egui::style::ScrollStyle::solid());
         let gl = cc.gl.clone().ok_or_else(|| anyhow::anyhow!("no OpenGL context"))?;
         let gfx = gfx::Gfx::new(gl)?;
         let root = options.root.clone().unwrap_or_else(library::root);
@@ -3835,13 +3837,14 @@ impl App {
             });
             ui.horizontal(|ui| {
                 // Play: this layer's cells one after another, from the first if none is live.
-                let running = layer.auto != 0 && layer.active.is_some();
+                let running = layer.active.is_some();
                 let play = ui
                     .small_button(if running { "⏹" } else { "▶" })
-                    .on_hover_text(if running { "Stop moving on by itself" } else { "Play this layer's cells one after another" });
+                    .on_hover_text(if running { "Stop this layer: nothing of it stays in the picture" } else { "Play this layer's cells one after another" });
                 if play.clicked() {
                     if running {
-                        layer.auto = 0;
+                        // Stopped means off, not frozen on its last cell under the other layers.
+                        actions.push(Action::Eject(index));
                     } else {
                         if layer.auto == 0 {
                             layer.auto = 1;
