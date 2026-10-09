@@ -146,6 +146,7 @@ uniform float u_contrast;
 uniform float u_gamma;
 uniform float u_invert;
 uniform float u_tile[7];
+uniform vec4 u_colorize;
 in vec2 uv;
 out vec4 color;
 const float ASPECT = 16.0 / 9.0;
@@ -177,6 +178,8 @@ void main() {
     c = mix(vec3(dot(c, vec3(0.2126, 0.7152, 0.0722))), c, u_saturation);
     c = ((c - 0.5) * u_contrast + 0.5) * u_brightness;
     c = pow(max(c, 0.0), vec3(1.0 / max(u_gamma, 0.05)));
+    // Colorize: the picture's light and dark kept, its colours swapped for one tint.
+    c = mix(c, u_colorize.rgb * dot(c, vec3(0.2126, 0.7152, 0.0722)) * 1.6, u_colorize.a);
     c = mix(c, 1.0 - c, u_invert);
     color = vec4(clamp(c, 0.0, 1.0), 1.0);
 }
@@ -675,7 +678,8 @@ impl Gfx {
     /// `tile` lays the picture out as tiles first: kind (0 none, 1 repeat, 2 mirrored,
     /// 3 seamless), turn as cos and sin, move across and up in picture heights, zoom,
     /// and how far in from a tile's edge the seamless blend reaches.
-    pub fn grade(&self, target: &Target, source: glow::Texture, grade: [f32; 6], tile: [f32; 7]) {
+    /// `colorize` is a tint (red, green, blue) and how far the picture is taken to it.
+    pub fn grade(&self, target: &Target, source: glow::Texture, grade: [f32; 6], tile: [f32; 7], colorize: [f32; 4]) {
         let (gl, p) = (&self.gl, &self.grade);
         // SAFETY: as in `new`; locations belong to the grade program.
         unsafe {
@@ -687,6 +691,7 @@ impl Gfx {
                 gl.uniform_1_f32(p.uniforms.get(name), value);
             }
             gl.uniform_1_f32_slice(p.uniforms.get("u_tile"), &tile);
+            gl.uniform_4_f32(p.uniforms.get("u_colorize"), colorize[0], colorize[1], colorize[2], colorize[3]);
             gl.draw_arrays(glow::TRIANGLES, 0, 3);
             self.end();
         }

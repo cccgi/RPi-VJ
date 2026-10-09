@@ -338,14 +338,17 @@ struct Look {
     contrast: f32,
     gamma: f32,
     invert: bool,
+    /// Colorize: how far the picture is taken to one tint, and the tint.
+    colorize: f32,
+    tint: [f32; 3],
     /// How the picture fills the frame when zoomed out or moved (`TILINGS`), and for the
     /// seamless kind how far in from a tile's edge the blend reaches.
     tile: usize,
     tile_blend: f32,
     /// Which sliders follow the music, and how: a bit each for pump, strobe, twist and
-    /// auto, for zoom, turn, across, up, speed, hue, saturation, brightness, contrast
-    /// and gamma in that order.
-    mods: [u8; 10],
+    /// auto, for zoom, turn, across, up, speed, hue, saturation, brightness, contrast,
+    /// gamma and colorize in that order.
+    mods: [u8; 11],
     /// Its own react mode, which then wins over the cell's, the layer's and the autoplay's.
     react_mode: Option<u8>,
     params: Vec<(String, f32)>,
@@ -364,9 +367,11 @@ impl Default for Look {
             contrast: 1.0,
             gamma: 1.0,
             invert: false,
+            colorize: 0.0,
+            tint: [1.0, 0.45, 0.1],
             tile: 0,
             tile_blend: 0.15,
-            mods: [0; 10],
+            mods: [0; 11],
             react_mode: None,
             params: Vec::new(),
         }
@@ -389,6 +394,7 @@ impl Look {
             self.gamma * (1.0 + follow(9)),
             f32::from(u8::from(self.invert)),
         ];
+        let colorize = [self.tint[0], self.tint[1], self.tint[2], (self.colorize + 0.8 * follow(10)).clamp(0.0, 1.0)];
         let zoom = self.zoom * (1.0 + 0.5 * follow(0));
         let canvas = [angle.cos(), angle.sin(), self.pan[0] + 0.2 * follow(2), self.pan[1] + 0.2 * follow(3)];
         // Tiled, the shader draws its picture plainly and the tiles are zoomed, turned and moved.
@@ -398,7 +404,8 @@ impl Look {
             canvas: if tiled { [1.0, 0.0, 0.0, 0.0] } else { canvas },
             speed: self.speed + 2.0 * follow(4),
             // The colour settings, when any of them is off its neutral value.
-            grade: (grade != NEUTRAL).then_some(grade),
+            grade: (grade != NEUTRAL || colorize[3] > 0.0).then_some(grade),
+            colorize,
             tile: tiled.then_some([self.tile as f32, canvas[0], canvas[1], canvas[2], canvas[3], zoom, self.tile_blend]),
         }
     }
@@ -406,7 +413,7 @@ impl Look {
         serde_json::json!({
             "zoom": self.zoom, "rotate": self.rotate, "pan": self.pan, "speed": self.speed, "react": self.react,
             "hue": self.hue, "saturation": self.saturation, "brightness": self.brightness, "contrast": self.contrast,
-            "gamma": self.gamma, "invert": self.invert, "react_mode": self.react_mode, "tile": TILINGS[self.tile.min(TILINGS.len() - 1)], "tile_blend": self.tile_blend, "mods": self.mods, "params": self.params,
+            "gamma": self.gamma, "invert": self.invert, "react_mode": self.react_mode, "tile": TILINGS[self.tile.min(TILINGS.len() - 1)], "tile_blend": self.tile_blend, "colorize": self.colorize, "tint": self.tint, "mods": self.mods, "params": self.params,
         })
     }
     fn from(saved: &serde_json::Value) -> Self {
@@ -426,6 +433,8 @@ impl Look {
             invert: saved["invert"].as_bool().unwrap_or(false),
             tile: TILINGS.iter().position(|name| Some(*name) == saved["tile"].as_str()).unwrap_or(0),
             tile_blend: number("tile_blend", 0.15).clamp(0.01, 0.5),
+            colorize: number("colorize", 0.0).clamp(0.0, 1.0),
+            tint: std::array::from_fn(|channel| saved["tint"][channel].as_f64().map_or([1.0, 0.45, 0.1][channel], |value| value as f32)),
             mods: std::array::from_fn(|slider| saved["mods"][slider].as_u64().unwrap_or(0) as u8 & 15),
             react_mode: saved["react_mode"].as_u64().map(|mode| (mode as u8).min(REACT_MODES.len() as u8 - 1)),
             params: saved["params"].as_array().into_iter().flatten().filter_map(pair).collect(),
@@ -438,6 +447,8 @@ struct Live {
     canvas: [f32; 4],
     speed: f32,
     grade: Option<[f32; 6]>,
+    /// The tint and its amount; an amount of 0 leaves the colours alone.
+    colorize: [f32; 4],
     /// The tiling for `gfx::Gfx::grade`, when the look tiles.
     tile: Option<[f32; 7]>,
 }
@@ -528,7 +539,7 @@ fn playing(layer: &Layer) -> Option<usize> {
 fn graded(gfx: &gfx::Gfx, looks: &HashMap<usize, Look>, signals: [f32; 4], layer: &Layer, into: &gfx::Target) -> glow::Texture {
     match playing(layer).and_then(|entry| looks.get(&entry)).map(|look| look.live(signals)) {
         Some(live) if live.grade.is_some() || live.tile.is_some() => {
-            gfx.grade(into, layer.target.texture, live.grade.unwrap_or(NEUTRAL), live.tile.unwrap_or([0.0; 7]));
+            gfx.grade(into, layer.target.texture, live.grade.unwrap_or(NEUTRAL), live.tile.unwrap_or([0.0; 7]), live.colorize);
             into.texture
         }
         _ => layer.target.texture,
@@ -971,6 +982,8 @@ struct App {
     signals: [f32; 4],
     signal_auto: usize,
     signal_since: Instant,
+    /// Whether the editor lists all of a shader's own numbers, or only the first.
+    numbers_open: bool,
     /// Where the editor is folded away; whether an effect goes to the layer (it was
     /// highlighted last) or to the highlighted cells; a target for transitions.
     editor_open: bool,
@@ -1177,6 +1190,7 @@ impl App {
             signals: [0.0; 4],
             signal_auto: 0,
             signal_since: now,
+            numbers_open: true,
             editor_open: true,
             editing: None,
             focus_layer: true,
@@ -1294,7 +1308,7 @@ impl App {
                     app.place(1, 0, vec![Source::Shader(entry)]);
                     app.launch(1, 0);
                     if app.options.tile > 0 {
-                        app.looks.insert(entry, Look { tile: app.options.tile.min(3), zoom: 0.4, ..Look::default() });
+                        app.looks.insert(entry, Look { tile: app.options.tile.min(3), zoom: if app.options.tile > 3 { 1.0 } else { 0.4 }, colorize: if app.options.tile > 3 { 0.9 } else { 0.0 }, ..Look::default() });
                     }
                 }
                 None => eprintln!("no shader {id} in the library"),
@@ -2398,19 +2412,35 @@ impl App {
             });
             ui.horizontal(|ui| {
                 follow_boxes(ui, &mut look.mods[9]);
-                let moved = ui.add(egui::Slider::new(&mut look.gamma, 0.3..=3.0).logarithmic(true).text("gamma"));
+                let moved = ui.add(egui::Slider::new(&mut look.gamma, 0.1..=8.0).logarithmic(true).text("gamma"));
                 if double_clicked(ui, &moved) {
                     look.gamma = 1.0;
                 }
             });
+            ui.horizontal(|ui| {
+                follow_boxes(ui, &mut look.mods[10]);
+                let moved = ui.add(egui::Slider::new(&mut look.colorize, 0.0..=1.0).text("colorize"));
+                if double_clicked(ui, &moved) {
+                    look.colorize = 0.0;
+                }
+                ui.color_edit_button_rgb(&mut look.tint).on_hover_text("The colour the picture is taken to");
+            });
             ui.checkbox(&mut look.invert, "invert");
         });
-        egui::CollapsingHeader::new("The shader's own numbers").default_open(true).show(ui, |ui| {
+        // Folded, this section still offers the shader's first number; opened, all of them.
+        let all = self.numbers_open;
+        ui.horizontal(|ui| {
+            if ui.small_button(if all { "🔽" } else { "▶" }).on_hover_text("All of the shader's numbers, or only the first").clicked() {
+                self.numbers_open = !all;
+            }
+            ui.label("The shader's own numbers");
+        });
+        ui.indent("numbers", |ui| {
             let declared = self.declared.as_ref().map(|(_, found)| found.as_slice()).unwrap_or(&[]);
             if declared.is_empty() {
                 ui.weak("This shader declares no numbers up front. Its shapes are in its code.");
             }
-            for (name, original, whole) in declared {
+            for (name, original, whole) in declared.iter().take(if all { 16 } else { 1 }) {
                 let mut value = look.params.iter().find(|(known, _)| known == name).map_or(*original, |(_, value)| *value);
                 let reach = if *original == 0.0 { 1.0 } else { original.abs() * 3.0 };
                 let range = if *original > 0.0 { 0.0..=reach } else { -reach..=reach };
