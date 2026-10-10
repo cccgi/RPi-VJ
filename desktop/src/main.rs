@@ -5,6 +5,7 @@
 //! compositions saved to and opened from files; a small preview; projection on a
 //! chosen monitor.
 mod audio_in;
+mod deck;
 mod gfx;
 mod library;
 mod midi;
@@ -215,6 +216,9 @@ struct Options {
     tile: usize,
     /// With `--sequence` and `--autoplay`: move on at song sections only, not by the timer.
     sections_only: bool,
+    /// Open the Pi deck view; and pull the Pi's layout into it.
+    deck: bool,
+    deck_pull: bool,
     /// Start with the grid scrolled this far sideways.
     scroll: f32,
     /// Open the editor for the first cell of the second layer.
@@ -264,6 +268,8 @@ impl Options {
                 "--edit-test" => options.edit_test = true,
                 "--tile" => options.tile = value().parse().unwrap_or(0),
                 "--sections-only" => options.sections_only = true,
+                "--deck" => options.deck = true,
+                "--deck-pull" => options.deck_pull = true,
                 "--scroll" => options.scroll = value().parse().unwrap_or(0.0),
                 "--cell-fx" => options.cell_fx = true,
                 "--drag-test" => options.drag_test = true,
@@ -1031,6 +1037,9 @@ struct App {
     seen_row: std::cell::Cell<Option<egui::Rect>>,
     seen_cell: std::cell::Cell<Option<egui::Rect>>,
     drag_notes: std::cell::RefCell<Vec<String>>,
+    /// The Pi's Stream Deck layout, and whether it has the middle of the window.
+    deck: deck::DeckEditor,
+    deck_open: bool,
     /// How far the grid's cells are scrolled sideways.
     grid_x: f32,
     /// What a slider that follows the music follows this frame: pump, strobe, twist and
@@ -1255,6 +1264,8 @@ impl App {
             seen_row: std::cell::Cell::new(None),
             seen_cell: std::cell::Cell::new(None),
             drag_notes: std::cell::RefCell::new(Vec::new()),
+            deck: deck::DeckEditor::new(&root),
+            deck_open: false,
             grid_x: 0.0,
             signals: [0.0; 6],
             step_pose: 0,
@@ -1427,6 +1438,10 @@ impl App {
         }
         app.tab = app.options.tab.min(2);
         app.assets_tiles = app.options.tiles;
+        app.deck_open = app.options.deck || app.options.deck_pull;
+        if app.options.deck_pull {
+            app.deck.start(deck::Remote::Pull);
+        }
         app.grid_x = app.options.scroll;
         if let Some(wanted) = app.options.download.clone() {
             app.download_text = wanted;
@@ -3618,6 +3633,7 @@ impl App {
             }
             ui.label(format!("{:.0} fps", self.fps));
             ui.separator();
+            ui.toggle_value(&mut self.deck_open, "Pi deck").on_hover_text("Edit the Pi's Stream Deck layout here, in place of the composition");
             if ui.toggle_value(&mut self.learn, "MIDI learn").changed() {
                 self.learn_target = None;
             }
@@ -4748,7 +4764,14 @@ impl eframe::App for App {
             self.detached = false;
         }
         self.download_window(ctx);
-        egui::CentralPanel::default().show(ctx, |ui| self.grid(ui, &mut actions));
+        egui::CentralPanel::default().show(ctx, |ui| {
+            if self.deck_open {
+                let (deck, library) = (&mut self.deck, &self.library);
+                deck.ui(ui, &|entry| library[entry].id.clone());
+            } else {
+                self.grid(ui, &mut actions);
+            }
+        });
         // In MIDI learn every bindable control gets a frame: yellow for the one waiting
         // for its knob or pad, blue for one that is bound, grey for one that is free.
         let frames = ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground, egui::Id::new("midi-learn")));
