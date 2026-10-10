@@ -28,6 +28,10 @@ pub struct DeckEditor {
     path: PathBuf,
     show: Value,
     page: usize,
+    /// Undo: the layout as last noted, the layouts to go back to, and those to go forward to.
+    base: Value,
+    undo: Vec<Value>,
+    redo: Vec<Value>,
     dirty: bool,
     status: String,
     pictures: HashMap<String, Option<egui::TextureHandle>>,
@@ -104,6 +108,9 @@ impl DeckEditor {
         Self {
             status: if text.is_empty() { format!("no show at {}", path.display()) } else { String::new() },
             path,
+            base: show.clone(),
+            undo: Vec::new(),
+            redo: Vec::new(),
             show,
             page: 0,
             dirty: false,
@@ -148,8 +155,46 @@ impl DeckEditor {
         (0..32).find(|key| !SYSTEM.iter().any(|(system, _)| system == key) && self.at(page, *key).is_none())
     }
     fn changed(&mut self, what: impl Into<String>) {
+        // The layout as it was before this change is a step to go back to.
+        if self.base != self.show {
+            self.undo.push(std::mem::replace(&mut self.base, self.show.clone()));
+            self.redo.clear();
+            if self.undo.len() > 200 {
+                self.undo.remove(0);
+            }
+        }
         self.dirty = true;
         self.status = format!("{} (not saved)", what.into());
+    }
+    /// For `--deck-undo-test`: put a shader on a free key, undo, redo, undo, and say what
+    /// the key held after each. Nothing is saved.
+    pub fn undo_test(&mut self) -> String {
+        let key = self.free_key(0).unwrap_or(26);
+        let held = |deck: &Self| deck.at(0, key).map(|binding| binding["label"].as_str().unwrap_or("?").to_owned());
+        let mut seen = vec![held(self)];
+        self.put(0, key, (true, 0));
+        self.changed("test");
+        seen.push(held(self));
+        for back in [true, false, true] {
+            self.step(back);
+            seen.push(held(self));
+        }
+        format!("key {key}: {seen:?}; undo {} redo {}", self.undo.len(), self.redo.len())
+    }
+    /// One step back through the changes to the layout, or forward again.
+    fn step(&mut self, back: bool) {
+        let Some(target) = (if back { self.undo.pop() } else { self.redo.pop() }) else { return };
+        let now = std::mem::replace(&mut self.show, target);
+        if back {
+            self.redo.push(now);
+        } else {
+            self.undo.push(now);
+        }
+        self.base = self.show.clone();
+        self.page = self.page.min(self.pages().saturating_sub(1));
+        self.pictures.clear();
+        self.dirty = true;
+        self.status = format!("{} (not saved)", if back { "undone" } else { "redone" });
     }
     fn put(&mut self, page: usize, key: u64, item: (bool, usize)) {
         let label = self.label_of(item);
@@ -243,6 +288,7 @@ impl DeckEditor {
                     self.show = show;
                     self.page = 0;
                     self.pictures.clear();
+                    self.changed("pulled");
                     self.save();
                     self.status = "loaded the Pi's layout".into();
                 }
@@ -301,6 +347,17 @@ impl DeckEditor {
             ui.heading("Pi Stream Deck layout");
             if ui.button("Save").clicked() {
                 self.save();
+            }
+            // Ctrl+Z and Ctrl+Y (or Ctrl+Shift+Z) belong to the layout while it is in view.
+            let typing = ui.ctx().wants_keyboard_input();
+            let pressed = |modifiers, key| !typing && ui.input_mut(|input| input.consume_key(modifiers, key));
+            let redo = pressed(egui::Modifiers::COMMAND | egui::Modifiers::SHIFT, egui::Key::Z) || pressed(egui::Modifiers::COMMAND, egui::Key::Y);
+            let undo = !redo && pressed(egui::Modifiers::COMMAND, egui::Key::Z);
+            if ui.add_enabled(!self.undo.is_empty(), egui::Button::new("Undo")).on_hover_text("Ctrl+Z").clicked() || undo {
+                self.step(true);
+            }
+            if ui.add_enabled(!self.redo.is_empty(), egui::Button::new("Redo")).on_hover_text("Ctrl+Y").clicked() || redo {
+                self.step(false);
             }
             let busy = self.job.is_some();
             if ui.add_enabled(!busy, egui::Button::new("Sync to Pi")).on_hover_text("Save, upload and restart the show on the Pi").clicked() {

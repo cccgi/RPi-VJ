@@ -1439,6 +1439,9 @@ impl App {
         app.tab = app.options.tab.min(2);
         app.assets_tiles = app.options.tiles;
         app.deck_open = app.options.deck || app.options.deck_pull;
+        if std::env::args().any(|arg| arg == "--deck-undo-test") {
+            println!("deck undo: {}", app.deck.undo_test());
+        }
         if app.options.deck_pull {
             app.deck.start(deck::Remote::Pull);
         }
