@@ -16,7 +16,7 @@ use std::{
         atomic::{AtomicBool, AtomicU64, Ordering},
         Arc,
     },
-    time::{Duration, SystemTime},
+    time::{Duration, Instant, SystemTime},
 };
 
 struct View {
@@ -186,6 +186,7 @@ fn connected(
     health.online.store(true, Ordering::Release);
     let mut displayed: Vec<Option<Key>> = vec![None; 32];
     let mut previous = [false; 32];
+    let (mut both_held, mut shutting_down) = (None::<Instant>, false);
     let mut transfer: Option<(usize, usize)> = None;
     let mut input = [0_u8; 1024];
     while !health.stopping.load(Ordering::Acquire) {
@@ -208,6 +209,16 @@ fn connected(
                     }
                 }
             }
+        }
+        // RESET and BLACK held down together for five seconds shut the Pi down.
+        if previous[RESET_KEY] && previous[BLACK_KEY] {
+            let since = *both_held.get_or_insert_with(Instant::now);
+            if since.elapsed() >= SHUTDOWN_HOLD && !shutting_down {
+                shutting_down = true;
+                power_off();
+            }
+        } else {
+            both_held = None;
         }
         if transfer.is_none() {
             transfer = desired
@@ -240,6 +251,21 @@ fn connected(
         }
     }
     Ok(())
+}
+/// The two keys that shut the Pi down when held together, and for how long.
+const RESET_KEY: usize = 30;
+const BLACK_KEY: usize = 31;
+const SHUTDOWN_HOLD: Duration = Duration::from_secs(5);
+/// Ask the system to power off. The service runs as an ordinary user with no way to
+/// gain privileges, so this goes through logind, which a polkit rule
+/// (`deploy/50-rpi-vj-poweroff.rules`) lets this user ask. Done on a thread: the key
+/// loop must not wait on it.
+fn power_off() {
+    eprintln!("RESET and BLACK held: shutting down");
+    std::thread::spawn(|| match std::process::Command::new("systemctl").arg("poweroff").status() {
+        Ok(status) if status.success() => {}
+        other => eprintln!("shutdown refused: {other:?}"),
+    });
 }
 fn pressed_edges(input: &[u8], previous: &mut [bool; 32]) -> Option<Vec<usize>> {
     if input.len() < 36 || input[..4] != [1, 0, 32, 0] {

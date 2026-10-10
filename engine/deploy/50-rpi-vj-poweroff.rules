@@ -1,0 +1,10 @@
+// Lets the Stream Deck controller (user vj) ask logind to power the Pi off, which it
+// does when RESET and BLACK are held together for five seconds.
+// Install as /etc/polkit-1/rules.d/50-rpi-vj-poweroff.rules.
+polkit.addRule(function (action, subject) {
+    if (subject.user == "vj" &&
+        (action.id == "org.freedesktop.login1.power-off" ||
+         action.id == "org.freedesktop.login1.power-off-multiple-sessions")) {
+        return polkit.Result.YES;
+    }
+});
