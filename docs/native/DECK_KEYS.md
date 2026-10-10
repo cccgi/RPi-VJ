@@ -15,6 +15,13 @@ Keys 26–29 give way to a page that binds its own key there.
 | 30 | RESET | Returns the look to the show's defaults. Keeps the input setting, gain and delete marks. |
 | 31 | BLACK | Blackout on or off. |
 
+## Shutting the Pi down
+
+Hold RESET and BLACK together for five seconds. The controller asks the system to
+power off; `engine/deploy/50-rpi-vj-poweroff.rules`, installed in
+`/etc/polkit-1/rules.d/`, is what allows it to. Pressing the two keys also does
+what each does alone: the look is reset and blackout is toggled.
+
 ## DELETE (key 29, hidden)
 
 DELETE is built but switched off. To bring it back, set `DELETE_KEY` to `true` in
