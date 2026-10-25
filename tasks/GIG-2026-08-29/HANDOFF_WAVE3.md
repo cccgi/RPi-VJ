@@ -1,6 +1,6 @@
 # Wave 3 handoff — paste these into Antigravity
 
-Repo: `C:\Users\Admin\Projects\RPi-VJ`
+Repo: `E:\__Projects\RPi-VJ`
 Every worker reads **two files only**: `tasks/GIG-2026-08-29/START_HERE.md` and its
 own spec. Plus `gig/probe/PERF.md` where a prompt says so — that one holds the
 measured hardware numbers and is short.
@@ -12,7 +12,7 @@ G-12 and G-13 follow G-07.
 ## 1. G-04b — verify isf.js against the real shader convention  (cheap, BLOCKING)
 
 ```
-Repo: C:\Users\Admin\Projects\RPi-VJ
+Repo: E:\__Projects\RPi-VJ
 
 Read exactly three files:
   tasks/GIG-2026-08-29/START_HERE.md
@@ -60,7 +60,7 @@ If the spec and the shaders disagree, the SHADERS win — say so under `surprise
 ## 2. G-06 — dual video deck  (cheap, parallel with G-04b)
 
 ```
-Repo: C:\Users\Admin\Projects\RPi-VJ
+Repo: E:\__Projects\RPi-VJ
 
 Read exactly two files:
   tasks/GIG-2026-08-29/START_HERE.md
@@ -94,7 +94,7 @@ Then: set G-06 in BOARD.md, append <=10 lines to RESULTS.md.
 ## 3. G-07 — the compositor  (mid tier, ONE agent, critical path)
 
 ```
-Repo: C:\Users\Admin\Projects\RPi-VJ
+Repo: E:\__Projects\RPi-VJ
 
 Read exactly three files:
   tasks/GIG-2026-08-29/START_HERE.md
@@ -134,7 +134,7 @@ after it is polish.
 ## 4. G-12 — post chain  (mid, after G-07) — highest visual value
 
 ```
-Repo: C:\Users\Admin\Projects\RPi-VJ
+Repo: E:\__Projects\RPi-VJ
 
 Read exactly three files:
   tasks/GIG-2026-08-29/START_HERE.md
@@ -164,7 +164,7 @@ dramatically richer than 'off', the parameters are wrong; say so in RESULTS.md.
 ## 5. G-13 — choreography  (mid, after G-07)
 
 ```
-Repo: C:\Users\Admin\Projects\RPi-VJ
+Repo: E:\__Projects\RPi-VJ
 
 Read exactly two files:
   tasks/GIG-2026-08-29/START_HERE.md
@@ -205,7 +205,7 @@ dismissed at the gig, and it would hide the entire show behind a modal.
 ## 6. G-19 — headless operation  (mid, HIGHEST PRIORITY of the remaining work)
 
 ```
-Repo: C:\Users\Admin\Projects\RPi-VJ
+Repo: E:\__Projects\RPi-VJ
 
 Read exactly two files:
   tasks/GIG-2026-08-29/START_HERE.md
@@ -236,7 +236,7 @@ interaction) is the one that decides whether Saturday works.
 ## 7. G-18 — X-Touch Mini via WebMIDI  (mid, after G-07)
 
 ```
-Repo: C:\Users\Admin\Projects\RPi-VJ
+Repo: E:\__Projects\RPi-VJ
 
 Read exactly two files:
   tasks/GIG-2026-08-29/START_HERE.md

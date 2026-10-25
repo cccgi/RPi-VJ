@@ -1,5 +1,5 @@
 # Antigravity Handoff — copy-paste prompts
-Gig: Sat 29 Aug 2026. Repo: `C:\Users\Admin\Projects\RPi-VJ`
+Gig: Sat 29 Aug 2026. Repo: `E:\__Projects\RPi-VJ`
 
 ## Files to name — and only these
 
@@ -19,7 +19,7 @@ The orchestrator additionally reads `BOARD.md` and `GIG_PLAN.md`. Nobody else ne
 
 ```
 You are the orchestrator for a live VJ gig on Saturday 29 August 2026. The
-repo is C:\Users\Admin\Projects\RPi-VJ.
+repo is E:\__Projects\RPi-VJ.
 
 Read these three files and nothing else:
   tasks/GIG-2026-08-29/BOARD.md
@@ -72,7 +72,7 @@ anything that contradicted a spec. No prose summaries.
 Replace `G-XX-name` and paste. Nothing else needs changing.
 
 ```
-Implement one task from a live-gig project. Repo: C:\Users\Admin\Projects\RPi-VJ
+Implement one task from a live-gig project. Repo: E:\__Projects\RPi-VJ
 
 Read exactly two files:
   tasks/GIG-2026-08-29/START_HERE.md

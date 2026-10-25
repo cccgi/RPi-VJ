@@ -1,5 +1,5 @@
 Ran command: `git status; git branch -a`
-Ran command: `git config --global --add safe.directory C:/Users/Admin/Projects/RPi-VJ; git status; git branch -a`
+Ran command: `git config --global --add safe.directory E:/__Projects/RPi-VJ; git status; git branch -a`
 Viewed README.md:1-60
 Viewed BOARD.md:1-22
 Viewed AGENT_PROTOCOL_V2.md:1-55

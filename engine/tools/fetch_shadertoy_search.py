@@ -30,6 +30,8 @@ from fetch_shadertoy import (  # noqa: E402
 ROOT = Path("E:/__Projects/RPi-VJ/target/shadertoy-offline")
 OUT = Path("E:/__Projects/RPi-VJ/target/shadertoy-downloads")
 FRACTALS = Path("E:/__Projects/RPi-VJ/target/shadertoy-fractals")
+ASSET_MANIFEST = ROOT / "shader-bank" / "assets" / "manifest.json"
+_ASSET_SHADER_STATUS = None
 EDGE_PROFILE = Path(os.environ.get(
     "SHADERTOY_EDGE_PROFILE",
     str(Path(tempfile.gettempdir()) / f"shadertoy-edge-profile-run-{os.getpid()}")
@@ -48,6 +50,35 @@ def search_urls(page_no: int):
     # crawler compatible with older deployments that expose /search.
     yield f"https://www.shadertoy.com/results?query={QUERY}&from={offset}&num={PAGE_SIZE}"
     yield f"https://www.shadertoy.com/search?query={QUERY}&from={offset}&num={PAGE_SIZE}"
+
+
+def is_complete(shader_id: str) -> bool:
+    """A shader is complete only when source, metadata, and every asset exist."""
+    shader_dir = ROOT / shader_id
+    if not (OUT / f"{shader_id}.glsl").is_file() or not (shader_dir / "shader.json").is_file():
+        return False
+    # The shader-bank manifest is authoritative for runtime inputs: it
+    # deduplicates shared textures instead of requiring a copied texture under
+    # every individual shader directory.
+    global _ASSET_SHADER_STATUS
+    if _ASSET_SHADER_STATUS is None:
+        try:
+            _ASSET_SHADER_STATUS = json.loads(
+                ASSET_MANIFEST.read_text(encoding="utf-8")
+            ).get("shaders", {})
+        except (OSError, json.JSONDecodeError):
+            _ASSET_SHADER_STATUS = {}
+    runtime = _ASSET_SHADER_STATUS.get(shader_id, {})
+    if runtime.get("texture_inputs") in ("none", "satisfied"):
+        return True
+    assets_file = shader_dir / "assets.json"
+    if not assets_file.is_file():
+        return False
+    try:
+        assets = json.loads(assets_file.read_text(encoding="utf-8")).get("assets", [])
+    except (OSError, json.JSONDecodeError):
+        return False
+    return all((shader_dir / str(item.get("filename") or "")).is_file() for item in assets)
 
 
 def main():
@@ -112,8 +143,12 @@ def main():
             print(f"ID_LIST_SAVED {len(ids)} (future runs skip search pages)", flush=True)
         print(f"FRACTAL_IDS {len(ids)}", flush=True)
 
-        existing = {x.stem for x in OUT.glob("*.glsl")}
-        ids = [sid for sid in ids if sid not in existing]
+        # Do not treat source-only captures as complete: shaders with missing
+        # textures must remain in the persisted retry queue.
+        ids = [sid for sid in ids if not is_complete(sid)]
+        (FRACTALS / "incomplete_ids.json").write_text(
+            json.dumps(ids, indent=2), encoding="utf-8"
+        )
         print(f"FRACTAL_NEW {len(ids)}", flush=True)
         if ids:
             first = ids[0]

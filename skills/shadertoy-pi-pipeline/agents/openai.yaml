@@ -1,0 +1,4 @@
+interface:
+  display_name: "Shadertoy Pi Pipeline"
+  short_description: "Import, benchmark, and publish native shader batches"
+  default_prompt: "Import a shader batch, qualify it on the Pi, and generate review pages."

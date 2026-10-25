@@ -5,9 +5,9 @@ import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SRC = ROOT / "target" / "native-13-shaders"
+SRC = Path(os.environ.get("REVIEW_SOURCE_DIR", str(ROOT / "target" / "native-13-shaders")))
 OUT = Path(os.environ.get("REVIEW_OUT", str(ROOT / "target" / "shader-review")))
-SOURCE_SHOW = SRC / "show-fixed-first-latest.json"
+SOURCE_SHOW = Path(os.environ.get("REVIEW_SOURCE_SHOW", str(SRC / "show-fixed-first-latest.json")))
 PI_BENCH_REPORT = os.environ.get("PI_BENCH_REPORT")
 PI_BENCH_RESOLUTION = os.environ.get("PI_BENCH_RESOLUTION", "both")
 
@@ -34,8 +34,13 @@ def main():
                     else at_1080)
         qualified = {item["shader"] for item in report["results"] if qualifies(item)}
         shaders = [p for p in shaders if p.stem in qualified]
-    source_index = {item["path"].rsplit(".", 1)[0]: index + 1
-                    for index, item in enumerate(json.loads(SOURCE_SHOW.read_text(encoding="utf-8"))["shaders"])}
+    if SOURCE_SHOW.is_file():
+        source_index = {item["path"].rsplit(".", 1)[0]: index + 1
+                        for index, item in enumerate(json.loads(SOURCE_SHOW.read_text(encoding="utf-8"))["shaders"])}
+    else:
+        # A new import batch has no historical master show.  Keep its stable
+        # insertion order rather than failing page generation.
+        source_index = {p.stem: index + 1 for index, p in enumerate(shaders)}
     groups = [[] for _ in range(4)]
     for p in shaders:
         groups[group(p)].append(p)

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key><string>RPi-VJ</string>
+  <key>CFBundleDisplayName</key><string>RPi-VJ VJ Desktop</string>
+  <key>CFBundleIdentifier</key><string>com.rpivj.desktop</string>
+  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleShortVersionString</key><string>1.0</string>
+  <key>LSMinimumSystemVersion</key><string>12.0</string>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSMicrophoneUsageDescription</key><string>RPi-VJ uses the selected audio input to analyze live music for shader reactivity.</string>
+  <key>CFBundleExecutable</key><string>RPi-VJ</string>
+</dict>
+</plist>
